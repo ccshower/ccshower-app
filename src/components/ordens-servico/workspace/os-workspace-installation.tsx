@@ -1,0 +1,480 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+
+import {
+  confirmarSaldoPendenteInstalacao,
+  finalizarInstalacao,
+  listarComprovantePagamentoInstalacao,
+  listarFotosInstalacao,
+  salvarObservacoesExecucaoInstalacao,
+  salvarPagamentoInstalacao,
+} from "@/app/ordens-servico/instalacao-actions";
+import { OsInstallationChecklistModal } from "@/components/ordens-servico/workspace/os-installation-checklist-modal";
+import { OsInstallationSeparationCard } from "@/components/ordens-servico/workspace/os-installation-separation-card";
+import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
+import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
+import { t } from "@/lib/i18n";
+import {
+  buildInstallationFinancialStatus,
+  formatInstallationBalance,
+  installationPaymentFromOrdem,
+  type InstallationPaymentCapture,
+} from "@/lib/ordens-servico/installation-workspace";
+import {
+  uploadComprovanteInstalacaoViaApi,
+  uploadFotosInstalacaoViaApi,
+} from "@/lib/ordens-servico/upload-anexos-client";
+import { VISIT_PAYMENT_METHODS, tVisitPaymentMethod } from "@/lib/ordens-servico/visit-payment";
+import type { OrdemServicoWithRelations, OsAnexoComUrl, OsSeparationListItem } from "@/lib/types/database";
+
+const inputClass =
+  "w-full rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2 text-sm font-light text-cc-ink outline-none placeholder:text-cc-subtle focus:border-cc-blue-focus focus:shadow-focus";
+
+const textareaClass =
+  "w-full min-h-[100px] resize-y rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none placeholder:text-cc-subtle focus:border-cc-blue-focus focus:shadow-focus";
+
+const sectionLabel =
+  "text-[10px] font-semibold uppercase tracking-[0.1em] text-cc-muted";
+
+const NOTES_SAVE_DELAY_MS = 800;
+const PAYMENT_SAVE_DELAY_MS = 600;
+
+type NotesSaveStatus = "idle" | "saving" | "saved" | "error";
+
+type Props = {
+  ordem: OrdemServicoWithRelations;
+  fluxoBloqueado?: boolean;
+  onAtualizado: () => void;
+};
+
+/** Execução etapa Instalação — checklist, fotos, saldo, observações. */
+export function OsWorkspaceInstallation({
+  ordem,
+  fluxoBloqueado = false,
+  onAtualizado,
+}: Props) {
+  const financial = buildInstallationFinancialStatus(ordem);
+
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklist, setChecklist] = useState<OsSeparationListItem[]>(
+    ordem.lista_separacao ?? [],
+  );
+  const [fotos, setFotos] = useState<OsAnexoComUrl[]>([]);
+  const [executionNotes, setExecutionNotes] = useState(
+    ordem.installation_execution_notes ?? "",
+  );
+  const [notesStatus, setNotesStatus] = useState<NotesSaveStatus>("idle");
+  const [payment, setPayment] = useState<InstallationPaymentCapture>(() =>
+    installationPaymentFromOrdem(ordem),
+  );
+  const [balanceAcknowledged, setBalanceAcknowledged] = useState(
+    ordem.installation_balance_pending_acknowledged ?? false,
+  );
+  const [savedReceipt, setSavedReceipt] = useState<OsAnexoComUrl | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const receiptRef = useRef<HTMLInputElement>(null);
+  const savedNotesRef = useRef(ordem.installation_execution_notes ?? "");
+  const saveNotesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savePaymentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onAtualizadoRef = useRef(onAtualizado);
+
+  useEffect(() => {
+    onAtualizadoRef.current = onAtualizado;
+  }, [onAtualizado]);
+
+  useEffect(() => {
+    setChecklist(ordem.lista_separacao ?? []);
+  }, [ordem.lista_separacao, ordem.id]);
+
+  useEffect(() => {
+    const next = ordem.installation_execution_notes ?? "";
+    setExecutionNotes((prev) => {
+      if (prev.trim() === next.trim()) return prev;
+      setNotesStatus("idle");
+      return next;
+    });
+    savedNotesRef.current = next;
+  }, [ordem.installation_execution_notes, ordem.id]);
+
+  useEffect(() => {
+    setPayment(installationPaymentFromOrdem(ordem));
+    setBalanceAcknowledged(ordem.installation_balance_pending_acknowledged ?? false);
+  }, [
+    ordem.id,
+    ordem.installation_payment_received,
+    ordem.installation_payment_amount,
+    ordem.installation_payment_method,
+    ordem.installation_payment_notes,
+    ordem.installation_balance_pending_acknowledged,
+  ]);
+
+  const carregarFotos = useCallback(async () => {
+    const { fotos: lista, error } = await listarFotosInstalacao(ordem.id);
+    if (!error) setFotos(lista);
+  }, [ordem.id]);
+
+  const carregarComprovante = useCallback(async () => {
+    const { comprovante } = await listarComprovantePagamentoInstalacao(ordem.id);
+    setSavedReceipt(comprovante);
+  }, [ordem.id]);
+
+  useEffect(() => {
+    void carregarFotos();
+    void carregarComprovante();
+  }, [carregarFotos, carregarComprovante]);
+
+  useEffect(() => {
+    const current = executionNotes.trim();
+    const saved = savedNotesRef.current.trim();
+    if (current === saved) return;
+
+    if (saveNotesTimerRef.current) clearTimeout(saveNotesTimerRef.current);
+    saveNotesTimerRef.current = setTimeout(() => {
+      void (async () => {
+        setNotesStatus("saving");
+        setMsg(null);
+        const r = await salvarObservacoesExecucaoInstalacao(ordem.id, executionNotes);
+        if (!r.ok) {
+          setNotesStatus("error");
+          setMsg(r.message);
+          return;
+        }
+        savedNotesRef.current = executionNotes;
+        setNotesStatus("saved");
+        onAtualizadoRef.current();
+        if (savedIndicatorTimerRef.current) {
+          clearTimeout(savedIndicatorTimerRef.current);
+        }
+        savedIndicatorTimerRef.current = setTimeout(
+          () => setNotesStatus("idle"),
+          2500,
+        );
+      })();
+    }, NOTES_SAVE_DELAY_MS);
+
+    return () => {
+      if (saveNotesTimerRef.current) clearTimeout(saveNotesTimerRef.current);
+    };
+  }, [executionNotes, ordem.id]);
+
+  useEffect(() => {
+    if (savePaymentTimerRef.current) clearTimeout(savePaymentTimerRef.current);
+    savePaymentTimerRef.current = setTimeout(() => {
+      void (async () => {
+        const r = await salvarPagamentoInstalacao(ordem.id, payment);
+        if (r.ok) onAtualizadoRef.current();
+      })();
+    }, PAYMENT_SAVE_DELAY_MS);
+
+    return () => {
+      if (savePaymentTimerRef.current) clearTimeout(savePaymentTimerRef.current);
+    };
+  }, [payment, ordem.id]);
+
+  function onPhotosSelected(files: FileList | null) {
+    if (!files?.length) return;
+    startTransition(async () => {
+      setMsg(null);
+      const r = await uploadFotosInstalacaoViaApi(ordem.id, files);
+      if (!r.ok) {
+        setMsg(r.message);
+        return;
+      }
+      await carregarFotos();
+      onAtualizado();
+    });
+  }
+
+  function onReceiptSelected(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    startTransition(async () => {
+      setMsg(null);
+      const r = await uploadComprovanteInstalacaoViaApi(ordem.id, file);
+      if (!r.ok) {
+        setMsg(r.message);
+        return;
+      }
+      if (receiptRef.current) receiptRef.current.value = "";
+      await carregarComprovante();
+    });
+  }
+
+  function onPaymentReceivedToggle(checked: boolean) {
+    if (checked) {
+      setBalanceAcknowledged(false);
+      void confirmarSaldoPendenteInstalacao(ordem.id, false);
+      setPayment((prev) => ({ ...prev, received: true }));
+      return;
+    }
+    setPayment({
+      received: false,
+      amount: "",
+      method: "",
+      notes: "",
+    });
+  }
+
+  function onBalanceAckToggle(checked: boolean) {
+    setBalanceAcknowledged(checked);
+    if (checked) {
+      setPayment({
+        received: false,
+        amount: "",
+        method: "",
+        notes: "",
+      });
+    }
+    startTransition(async () => {
+      const r = await confirmarSaldoPendenteInstalacao(ordem.id, checked);
+      if (!r.ok) setMsg(r.message);
+      else onAtualizado();
+    });
+  }
+
+  function finalizar() {
+    if (!confirm(t("os.workspace.installation.confirmFinish"))) return;
+    startTransition(async () => {
+      setMsg(null);
+      if (executionNotes.trim() !== savedNotesRef.current.trim()) {
+        const save = await salvarObservacoesExecucaoInstalacao(
+          ordem.id,
+          executionNotes,
+        );
+        if (!save.ok) {
+          setMsg(save.message);
+          return;
+        }
+        savedNotesRef.current = executionNotes;
+      }
+      await salvarPagamentoInstalacao(ordem.id, payment);
+      const r = await finalizarInstalacao(ordem.id);
+      if (!r.ok) {
+        setMsg(r.message);
+        return;
+      }
+      onAtualizado();
+    });
+  }
+
+  const busy = pending || notesStatus === "saving";
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-sm border border-cc-border/80 bg-white p-3">
+        <p className={sectionLabel}>
+          {t("os.workspace.installation.financialTitle")}
+        </p>
+        {financial.isPaid ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            {t("os.workspace.installation.paymentSettled")}
+          </p>
+        ) : (
+          <div className="mt-2 space-y-3">
+            <p className="text-sm font-medium text-amber-700">
+              {t("os.workspace.installation.balancePending", {
+                amount: formatInstallationBalance(financial.balance),
+              })}
+            </p>
+
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={payment.received}
+                disabled={busy}
+                onChange={(e) => onPaymentReceivedToggle(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-cc-border accent-cc-ink"
+              />
+              <span className="text-sm font-medium text-cc-ink">
+                {t("os.workspace.installation.receivedLabel")}
+              </span>
+            </label>
+
+            {payment.received ? (
+              <div className="space-y-3 border-t border-cc-border/60 pt-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={sectionLabel}>
+                      {t("os.visitPayment.amount")}
+                    </label>
+                    <div className="mt-1">
+                      <OsMoneyInput
+                        compact
+                        disabled={busy}
+                        value={payment.amount}
+                        onChange={(amount) =>
+                          setPayment((prev) => ({ ...prev, amount }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={sectionLabel}>
+                      {t("os.visitPayment.method")}
+                    </label>
+                    <select
+                      disabled={busy}
+                      className={`mt-1 ${inputClass}`}
+                      value={payment.method}
+                      onChange={(e) =>
+                        setPayment((prev) => ({
+                          ...prev,
+                          method: e.target.value as InstallationPaymentCapture["method"],
+                        }))
+                      }
+                    >
+                      <option value="">{t("os.visitPayment.selectMethod")}</option>
+                      {VISIT_PAYMENT_METHODS.map((m) => (
+                        <option key={m} value={m}>
+                          {tVisitPaymentMethod(m)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <p className={sectionLabel}>{t("os.visitPayment.receipt")}</p>
+                  <input
+                    ref={receiptRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="sr-only"
+                    onChange={(e) => onReceiptSelected(e.target.files)}
+                  />
+                  {savedReceipt?.url ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="truncate text-sm text-cc-ink">
+                        {savedReceipt.nome_arquivo}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => receiptRef.current?.click()}
+                        className="text-xs text-cc-muted hover:underline"
+                      >
+                        {t("os.visitPayment.receiptReplace")}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => receiptRef.current?.click()}
+                      className="mt-2 w-full rounded-sm border border-dashed border-cc-border px-3 py-2.5 text-sm text-cc-muted hover:border-cc-blue-soft hover:bg-cc-blue-soft/15 disabled:opacity-40"
+                    >
+                      {t("os.visitPayment.receiptUpload")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={balanceAcknowledged}
+                  disabled={busy}
+                  onChange={(e) => onBalanceAckToggle(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-cc-border accent-cc-ink"
+                />
+                <span className="text-sm font-light text-cc-deep">
+                  {t("os.workspace.installation.balanceAcknowledge")}
+                </span>
+              </label>
+            )}
+          </div>
+        )}
+      </section>
+
+      <OsInstallationSeparationCard
+        itens={checklist}
+        onConferir={() => setChecklistOpen(true)}
+      />
+
+      <section className="rounded-sm border border-cc-border/80 bg-white p-3">
+        <p className={sectionLabel}>
+          {t("os.workspace.installation.photosTitle")}
+        </p>
+        <OsPhotoUploadActions
+          disabled={busy}
+          onFilesSelected={onPhotosSelected}
+          takePhotoLabel={t("os.workspace.installation.takePhoto")}
+          choosePhotosLabel={t("os.workspace.installation.choosePhotos")}
+        />
+        {fotos.length > 0 ? (
+          <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {fotos.map((f) => (
+              <li
+                key={f.id}
+                className="relative aspect-square overflow-hidden rounded-sm border border-cc-border"
+              >
+                {f.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.url}
+                    alt={f.nome_arquivo}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="rounded-sm border border-cc-border/80 bg-white p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className={sectionLabel}>
+            {t("os.workspace.installation.notesTitle")}
+          </p>
+          {notesStatus === "saving" ? (
+            <span className="text-[11px] font-light text-cc-subtle">
+              {t("os.workspace.project.notesSaving")}
+            </span>
+          ) : null}
+          {notesStatus === "saved" ? (
+            <span className="text-[11px] font-light text-cc-subtle">
+              {t("os.workspace.project.notesSaved")}
+            </span>
+          ) : null}
+        </div>
+        <textarea
+          disabled={busy}
+          className={`mt-2 ${textareaClass}`}
+          placeholder={t("os.workspace.installation.notesPlaceholder")}
+          value={executionNotes}
+          onChange={(e) => setExecutionNotes(e.target.value)}
+        />
+      </section>
+
+      {msg ? (
+        <p className="rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2 text-sm text-cc-red">
+          {msg}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={busy || fluxoBloqueado}
+        onClick={finalizar}
+        className="w-full rounded-sm bg-cc-ink py-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-white shadow-lift hover:bg-cc-deep disabled:opacity-40"
+      >
+        {pending
+          ? t("os.workspace.installation.finishing")
+          : t("os.workspace.installation.finish")}
+      </button>
+
+      <OsInstallationChecklistModal
+        osId={ordem.id}
+        itensIniciais={checklist}
+        open={checklistOpen}
+        onClose={() => setChecklistOpen(false)}
+        onSalvo={onAtualizado}
+      />
+    </div>
+  );
+}

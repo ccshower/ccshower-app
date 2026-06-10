@@ -1,0 +1,1 @@
+-- Cliente pertence à equipe (não ao usuário). Remove responsavel_comercial_id.

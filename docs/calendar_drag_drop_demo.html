@@ -1,0 +1,197 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.cal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 16px; }
+.cal-title { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+.cal-legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--color-text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+.day-header { text-align: center; font-size: 11px; font-weight: 500; color: var(--color-text-secondary); padding: 8px 0; background: var(--color-background-secondary); border-bottom: 0.5px solid var(--color-border-tertiary); letter-spacing: 0.04em; }
+.day-cell { min-height: 110px; border-right: 0.5px solid var(--color-border-tertiary); border-bottom: 0.5px solid var(--color-border-tertiary); padding: 6px 5px; background: var(--color-background-primary); position: relative; transition: background 0.15s; vertical-align: top; }
+.day-cell:nth-child(7n) { border-right: none; }
+.day-cell.other-month { background: var(--color-background-tertiary); }
+.day-cell.today .day-num { background: #1a73e8; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.day-cell.drag-over { background: #e8f0fe; }
+.day-num { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.event { font-size: 11px; border-radius: 4px; padding: 2px 5px; margin-bottom: 2px; cursor: grab; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.15s, transform 0.1s; display: flex; align-items: center; gap: 3px; }
+.event:active { cursor: grabbing; }
+.event.comercial { background: #e8f0fe; color: #1a56db; }
+.event.instalacao { background: #fce8e6; color: #c5221f; }
+.event.dragging { opacity: 0.35; }
+.event-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.event.comercial .event-dot { background: #1a56db; }
+.event.instalacao .event-dot { background: #c5221f; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
+.toast.show { opacity: 1; }
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 0; font-size: 12px; color: var(--color-text-secondary); }
+.save-indicator { display: flex; align-items: center; gap: 6px; }
+.save-dot { width: 7px; height: 7px; border-radius: 50%; background: #34a853; }
+.save-dot.saving { background: #fbbc05; animation: pulse 0.8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+
+<h2 class="sr-only">Demonstração de drag-and-drop do calendário — arraste eventos entre os dias</h2>
+
+<div class="cal-header">
+  <span class="cal-title">Maio 2026</span>
+  <div class="cal-legend">
+    <span><span class="legend-dot" style="background:#1a56db"></span>Comercial</span>
+    <span><span class="legend-dot" style="background:#c5221f"></span>Instalação</span>
+  </div>
+</div>
+
+<div class="cal-grid" id="calendar">
+  <div class="day-header">DOM</div>
+  <div class="day-header">SEG</div>
+  <div class="day-header">TER</div>
+  <div class="day-header">QUA</div>
+  <div class="day-header">QUI</div>
+  <div class="day-header">SEX</div>
+  <div class="day-header">SÁB</div>
+</div>
+
+<div class="status-bar">
+  <span id="event-count">23 eventos no período</span>
+  <span class="save-indicator"><span class="save-dot" id="save-dot"></span><span id="save-text">Sincronizado com Supabase</span></span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const events = [
+  { id:1, day:3, time:'10:00', label:'Visita comercial - Smith', type:'comercial' },
+  { id:2, day:5, time:'08:00', label:'Instalação - Banheiro J.', type:'instalacao' },
+  { id:3, day:5, time:'09:00', label:'Visita - Thompson', type:'comercial' },
+  { id:4, day:5, time:'15:30', label:'Visita - Clark', type:'comercial' },
+  { id:5, day:8, time:'08:00', label:'Instalação - Adams', type:'instalacao' },
+  { id:6, day:8, time:'14:00', label:'Visita técnica - Brown', type:'comercial' },
+  { id:7, day:12, time:'07:30', label:'Instalação - Davis Proj.', type:'instalacao' },
+  { id:8, day:12, time:'10:00', label:'Visita - Green', type:'comercial' },
+  { id:9, day:13, time:'07:30', label:'Instalação - Davis Proj.', type:'instalacao' },
+  { id:10, day:14, time:'07:30', label:'Instalação - Davis Proj.', type:'instalacao' },
+  { id:11, day:15, time:'08:00', label:'Instalação - Rivera', type:'instalacao' },
+  { id:12, day:15, time:'09:00', label:'Visita - Hernandez', type:'comercial' },
+  { id:13, day:15, time:'11:00', label:'Visita comercial - Wilson', type:'comercial' },
+  { id:14, day:18, time:'08:00', label:'Instalação - Taylor Bath', type:'instalacao' },
+  { id:15, day:18, time:'11:00', label:'Visita - White', type:'comercial' },
+  { id:16, day:18, time:'13:00', label:'Instalação - Young', type:'instalacao' },
+  { id:17, day:20, time:'08:00', label:'Instalação - King', type:'instalacao' },
+  { id:18, day:20, time:'09:30', label:'Visita - Anderson', type:'comercial' },
+  { id:19, day:20, time:'14:00', label:'Visita - Hall', type:'comercial' },
+  { id:20, day:22, time:'08:00', label:'Instalação - Garcia', type:'instalacao' },
+  { id:21, day:23, time:'08:00', label:'Instalação - Garcia', type:'instalacao' },
+  { id:22, day:25, time:'09:00', label:'Instalação rápida - Bak.', type:'instalacao' },
+  { id:23, day:25, time:'13:00', label:'Visita comercial - Mart.', type:'comercial' },
+  { id:24, day:25, time:'16:00', label:'Visita - Nelson', type:'comercial' },
+  { id:25, day:27, time:'07:30', label:'Instalação - Lee Reside.', type:'instalacao' },
+];
+
+const calDays = [
+  {d:26,om:true},{d:27,om:true},{d:28,om:true},{d:29,om:true},{d:30,om:true},{d:1,om:false},{d:2,om:false},
+  {d:3},{d:4},{d:5},{d:6},{d:7},{d:8},{d:9},
+  {d:10},{d:11},{d:12},{d:13},{d:14},{d:15},{d:16},
+  {d:17},{d:18},{d:19},{d:20},{d:21},{d:22},{d:23},
+  {d:24},{d:25},{d:26,om2:true},{d:27},{d:28},{d:29},{d:30},
+  {d:31},{d:1,om:true},{d:2,om:true},{d:3,om:true},{d:4,om:true},{d:5,om:true},{d:6,om:true},
+];
+
+let dragId = null;
+let dragEl = null;
+
+function showToast(msg, duration=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setSaving(saving) {
+  const dot = document.getElementById('save-dot');
+  const txt = document.getElementById('save-text');
+  if (saving) {
+    dot.classList.add('saving');
+    txt.textContent = 'Salvando no Supabase...';
+  } else {
+    dot.classList.remove('saving');
+    txt.textContent = 'Sincronizado com Supabase';
+  }
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar');
+  const existingCells = grid.querySelectorAll('.day-cell');
+  existingCells.forEach(c => c.remove());
+
+  calDays.forEach(info => {
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (info.om || info.om2 ? ' other-month' : '') + (info.d === 9 && !info.om ? ' today' : '');
+    cell.dataset.day = info.om || info.om2 ? '' : info.d;
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'day-num';
+    numDiv.textContent = info.d;
+    cell.appendChild(numDiv);
+
+    if (!info.om && !info.om2) {
+      const dayEvents = events.filter(e => e.day === info.d);
+      dayEvents.slice(0, 3).forEach(ev => {
+        const el = document.createElement('div');
+        el.className = `event ${ev.type}`;
+        el.draggable = true;
+        el.dataset.id = ev.id;
+        el.innerHTML = `<span class="event-dot"></span>${ev.time} ${ev.label}`;
+
+        el.addEventListener('dragstart', e => {
+          dragId = ev.id;
+          dragEl = el;
+          setTimeout(() => el.classList.add('dragging'), 0);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        el.addEventListener('dragend', () => {
+          el.classList.remove('dragging');
+          dragId = null;
+          dragEl = null;
+          document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+        });
+        cell.appendChild(el);
+      });
+      if (dayEvents.length > 3) {
+        const more = document.createElement('div');
+        more.style.cssText = 'font-size:10px;color:var(--color-text-tertiary);padding:1px 5px;';
+        more.textContent = `+${dayEvents.length - 3} mais`;
+        cell.appendChild(more);
+      }
+    }
+
+    cell.addEventListener('dragover', e => {
+      if (dragId && cell.dataset.day) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cell.classList.add('drag-over');
+      }
+    });
+    cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+    cell.addEventListener('drop', e => {
+      e.preventDefault();
+      cell.classList.remove('drag-over');
+      if (!dragId || !cell.dataset.day) return;
+      const newDay = parseInt(cell.dataset.day);
+      const ev = events.find(e => e.id === dragId);
+      if (!ev || ev.day === newDay) return;
+      const oldDay = ev.day;
+      ev.day = newDay;
+      renderCalendar();
+      setSaving(true);
+      setTimeout(() => {
+        setSaving(false);
+        showToast(`✓ "${ev.label.split(' - ')[1] || ev.label}" movido para dia ${newDay}`);
+      }, 900);
+    });
+
+    grid.appendChild(cell);
+  });
+}
+
+renderCalendar();
+</script>

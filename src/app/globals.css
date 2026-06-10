@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-cc-canvas text-cc-ink antialiased;
+}
+
+/* foco visível — alinhado ao design system (anel azul suave) */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-cc-blue-focus;
+}
+
+/* Sugestões Google Places acima do modal (<dialog> usa top layer) */
+.pac-container {
+  z-index: 2147483647 !important;
+  font-family: inherit;
+}

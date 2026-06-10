@@ -1,16 +1,22 @@
-# React + Vite
+# CCSHOWER (fase 1)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Next.js (App Router) + TypeScript + Tailwind + Supabase.
 
-Currently, two official plugins are available:
+## Configuração
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Copie `.env.example` para `.env.local` e preencha as variáveis.
+2. Aplique as migrações em `supabase/migrations/` **na ordem** no SQL Editor do Supabase (ou via CLI):
+   - `20250511000000_fase1_equipes_usuarios.sql`
+   - `20250511200000_tipo_usuario_admin.sql`
+   - `20250519000000_clientes.sql` ← necessário para `/clientes`
+   - `20250520000000_ordens_servico_agenda.sql` ← OS + agenda_eventos
+3. Crie o primeiro **admin**: usuário em Authentication e linha correspondente em `public.usuarios` (ver comentário no final da migração).
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `npm run dev` — desenvolvimento
+- `npm run build` — build de produção
+- `npm run start` — servidor após build
+- `npm run seed:clientes` — popula clientes de teste (40 registros; ver `scripts/seed-clientes.mjs`)
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Consulte `docs/ARCHITECTURE.md`, `docs/PRODUCT_RULES.md` e `docs/DATABASE_RULES.md`.

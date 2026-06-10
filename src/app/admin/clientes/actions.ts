@@ -1,0 +1,258 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { parseClientType } from "@/lib/clientes/tipo-cliente";
+import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
+import { validateEquipeIdForStage } from "@/lib/ordens-servico/workflow-equipe";
+import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
+import { resolveEmpresaId } from "@/lib/ordens-servico/resolve-empresa-id";
+import { createClient } from "@/lib/supabase/server";
+
+export type ActionResult =
+  | { ok: true; id?: string; nome?: string }
+  | { ok: false; message: string };
+
+type ActiveUsuario = {
+  id: string;
+  equipe_id: string | null;
+  ativo: boolean;
+  tipo_usuario: string;
+  pode_ver_todas_equipes: boolean;
+};
+
+async function requireActiveSupabase() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Sessao expirada");
+  }
+
+  const { data: row, error } = await supabase
+    .from("usuarios")
+    .select("id, equipe_id, ativo, tipo_usuario, pode_ver_todas_equipes")
+    .eq("id", user.id)
+    .single();
+
+  if (error || !row?.ativo) {
+    throw new Error("Sem permissao");
+  }
+
+  return { supabase, usuario: row as ActiveUsuario, userId: user.id };
+}
+
+function emptyToNull(v: FormDataEntryValue | null) {
+  const t = String(v ?? "").trim();
+  return t.length ? t : null;
+}
+
+function readNumber(v: FormDataEntryValue | null) {
+  const t = String(v ?? "").trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+function canChooseEquipe(usuario: ActiveUsuario) {
+  return usuario.tipo_usuario === "admin" || usuario.pode_ver_todas_equipes;
+}
+
+function getEquipeId(formData: FormData, usuario: ActiveUsuario) {
+  const requested = emptyToNull(formData.get("equipe_id"));
+  if (canChooseEquipe(usuario)) return requested;
+  return usuario.equipe_id;
+}
+
+export async function criarCliente(formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, usuario, userId } = await requireActiveSupabase();
+    const nome = String(formData.get("nome") ?? "").trim();
+    const telefone = String(formData.get("telefone") ?? "").trim();
+    const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
+    const equipe_id = getEquipeId(formData, usuario);
+    const tipo_cliente = parseClientType(
+      String(formData.get("tipo_cliente") ?? ""),
+    );
+
+    if (!nome || !telefone || !endereco_formatado) {
+      return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
+    }
+
+    const eqVal = await validateEquipeOperacional(supabase, equipe_id);
+    if (!eqVal.ok) return eqVal;
+
+    const eqStage = await validateEquipeIdForStage(
+      supabase,
+      eqVal.equipe_id,
+      "commercial",
+    );
+    if (!eqStage.ok) return { ok: false, message: eqStage.message };
+
+    const equipeWorkOrder = eqVal.equipe_id;
+
+    const { data: created, error } = await supabase
+      .from("clientes")
+      .insert({
+        nome,
+        telefone,
+        tipo_cliente,
+        email: emptyToNull(formData.get("email")),
+        endereco_formatado,
+        endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        cidade: emptyToNull(formData.get("cidade")),
+        estado: emptyToNull(formData.get("estado")),
+        cep: emptyToNull(formData.get("cep")),
+        pais: emptyToNull(formData.get("pais")) ?? "US",
+        google_place_id: emptyToNull(formData.get("google_place_id")),
+        latitude: readNumber(formData.get("latitude")),
+        longitude: readNumber(formData.get("longitude")),
+        google_maps_url: emptyToNull(formData.get("google_maps_url")),
+        observacoes: emptyToNull(formData.get("observacoes")),
+        equipe_id: equipeWorkOrder,
+        criado_por: userId,
+        ativo: true,
+      })
+      .select("id, nome, equipe_id")
+      .single();
+
+    if (error) return { ok: false, message: error.message };
+
+    // Work order inicial (fluxo vivo) — nasce automaticamente ao salvar cliente.
+    // Não há responsável/ownership por usuário; userId entra apenas como auditoria (criado_por).
+    const empresa_id = await resolveEmpresaId(supabase, {
+      clienteId: created.id,
+      userId,
+    });
+    if (!empresa_id) {
+      return {
+        ok: false,
+        message:
+          "Cliente criado, mas não foi possível identificar empresa_id para criar a Work Order.",
+      };
+    }
+
+    const snapshot = buildOperationalSnapshot(
+      equipeWorkOrder,
+      "commercial",
+      "open",
+    );
+
+    const { error: osErr } = await supabase.from("ordens_servico").insert({
+      empresa_id,
+      cliente_id: created.id,
+      titulo: `Primeiro atendimento — ${created.nome}`,
+      descricao: null,
+      observacoes: null,
+      anotacoes_tecnicas: null,
+      status: "open",
+      equipe_id: equipeWorkOrder,
+      responsavel_id: null,
+      possui_instalacao: true,
+      equipe_atual_id: snapshot.equipe_atual_id,
+      etapa_atual: snapshot.etapa_atual,
+      status_atual: snapshot.status_atual, // no_visit
+      criado_por: userId,
+      ativo: true,
+    });
+
+    if (osErr) {
+      return {
+        ok: false,
+        message: `Cliente criado, mas falhou criar Work Order inicial: ${osErr.message}`,
+      };
+    }
+
+    revalidatePath("/clientes");
+    revalidatePath("/admin/clientes");
+    revalidatePath("/operacao");
+    revalidatePath("/ordens-servico");
+    return { ok: true, id: created.id, nome: created.nome };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Erro ao criar cliente" };
+  }
+}
+
+export async function atualizarCliente(formData: FormData): Promise<ActionResult> {
+  try {
+    const { supabase, usuario } = await requireActiveSupabase();
+    const id = String(formData.get("id") ?? "");
+    const nome = String(formData.get("nome") ?? "").trim();
+    const telefone = String(formData.get("telefone") ?? "").trim();
+    const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
+    const equipe_id = getEquipeId(formData, usuario);
+    const tipo_cliente = parseClientType(
+      String(formData.get("tipo_cliente") ?? ""),
+    );
+
+    if (!id) return { ok: false, message: "ID ausente" };
+    if (!nome || !telefone || !endereco_formatado) {
+      return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
+    }
+
+    const eqVal = await validateEquipeOperacional(supabase, equipe_id);
+    if (!eqVal.ok) return eqVal;
+
+    const eqStage = await validateEquipeIdForStage(
+      supabase,
+      eqVal.equipe_id,
+      "commercial",
+    );
+    if (!eqStage.ok) return { ok: false, message: eqStage.message };
+
+    const { error } = await supabase
+      .from("clientes")
+      .update({
+        nome,
+        telefone,
+        tipo_cliente,
+        email: emptyToNull(formData.get("email")),
+        endereco_formatado,
+        endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        cidade: emptyToNull(formData.get("cidade")),
+        estado: emptyToNull(formData.get("estado")),
+        cep: emptyToNull(formData.get("cep")),
+        pais: emptyToNull(formData.get("pais")) ?? "US",
+        google_place_id: emptyToNull(formData.get("google_place_id")),
+        latitude: readNumber(formData.get("latitude")),
+        longitude: readNumber(formData.get("longitude")),
+        google_maps_url: emptyToNull(formData.get("google_maps_url")),
+        observacoes: emptyToNull(formData.get("observacoes")),
+        equipe_id: eqVal.equipe_id,
+      })
+      .eq("id", id);
+
+    if (error) return { ok: false, message: error.message };
+
+    revalidatePath("/clientes");
+    revalidatePath("/admin/clientes");
+    revalidatePath("/operacao");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Erro ao atualizar cliente",
+    };
+  }
+}
+
+export async function setClienteAtivo(id: string, ativo: boolean): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireActiveSupabase();
+    const { error } = await supabase.from("clientes").update({ ativo }).eq("id", id);
+
+    if (error) return { ok: false, message: error.message };
+
+    revalidatePath("/clientes");
+    revalidatePath("/admin/clientes");
+    revalidatePath("/operacao");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Erro ao atualizar status",
+    };
+  }
+}

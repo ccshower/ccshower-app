@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Shower Door — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════
+     DESIGN TOKENS
+  ═══════════════════════════════════════════════════ */
+  :root {
+    /* Brand Colors */
+    --slate-900: #1a1f2e;
+    --slate-800: #252b3b;
+    --slate-700: #343d52;
+    --slate-500: #6b7898;
+    --slate-400: #8d9ab5;
+    --slate-300: #b8c2d6;
+    --slate-200: #dde3ed;
+    --slate-100: #f0f3f8;
+    --slate-50:  #f8fafc;
+
+    --rose-600:  #c47a7a;
+    --rose-500:  #d4908a;
+    --rose-400:  #e0a8a2;
+    --rose-300:  #ebb8b4;
+    --rose-100:  #f7eceb;
+
+    --blue-600:  #5b6f8c;
+    --blue-500:  #7189a8;
+    --blue-400:  #8da3bf;
+    --blue-300:  #aabdd4;
+    --blue-100:  #e8f0f7;
+
+    --white: #ffffff;
+    --black: #0d1117;
+
+    /* Semantic */
+    --color-brand-primary:   var(--blue-500);
+    --color-brand-accent:    var(--rose-500);
+    --color-text-primary:    var(--slate-900);
+    --color-text-secondary:  var(--slate-500);
+    --color-text-muted:      var(--slate-400);
+    --color-bg-base:         var(--white);
+    --color-bg-subtle:       var(--slate-50);
+    --color-bg-muted:        var(--slate-100);
+    --color-border:          var(--slate-200);
+    --color-border-strong:   var(--slate-300);
+
+    /* Typography */
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body:    'Jost', sans-serif;
+
+    --text-xs:   0.75rem;
+    --text-sm:   0.875rem;
+    --text-base: 1rem;
+    --text-lg:   1.125rem;
+    --text-xl:   1.375rem;
+    --text-2xl:  1.75rem;
+    --text-3xl:  2.25rem;
+    --text-4xl:  3rem;
+    --text-5xl:  4rem;
+    --text-6xl:  5.5rem;
+
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-20: 5rem;
+    --space-24: 6rem;
+
+    /* Radius */
+    --radius-sm: 2px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(26,31,46,0.06), 0 1px 2px rgba(26,31,46,0.04);
+    --shadow-md: 0 4px 16px rgba(26,31,46,0.08), 0 2px 6px rgba(26,31,46,0.05);
+    --shadow-lg: 0 12px 40px rgba(26,31,46,0.12), 0 4px 12px rgba(26,31,46,0.06);
+    --shadow-xl: 0 24px 64px rgba(26,31,46,0.16);
+    --shadow-accent: 0 8px 32px rgba(212,144,138,0.25);
+    --shadow-blue:   0 8px 32px rgba(113,137,168,0.25);
+
+    /* Transitions */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-fast: 150ms;
+    --duration-base: 250ms;
+    --duration-slow: 400ms;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     RESET & BASE
+  ═══════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: var(--font-body);
+    color: var(--color-text-primary);
+    background: var(--white);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     LAYOUT HELPERS
+  ═══════════════════════════════════════════════════ */
+  .ds-page { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-8); }
+  .ds-section { padding: var(--space-20) 0; border-bottom: 1px solid var(--color-border); }
+  .ds-section:last-child { border-bottom: none; }
+  .ds-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+  .ds-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-6); }
+  .ds-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+  .ds-flex { display: flex; }
+  .ds-flex-gap { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .ds-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+
+  /* ═══════════════════════════════════════════════════
+     HEADER
+  ═══════════════════════════════════════════════════ */
+  .ds-header {
+    background: var(--slate-900);
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-24) 0;
+  }
+  .ds-header::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 480px; height: 480px;
+    background: radial-gradient(circle, rgba(212,144,138,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ds-header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(113,137,168,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ds-header-inner { position: relative; z-index: 1; }
+  .ds-header-eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rose-400);
+    margin-bottom: var(--space-4);
+  }
+  .ds-header-title {
+    font-family: var(--font-display);
+    font-size: var(--text-6xl);
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1.05;
+    margin-bottom: var(--space-6);
+    letter-spacing: -0.01em;
+  }
+  .ds-header-title em {
+    font-style: italic;
+    color: var(--rose-400);
+  }
+  .ds-header-subtitle {
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: 300;
+    color: var(--slate-400);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+  .ds-header-meta {
+    display: flex;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+    padding-top: var(--space-12);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .ds-header-meta-item { color: var(--slate-400); font-size: var(--text-sm); }
+  .ds-header-meta-item strong { display: block; color: var(--white); font-weight: 500; margin-bottom: 2px; }
+
+  /* ═══════════════════════════════════════════════════
+     SECTION LABELS
+  ═══════════════════════════════════════════════════ */
+  .ds-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rose-500);
+    margin-bottom: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .ds-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+    max-width: 48px;
+  }
+  .ds-section-title {
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    font-weight: 300;
+    color: var(--slate-900);
+    letter-spacing: -0.01em;
+    margin-bottom: var(--space-2);
+    line-height: 1.1;
+  }
+  .ds-section-desc {
+    font-size: var(--text-base);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-12);
+    font-weight: 300;
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     COLOR SWATCHES
+  ═══════════════════════════════════════════════════ */
+  .swatch-group { display: flex; flex-direction: column; gap: var(--space-3); }
+  .swatch-group-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate-500);
+    margin-bottom: var(--space-1);
+  }
+  .swatch-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .swatch {
+    width: 72px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .swatch-color { height: 56px; }
+  .swatch-info { padding: 6px 8px; background: var(--white); border-top: 1px solid var(--color-border); }
+  .swatch-name { font-size: 10px; font-weight: 600; color: var(--slate-700); display: block; }
+  .swatch-hex  { font-size: 9px; color: var(--slate-400); font-family: monospace; }
+
+  .swatch-lg {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .swatch-lg-color { height: 120px; display: flex; align-items: flex-end; padding: var(--space-4); }
+  .swatch-lg-name { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 500; }
+  .swatch-lg-info { padding: var(--space-4) var(--space-5); background: var(--white); }
+  .swatch-lg-role { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate-500); margin-bottom: 2px; }
+  .swatch-lg-hex  { font-family: monospace; font-size: var(--text-xs); color: var(--slate-400); }
+  .swatch-lg-desc { font-size: var(--text-xs); color: var(--slate-500); margin-top: var(--space-2); line-height: 1.5; }
+
+  /* ═══════════════════════════════════════════════════
+     TYPOGRAPHY SPECIMENS
+  ═══════════════════════════════════════════════════ */
+  .type-specimen {
+    padding: var(--space-8) var(--space-10);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    position: relative;
+    overflow: hidden;
+  }
+  .type-specimen::before {
+    content: attr(data-font);
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-6);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate-300);
+  }
+  .type-display { font-family: var(--font-display); font-size: var(--text-5xl); font-weight: 300; color: var(--slate-900); line-height: 1.05; letter-spacing: -0.01em; }
+  .type-display-italic { font-family: var(--font-display); font-size: var(--text-5xl); font-style: italic; font-weight: 300; color: var(--rose-500); line-height: 1.05; }
+  .type-display-sm { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 400; color: var(--slate-800); }
+  .type-heading { font-family: var(--font-body); font-size: var(--text-2xl); font-weight: 500; color: var(--slate-900); letter-spacing: -0.01em; }
+  .type-subheading { font-family: var(--font-body); font-size: var(--text-xl); font-weight: 300; color: var(--slate-700); }
+  .type-eyebrow { font-family: var(--font-body); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rose-500); }
+  .type-body { font-family: var(--font-body); font-size: var(--text-base); font-weight: 300; color: var(--slate-700); line-height: 1.75; }
+  .type-small { font-family: var(--font-body); font-size: var(--text-sm); color: var(--slate-500); }
+  .type-caption { font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500; letter-spacing: 0.06em; color: var(--slate-400); }
+  .type-price { font-family: var(--font-display); font-size: var(--text-4xl); font-weight: 600; color: var(--slate-900); }
+
+  .type-scale-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-6);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .type-scale-row:last-child { border-bottom: none; }
+  .type-scale-meta { width: 120px; flex-shrink: 0; }
+  .type-scale-name { font-size: var(--text-xs); font-weight: 600; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.1em; }
+  .type-scale-size { font-size: var(--text-xs); color: var(--slate-400); font-family: monospace; }
+  .type-scale-sample { flex: 1; }
+
+  /* ═══════════════════════════════════════════════════
+     BUTTONS
+  ═══════════════════════════════════════════════════ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-body);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: all var(--duration-base) var(--ease-out);
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity var(--duration-fast);
+    background: rgba(255,255,255,0.1);
+  }
+  .btn:hover::after { opacity: 1; }
+
+  /* Sizes */
+  .btn-sm  { font-size: var(--text-xs);  padding: var(--space-2) var(--space-5);  border-radius: var(--radius-sm); }
+  .btn-md  { font-size: var(--text-xs);  padding: var(--space-3) var(--space-6);  border-radius: var(--radius-sm); }
+  .btn-lg  { font-size: var(--text-sm);  padding: var(--space-4) var(--space-8);  border-radius: var(--radius-sm); }
+  .btn-xl  { font-size: var(--text-sm);  padding: var(--space-5) var(--space-10); border-radius: var(--radius-sm); }
+
+  /* Variants */
+  .btn-primary {
+    background: var(--slate-900);
+    color: var(--white);
+    box-shadow: var(--shadow-md);
+  }
+  .btn-primary:hover { background: var(--slate-700); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-accent {
+    background: var(--rose-500);
+    color: var(--white);
+    box-shadow: var(--shadow-accent);
+  }
+  .btn-accent:hover { background: var(--rose-600); transform: translateY(-1px); box-shadow: 0 12px 40px rgba(212,144,138,0.35); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--slate-900);
+    border: 1.5px solid var(--slate-900);
+    box-shadow: none;
+  }
+  .btn-outline::after { background: rgba(26,31,46,0.05); }
+  .btn-outline:hover { background: var(--slate-900); color: var(--white); }
+
+  .btn-outline-accent {
+    background: transparent;
+    color: var(--rose-500);
+    border: 1.5px solid var(--rose-400);
+  }
+  .btn-outline-accent::after { background: rgba(212,144,138,0.08); }
+  .btn-outline-accent:hover { background: var(--rose-500); color: var(--white); border-color: var(--rose-500); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--slate-700);
+    border: none;
+  }
+  .btn-ghost::after { background: rgba(26,31,46,0.05); border-radius: var(--radius-sm); }
+  .btn-ghost:hover { color: var(--slate-900); }
+
+  .btn-light {
+    background: var(--white);
+    color: var(--slate-900);
+    box-shadow: var(--shadow-md);
+  }
+  .btn-light:hover { background: var(--slate-50); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+
+  .btn-dark-bg {
+    background: rgba(255,255,255,0.1);
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+  }
+  .btn-dark-bg:hover { background: rgba(255,255,255,0.18); }
+
+  .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border-radius: var(--radius-md); }
+  .btn-icon.btn-sm { width: 32px; height: 32px; }
+  .btn-icon.btn-lg { width: 52px; height: 52px; border-radius: var(--radius-lg); }
+  .btn-loading { opacity: 0.7; pointer-events: none; }
+  .btn-disabled, .btn:disabled { opacity: 0.4; pointer-events: none; cursor: not-allowed; }
+
+  /* ═══════════════════════════════════════════════════
+     FORM ELEMENTS
+  ═══════════════════════════════════════════════════ */
+  .form-group { display: flex; flex-direction: column; gap: var(--space-2); }
+  .form-label {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--slate-700);
+  }
+  .form-input {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 300;
+    color: var(--slate-900);
+    background: var(--white);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    outline: none;
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    width: 100%;
+  }
+  .form-input::placeholder { color: var(--slate-400); }
+  .form-input:focus {
+    border-color: var(--blue-400);
+    box-shadow: 0 0 0 3px rgba(113,137,168,0.12);
+  }
+  .form-input-error { border-color: var(--rose-500) !important; }
+  .form-input-error:focus { box-shadow: 0 0 0 3px rgba(212,144,138,0.15) !important; }
+  .form-hint { font-size: var(--text-xs); color: var(--slate-400); }
+  .form-error { font-size: var(--text-xs); color: var(--rose-600); font-weight: 500; }
+  
+  .form-select {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    color: var(--slate-900);
+    background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7898' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-10) var(--space-3) var(--space-4);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color var(--duration-fast);
+    width: 100%;
+  }
+  .form-select:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(113,137,168,0.12); }
+
+  .form-textarea {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 300;
+    color: var(--slate-900);
+    background: var(--white);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    outline: none;
+    transition: border-color var(--duration-fast);
+    resize: vertical;
+    min-height: 100px;
+    width: 100%;
+  }
+  .form-textarea:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(113,137,168,0.12); }
+
+  /* Checkbox & Radio */
+  .form-check { display: flex; align-items: center; gap: var(--space-3); cursor: pointer; }
+  .form-check-input {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    appearance: none;
+    cursor: pointer;
+    transition: all var(--duration-fast);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .form-check-input:checked {
+    background: var(--blue-500);
+    border-color: var(--blue-500);
+  }
+  .form-check-input:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 5px;
+    width: 5px; height: 9px;
+    border: 2px solid white;
+    border-top: none; border-left: none;
+    transform: rotate(45deg);
+  }
+  .form-check-input[type=radio] { border-radius: 50%; }
+  .form-check-input[type=radio]:checked::after {
+    top: 3px; left: 3px;
+    width: 8px; height: 8px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    transform: none;
+  }
+  .form-check-label { font-size: var(--text-sm); color: var(--slate-700); font-weight: 400; }
+
+  /* ═══════════════════════════════════════════════════
+     CARDS
+  ═══════════════════════════════════════════════════ */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    transition: box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
+  }
+  .card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .card-body { padding: var(--space-6); }
+  .card-header { padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-border); }
+  .card-footer { padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); background: var(--color-bg-subtle); }
+  .card-image { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+
+  .card-product {
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: all var(--duration-slow) var(--ease-out);
+  }
+  .card-product:hover { box-shadow: var(--shadow-xl); transform: translateY(-4px); }
+  .card-product-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, var(--slate-100) 0%, var(--blue-100) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-product-img-placeholder {
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    color: var(--slate-300);
+    font-weight: 300;
+    font-style: italic;
+  }
+  .card-product-badge {
+    position: absolute;
+    top: var(--space-4); left: var(--space-4);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--rose-500);
+    color: white;
+  }
+  .card-product-body { padding: var(--space-6); }
+  .card-product-eyebrow { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-500); margin-bottom: var(--space-2); }
+  .card-product-name { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 400; color: var(--slate-900); margin-bottom: var(--space-3); }
+  .card-product-desc { font-size: var(--text-sm); font-weight: 300; color: var(--slate-500); line-height: 1.6; margin-bottom: var(--space-5); }
+  .card-product-footer { display: flex; align-items: center; justify-content: space-between; }
+  .card-product-price { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; color: var(--slate-900); }
+
+  .card-testimonial {
+    background: var(--slate-900);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-testimonial::before {
+    content: '"';
+    position: absolute;
+    top: -20px; right: var(--space-6);
+    font-family: var(--font-display);
+    font-size: 140px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.04);
+    line-height: 1;
+  }
+  .card-testimonial-text {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--white);
+    line-height: 1.6;
+    margin-bottom: var(--space-6);
+    position: relative;
+  }
+  .card-testimonial-author { display: flex; align-items: center; gap: var(--space-4); }
+  .card-testimonial-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--rose-400), var(--blue-400));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; color: white; font-size: var(--text-sm);
+  }
+  .card-testimonial-name { font-weight: 500; color: var(--white); font-size: var(--text-sm); }
+  .card-testimonial-role { font-size: var(--text-xs); color: var(--slate-400); }
+  .card-stars { color: var(--rose-400); font-size: var(--text-sm); letter-spacing: 2px; margin-bottom: var(--space-4); }
+
+  /* ═══════════════════════════════════════════════════
+     BADGES & TAGS
+  ═══════════════════════════════════════════════════ */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    line-height: 1;
+  }
+  .badge-primary   { background: var(--blue-100);  color: var(--blue-600); }
+  .badge-accent    { background: var(--rose-100);  color: var(--rose-600); }
+  .badge-dark      { background: var(--slate-900); color: var(--white); }
+  .badge-outline   { background: transparent; color: var(--slate-600); border: 1.5px solid var(--color-border-strong); }
+  .badge-success   { background: #e6f4ea; color: #2d6a4f; }
+  .badge-warning   { background: #fef9e7; color: #9a7d0a; }
+  .badge-dot       { display: inline-flex; align-items: center; gap: 6px; }
+  .badge-dot::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     NAVIGATION
+  ═══════════════════════════════════════════════════ */
+  .nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-8);
+    height: 72px;
+    box-shadow: var(--shadow-sm);
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    color: var(--slate-900);
+    letter-spacing: 0.05em;
+    margin-right: var(--space-12);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .nav-logo span { color: var(--rose-500); font-style: italic; }
+  .nav-links { display: flex; gap: var(--space-8); flex: 1; }
+  .nav-link {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate-500);
+    text-decoration: none;
+    transition: color var(--duration-fast);
+    padding: var(--space-2) 0;
+    position: relative;
+  }
+  .nav-link:hover { color: var(--slate-900); }
+  .nav-link.active { color: var(--slate-900); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0; right: 0;
+    height: 2px;
+    background: var(--rose-500);
+    border-radius: var(--radius-full);
+  }
+  .nav-actions { display: flex; gap: var(--space-3); align-items: center; }
+
+  /* ═══════════════════════════════════════════════════
+     ALERTS
+  ═══════════════════════════════════════════════════ */
+  .alert {
+    display: flex;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    border-left: 3px solid;
+    font-size: var(--text-sm);
+  }
+  .alert-icon { font-size: var(--text-lg); flex-shrink: 0; margin-top: 1px; }
+  .alert-body { flex: 1; }
+  .alert-title { font-weight: 600; margin-bottom: 2px; }
+  .alert-desc { font-weight: 300; opacity: 0.85; }
+
+  .alert-info    { background: var(--blue-100);  border-color: var(--blue-500);  color: var(--blue-600); }
+  .alert-success { background: #e6f4ea; border-color: #2d6a4f; color: #2d6a4f; }
+  .alert-warning { background: #fef9e7; border-color: #e6a817; color: #9a7d0a; }
+  .alert-error   { background: var(--rose-100); border-color: var(--rose-600); color: var(--rose-600); }
+
+  /* ═══════════════════════════════════════════════════
+     AVATARS & MEDIA
+  ═══════════════════════════════════════════════════ */
+  .avatar {
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; color: white;
+    background: linear-gradient(135deg, var(--blue-400), var(--rose-400));
+    flex-shrink: 0;
+  }
+  .avatar-xs { width: 24px; height: 24px; font-size: 10px; }
+  .avatar-sm { width: 32px; height: 32px; font-size: var(--text-xs); }
+  .avatar-md { width: 44px; height: 44px; font-size: var(--text-sm); }
+  .avatar-lg { width: 64px; height: 64px; font-size: var(--text-xl); }
+  .avatar-xl { width: 96px; height: 96px; font-size: var(--text-2xl); }
+
+  .avatar-group { display: flex; }
+  .avatar-group .avatar { border: 2px solid white; margin-left: -8px; }
+  .avatar-group .avatar:first-child { margin-left: 0; }
+
+  /* ═══════════════════════════════════════════════════
+     DIVIDER
+  ═══════════════════════════════════════════════════ */
+  .divider {
+    display: flex; align-items: center; gap: var(--space-4);
+    color: var(--slate-400); font-size: var(--text-xs);
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: var(--color-border);
+  }
+  .divider-ornament { color: var(--rose-400); }
+
+  /* ═══════════════════════════════════════════════════
+     STATS
+  ═══════════════════════════════════════════════════ */
+  .stat-card {
+    padding: var(--space-6);
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue-400), var(--rose-400));
+  }
+  .stat-number {
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    font-weight: 600;
+    color: var(--slate-900);
+    line-height: 1;
+    margin-bottom: var(--space-2);
+  }
+  .stat-label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate-400); }
+  .stat-trend { font-size: var(--text-sm); color: #2d6a4f; font-weight: 500; display: flex; align-items: center; gap: 4px; margin-top: var(--space-3); }
+
+  /* ═══════════════════════════════════════════════════
+     SPACING & GRID DEMO
+  ═══════════════════════════════════════════════════ */
+  .spacing-row { display: flex; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+  .spacing-demo {
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .spacing-bar { background: var(--blue-300); border-radius: 2px; height: 16px; }
+  .spacing-meta { font-size: 10px; font-family: monospace; color: var(--slate-500); }
+
+  /* ═══════════════════════════════════════════════════
+     LOGO LOCKUPS
+  ═══════════════════════════════════════════════════ */
+  .logo-lockup {
+    display: flex; align-items: center; gap: var(--space-3);
+    text-decoration: none;
+  }
+  .logo-mark {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .logo-mark-c {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--blue-500);
+    border: 3px solid var(--rose-400);
+    border-radius: 50%;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: -2px;
+  }
+  .logo-text-main {
+    font-family: var(--font-body);
+    font-size: var(--text-xl);
+    font-weight: 500;
+    color: var(--slate-700);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .logo-text-sub {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--slate-400);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     HERO SECTION EXAMPLE
+  ═══════════════════════════════════════════════════ */
+  .hero-example {
+    background: var(--slate-900);
+    border-radius: var(--radius-xl);
+    padding: var(--space-16) var(--space-12);
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+  }
+  .hero-example::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(212,144,138,0.12) 0%, transparent 65%);
+  }
+  .hero-example::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: 40%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(113,137,168,0.1) 0%, transparent 65%);
+  }
+  .hero-example-inner { position: relative; z-index: 1; max-width: 560px; }
+  .hero-example-eyebrow { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rose-400); margin-bottom: var(--space-4); }
+  .hero-example-title { font-family: var(--font-display); font-size: var(--text-5xl); font-weight: 300; color: var(--white); line-height: 1.05; margin-bottom: var(--space-6); }
+  .hero-example-title em { font-style: italic; color: var(--rose-400); }
+  .hero-example-subtitle { font-size: var(--text-base); font-weight: 300; color: var(--slate-400); margin-bottom: var(--space-8); line-height: 1.7; }
+  .hero-example-actions { display: flex; gap: var(--space-4); align-items: center; }
+
+  /* ═══════════════════════════════════════════════════
+     ICON BOXES
+  ═══════════════════════════════════════════════════ */
+  .icon-box {
+    display: flex;
+    gap: var(--space-5);
+    padding: var(--space-6);
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    transition: all var(--duration-base) var(--ease-out);
+  }
+  .icon-box:hover { box-shadow: var(--shadow-md); border-color: var(--blue-300); }
+  .icon-box-icon {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .icon-box-icon-blue { background: var(--blue-100); }
+  .icon-box-icon-rose { background: var(--rose-100); }
+  .icon-box-icon-slate { background: var(--slate-100); }
+  .icon-box-body {}
+  .icon-box-title { font-family: var(--font-body); font-size: var(--text-base); font-weight: 500; color: var(--slate-900); margin-bottom: var(--space-2); }
+  .icon-box-text { font-size: var(--text-sm); font-weight: 300; color: var(--slate-500); line-height: 1.65; }
+
+  /* ═══════════════════════════════════════════════════
+     FOOTER AREA
+  ═══════════════════════════════════════════════════ */
+  .ds-footer {
+    background: var(--slate-900);
+    color: var(--slate-400);
+    padding: var(--space-8) 0;
+    text-align: center;
+    font-size: var(--text-sm);
+    font-weight: 300;
+  }
+  .ds-footer strong { color: var(--white); font-weight: 500; }
+
+  /* ═══════════════════════════════════════════════════
+     UTILITIES
+  ═══════════════════════════════════════════════════ */
+  .bg-dark   { background: var(--slate-900); }
+  .bg-light  { background: var(--slate-50); }
+  .p-8  { padding: var(--space-8); }
+  .rounded-xl { border-radius: var(--radius-xl); }
+  .text-white { color: var(--white); }
+  .mt-4 { margin-top: var(--space-4); }
+  .mb-0 { margin-bottom: 0 !important; }
+
+  /* ═══════════════════════════════════════════════════
+     ANIMATIONS
+  ═══════════════════════════════════════════════════ */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fadeUp 0.6s var(--ease-out) both; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+
+  /* ═══════════════════════════════════════════════════
+     SHADOW DEMOS
+  ═══════════════════════════════════════════════════ */
+  .shadow-demo {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--text-xs); font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--slate-500);
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="ds-header">
+  <div class="ds-page">
+    <div class="ds-header-inner animate-in">
+      <p class="ds-header-eyebrow">Design System v1.0</p>
+      <h1 class="ds-header-title">CC Shower Door<br><em>Brand Guidelines</em></h1>
+      <p class="ds-header-subtitle">A comprehensive visual language for a premium bathroom renovation company — refined, trustworthy, and distinctly American luxury.</p>
+      <div class="ds-header-meta">
+        <div class="ds-header-meta-item"><strong>Brand</strong>CC Shower Door</div>
+        <div class="ds-header-meta-item"><strong>Industry</strong>Bathroom Renovation, USA</div>
+        <div class="ds-header-meta-item"><strong>Tone</strong>Premium · Trustworthy · Refined</div>
+        <div class="ds-header-meta-item"><strong>Version</strong>1.0 — 2025</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV PREVIEW -->
+<nav class="nav">
+  <a class="nav-logo" href="#">CC <span>Shower Door</span></a>
+  <div class="nav-links">
+    <a class="nav-link active" href="#">Products</a>
+    <a class="nav-link" href="#">Showroom</a>
+    <a class="nav-link" href="#">Gallery</a>
+    <a class="nav-link" href="#">About</a>
+    <a class="nav-link" href="#">Contact</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost btn-md">Get a Quote</button>
+    <button class="btn btn-accent btn-md">Schedule Visit</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- 1. COLORS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">01</p>
+    <h2 class="ds-section-title">Color Palette</h2>
+    <p class="ds-section-desc">Derived from the brand's existing identity — steel blue conveys precision and trust, dusty rose adds warmth and approachability. Together they feel both luxurious and livable.</p>
+
+    <!-- Primary swatches -->
+    <div class="ds-grid-4" style="margin-bottom: var(--space-8);">
+      <div class="swatch-lg">
+        <div class="swatch-lg-color" style="background: var(--slate-900);">
+          <span class="swatch-lg-name" style="color:rgba(255,255,255,0.6); font-size:12px; font-family: var(--font-body); font-weight:500;">Slate 900</span>
+        </div>
+        <div class="swatch-lg-info">
+          <div class="swatch-lg-role">Primary Text</div>
+          <div class="swatch-lg-hex">#1a1f2e</div>
+          <div class="swatch-lg-desc">Headlines, body text, dark backgrounds. The anchor of the palette.</div>
+        </div>
+      </div>
+      <div class="swatch-lg">
+        <div class="swatch-lg-color" style="background: var(--blue-500);">
+          <span class="swatch-lg-name" style="color:rgba(255,255,255,0.7); font-size:12px; font-family: var(--font-body); font-weight:500;">Steel Blue</span>
+        </div>
+        <div class="swatch-lg-info">
+          <div class="swatch-lg-role">Brand Primary</div>
+          <div class="swatch-lg-hex">#7189a8</div>
+          <div class="swatch-lg-desc">Buttons, links, icons, UI elements. Trust and precision.</div>
+        </div>
+      </div>
+      <div class="swatch-lg">
+        <div class="swatch-lg-color" style="background: var(--rose-500);">
+          <span class="swatch-lg-name" style="color:rgba(255,255,255,0.8); font-size:12px; font-family: var(--font-body); font-weight:500;">Dusty Rose</span>
+        </div>
+        <div class="swatch-lg-info">
+          <div class="swatch-lg-role">Brand Accent</div>
+          <div class="swatch-lg-hex">#d4908a</div>
+          <div class="swatch-lg-desc">CTAs, highlights, decorative elements. Warmth and elegance.</div>
+        </div>
+      </div>
+      <div class="swatch-lg">
+        <div class="swatch-lg-color" style="background: var(--white); border: 1px solid var(--color-border);">
+          <span class="swatch-lg-name" style="color:var(--slate-400); font-size:12px; font-family: var(--font-body); font-weight:500;">White</span>
+        </div>
+        <div class="swatch-lg-info">
+          <div class="swatch-lg-role">Background</div>
+          <div class="swatch-lg-hex">#ffffff</div>
+          <div class="swatch-lg-desc">Page base, cards, inputs. Clean, airy bathroom feel.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scale swatches -->
+    <div class="ds-grid-2" style="gap: var(--space-10);">
+      <div>
+        <div class="swatch-group-label" style="font-family: var(--font-body); font-size:11px; font-weight:600; letter-spacing:0.1em; color: var(--slate-500); text-transform: uppercase; margin-bottom: var(--space-3);">Blue Scale</div>
+        <div class="swatch-row">
+          <div class="swatch"><div class="swatch-color" style="background:var(--blue-600)"></div><div class="swatch-info"><span class="swatch-name">600</span><span class="swatch-hex">#5b6f8c</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--blue-500)"></div><div class="swatch-info"><span class="swatch-name">500</span><span class="swatch-hex">#7189a8</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--blue-400)"></div><div class="swatch-info"><span class="swatch-name">400</span><span class="swatch-hex">#8da3bf</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--blue-300)"></div><div class="swatch-info"><span class="swatch-name">300</span><span class="swatch-hex">#aabdd4</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--blue-100)"></div><div class="swatch-info"><span class="swatch-name">100</span><span class="swatch-hex">#e8f0f7</span></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-group-label" style="font-family: var(--font-body); font-size:11px; font-weight:600; letter-spacing:0.1em; color: var(--slate-500); text-transform: uppercase; margin-bottom: var(--space-3);">Rose Scale</div>
+        <div class="swatch-row">
+          <div class="swatch"><div class="swatch-color" style="background:var(--rose-600)"></div><div class="swatch-info"><span class="swatch-name">600</span><span class="swatch-hex">#c47a7a</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--rose-500)"></div><div class="swatch-info"><span class="swatch-name">500</span><span class="swatch-hex">#d4908a</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--rose-400)"></div><div class="swatch-info"><span class="swatch-name">400</span><span class="swatch-hex">#e0a8a2</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--rose-300)"></div><div class="swatch-info"><span class="swatch-name">300</span><span class="swatch-hex">#ebb8b4</span></div></div>
+          <div class="swatch"><div class="swatch-color" style="background:var(--rose-100)"></div><div class="swatch-info"><span class="swatch-name">100</span><span class="swatch-hex">#f7eceb</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. TYPOGRAPHY -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">02</p>
+    <h2 class="ds-section-title">Typography</h2>
+    <p class="ds-section-desc">Two typefaces in intentional tension: Cormorant Garamond for elegance and authority, Jost for clarity and modernity. Together they span luxury and utility.</p>
+
+    <div class="ds-stack" style="gap: var(--space-6); margin-bottom: var(--space-10);">
+      <div class="type-specimen" data-font="Cormorant Garamond — Display">
+        <div class="type-display">Elevate Your Bathroom.</div>
+        <div class="type-display-italic" style="margin-top: var(--space-2);">Crafted for Perfection.</div>
+      </div>
+      <div class="type-specimen" data-font="Jost — Interface">
+        <div class="type-heading" style="margin-bottom: var(--space-3);">Premium Glass Solutions</div>
+        <div class="type-eyebrow" style="margin-bottom: var(--space-3);">Frameless · Semi-Frameless · Custom</div>
+        <div class="type-body">We transform ordinary bathrooms into extraordinary spaces. Every shower door is measured, crafted, and installed with meticulous attention to detail by our licensed team of craftsmen.</div>
+      </div>
+    </div>
+
+    <!-- Type Scale -->
+    <div style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden;">
+      <div style="padding: var(--space-4) var(--space-6); background: var(--slate-50); border-bottom: 1px solid var(--color-border);">
+        <span style="font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--slate-500);">Type Scale</span>
+      </div>
+      <div style="padding: var(--space-4) var(--space-6);">
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">Display</div><div class="type-scale-size">88px / 5.5rem</div></div>
+          <div class="type-scale-sample"><span style="font-family:var(--font-display); font-size: clamp(32px, 6vw, 56px); font-weight:300; color:var(--slate-900); line-height:1.05;">CC Shower Door</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">H1</div><div class="type-scale-size">48px / 3rem</div></div>
+          <div class="type-scale-sample"><span style="font-family:var(--font-display); font-size:clamp(28px,4vw,40px); font-weight:400; color:var(--slate-900);">Your Dream Bathroom Awaits</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">H2</div><div class="type-scale-size">36px / 2.25rem</div></div>
+          <div class="type-scale-sample"><span style="font-family:var(--font-display); font-size:clamp(24px,3vw,34px); font-weight:400; color:var(--slate-900);">Premium Glass Solutions</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">H3</div><div class="type-scale-size">28px / 1.75rem</div></div>
+          <div class="type-scale-sample"><span style="font-family:var(--font-body); font-size:var(--text-2xl); font-weight:500; color:var(--slate-900);">Frameless Shower Enclosures</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">Body</div><div class="type-scale-size">16px / 1rem</div></div>
+          <div class="type-scale-sample"><span class="type-body">Our certified installers bring decades of experience to every project, ensuring a flawless finish every time.</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">Eyebrow</div><div class="type-scale-size">12px / 0.75rem</div></div>
+          <div class="type-scale-sample"><span class="type-eyebrow">A Clear Choice Shower Door Company</span></div>
+        </div>
+        <div class="type-scale-row">
+          <div class="type-scale-meta"><div class="type-scale-name">Caption</div><div class="type-scale-size">12px / 0.75rem</div></div>
+          <div class="type-scale-sample"><span class="type-caption">Licensed · Insured · 5-Star Rated · Serving the Greater US Area</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. BUTTONS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">03</p>
+    <h2 class="ds-section-title">Buttons</h2>
+    <p class="ds-section-desc">All caps, tracked out — communicates confidence and intentionality. Sizes from SM to XL; variants for every context including dark backgrounds.</p>
+
+    <div class="ds-stack" style="gap: var(--space-8);">
+      <!-- Variants -->
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Variants</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <button class="btn btn-primary btn-lg">Get a Free Quote</button>
+          <button class="btn btn-accent btn-lg">Schedule a Visit</button>
+          <button class="btn btn-outline btn-lg">View Gallery</button>
+          <button class="btn btn-outline-accent btn-lg">Learn More</button>
+          <button class="btn btn-ghost btn-lg">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Sizes -->
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Sizes</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <button class="btn btn-primary btn-sm">Small</button>
+          <button class="btn btn-primary btn-md">Medium</button>
+          <button class="btn btn-primary btn-lg">Large</button>
+          <button class="btn btn-primary btn-xl">Extra Large</button>
+        </div>
+      </div>
+
+      <!-- States -->
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">States</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <button class="btn btn-primary btn-lg">Default</button>
+          <button class="btn btn-primary btn-lg btn-loading">Loading…</button>
+          <button class="btn btn-primary btn-lg btn-disabled">Disabled</button>
+        </div>
+      </div>
+
+      <!-- On dark background -->
+      <div class="p-8 rounded-xl" style="background: var(--slate-900);">
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-500); margin-bottom:var(--space-4);">On Dark Background</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <button class="btn btn-light btn-lg">Get Started</button>
+          <button class="btn btn-accent btn-lg">Book Now</button>
+          <button class="btn btn-dark-bg btn-lg">Learn More</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. FORMS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">04</p>
+    <h2 class="ds-section-title">Form Elements</h2>
+    <p class="ds-section-desc">Clean inputs with subtle focus states. Designed for quote requests, scheduling, and contact forms — the primary conversion points on the site.</p>
+
+    <div class="ds-grid-2" style="gap: var(--space-10);">
+      <!-- Left: inputs -->
+      <div class="ds-stack">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" placeholder="John & Jane Smith">
+          <span class="form-hint">As it appears on your account</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input class="form-input" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input class="form-input form-input-error" type="tel" placeholder="(555) 000-0000" value="555-abc-">
+          <span class="form-error">Please enter a valid US phone number</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Project Type</label>
+          <select class="form-select">
+            <option>Frameless Shower Door</option>
+            <option>Semi-Frameless Enclosure</option>
+            <option>Custom Glass Partition</option>
+            <option>Tub Enclosure</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Project Description</label>
+          <textarea class="form-textarea" placeholder="Tell us about your bathroom project, dimensions, preferences…"></textarea>
+        </div>
+      </div>
+
+      <!-- Right: checkboxes, radios, etc. -->
+      <div class="ds-stack">
+        <div>
+          <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Checkboxes</div>
+          <div class="ds-stack" style="gap: var(--space-3);">
+            <label class="form-check">
+              <input type="checkbox" class="form-check-input" checked>
+              <span class="form-check-label">Frameless glass doors</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" class="form-check-input" checked>
+              <span class="form-check-label">Custom hardware finishes</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" class="form-check-input">
+              <span class="form-check-label">3D design preview</span>
+            </label>
+            <label class="form-check">
+              <input type="checkbox" class="form-check-input">
+              <span class="form-check-label">White-glove installation</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="divider"><span class="divider-ornament">◆</span></div>
+
+        <div>
+          <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Budget Range</div>
+          <div class="ds-stack" style="gap: var(--space-3);">
+            <label class="form-check">
+              <input type="radio" name="budget" class="form-check-input" checked>
+              <span class="form-check-label">$500 – $1,500</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="budget" class="form-check-input">
+              <span class="form-check-label">$1,500 – $3,000</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="budget" class="form-check-input">
+              <span class="form-check-label">$3,000 – $6,000</span>
+            </label>
+            <label class="form-check">
+              <input type="radio" name="budget" class="form-check-input">
+              <span class="form-check-label">$6,000+</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top: auto; padding-top: var(--space-6);">
+          <button class="btn btn-accent btn-xl" style="width: 100%; justify-content: center;">Request Free Estimate →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. CARDS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">05</p>
+    <h2 class="ds-section-title">Cards & Components</h2>
+    <p class="ds-section-desc">Versatile card patterns for product listings, testimonials, team members, and content blocks throughout the site.</p>
+
+    <!-- Product Cards -->
+    <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-5);">Product Cards</div>
+    <div class="ds-grid-3" style="margin-bottom: var(--space-12);">
+      <div class="card-product">
+        <div class="card-product-img">
+          <span class="card-product-img-placeholder">Frameless</span>
+          <span class="card-product-badge">Best Seller</span>
+        </div>
+        <div class="card-product-body">
+          <div class="card-product-eyebrow">Shower Doors</div>
+          <div class="card-product-name">Neo-Angle Frameless Enclosure</div>
+          <div class="card-product-desc">Premium 3/8" tempered glass with brushed nickel hardware. Fits corner showers from 36" to 42".</div>
+          <div class="card-product-footer">
+            <div class="card-product-price">$1,890</div>
+            <button class="btn btn-accent btn-sm">Get Quote</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-product">
+        <div class="card-product-img" style="background: linear-gradient(135deg, var(--rose-100) 0%, var(--slate-100) 100%);">
+          <span class="card-product-img-placeholder" style="color:var(--rose-300);">Sliding</span>
+        </div>
+        <div class="card-product-body">
+          <div class="card-product-eyebrow">Tub Enclosures</div>
+          <div class="card-product-name">Sliding Bypass Tub Door</div>
+          <div class="card-product-desc">Smooth-glide bypass doors in clear or frosted glass. Available in chrome, bronze, and matte black.</div>
+          <div class="card-product-footer">
+            <div class="card-product-price">$680</div>
+            <button class="btn btn-accent btn-sm">Get Quote</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-product">
+        <div class="card-product-img" style="background: linear-gradient(135deg, var(--slate-200) 0%, var(--blue-100) 100%);">
+          <span class="card-product-img-placeholder" style="color:var(--blue-300);">Custom</span>
+        </div>
+        <div class="card-product-body">
+          <div class="card-product-eyebrow">Custom Work</div>
+          <div class="card-product-name">Bespoke Glass Partition</div>
+          <div class="card-product-desc">Fully custom dimensions and hardware. Walk-in designs, steam rooms, and specialty installations.</div>
+          <div class="card-product-footer">
+            <div class="card-product-price">From $2,400</div>
+            <button class="btn btn-accent btn-sm">Inquire</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Testimonials -->
+    <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-5);">Testimonials</div>
+    <div class="ds-grid-2" style="margin-bottom: var(--space-12);">
+      <div class="card-testimonial">
+        <div class="card-stars">★★★★★</div>
+        <div class="card-testimonial-text">The team was absolutely incredible. They measured twice, cut once, and our new frameless shower looks like it belongs in a five-star hotel.</div>
+        <div class="card-testimonial-author">
+          <div class="card-testimonial-avatar">SM</div>
+          <div>
+            <div class="card-testimonial-name">Sarah M.</div>
+            <div class="card-testimonial-role">Homeowner · Miami, FL</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-testimonial" style="background: var(--blue-500);">
+        <div class="card-stars">★★★★★</div>
+        <div class="card-testimonial-text">We've used CC Shower Door on three renovation projects now. Competitive pricing, premium materials, and zero drama on install day.</div>
+        <div class="card-testimonial-author">
+          <div class="card-testimonial-avatar" style="background: linear-gradient(135deg, var(--rose-300), var(--slate-900));">RK</div>
+          <div>
+            <div class="card-testimonial-name">Robert K.</div>
+            <div class="card-testimonial-role">General Contractor · Atlanta, GA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Icon Feature Cards -->
+    <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-5);">Feature Boxes</div>
+    <div class="ds-grid-3">
+      <div class="icon-box">
+        <div class="icon-box-icon icon-box-icon-blue">🔵</div>
+        <div class="icon-box-body">
+          <div class="icon-box-title">Licensed & Insured</div>
+          <div class="icon-box-text">Fully licensed contractors with $2M general liability insurance on every job.</div>
+        </div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-box-icon icon-box-icon-rose">🌸</div>
+        <div class="icon-box-body">
+          <div class="icon-box-title">Lifetime Warranty</div>
+          <div class="icon-box-text">Our hardware and installation are guaranteed for as long as you own your home.</div>
+        </div>
+      </div>
+      <div class="icon-box">
+        <div class="icon-box-icon icon-box-icon-slate">⚙️</div>
+        <div class="icon-box-body">
+          <div class="icon-box-title">48-hr Installation</div>
+          <div class="icon-box-text">From measurement to installation in as little as 48 hours for standard projects.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. BADGES & ALERTS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">06</p>
+    <h2 class="ds-section-title">Badges, Tags & Alerts</h2>
+    <p class="ds-section-desc">Concise, high-information UI elements for status, categories, and system messaging.</p>
+
+    <div class="ds-stack" style="gap: var(--space-10);">
+      <!-- Badges -->
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Badges</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <span class="badge badge-primary">Frameless</span>
+          <span class="badge badge-accent">New Arrival</span>
+          <span class="badge badge-dark">Premium</span>
+          <span class="badge badge-outline">In Stock</span>
+          <span class="badge badge-success">Installed</span>
+          <span class="badge badge-warning">Lead Time: 5 days</span>
+          <span class="badge badge-primary badge-dot">Available</span>
+          <span class="badge badge-accent badge-dot">On Sale</span>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Alerts</div>
+        <div class="ds-stack" style="gap: var(--space-3);">
+          <div class="alert alert-info">
+            <span class="alert-icon">ℹ️</span>
+            <div class="alert-body">
+              <div class="alert-title">Consultation Confirmed</div>
+              <div class="alert-desc">A specialist will visit your home on Thursday, Jan 23rd between 9am and noon.</div>
+            </div>
+          </div>
+          <div class="alert alert-success">
+            <span class="alert-icon">✅</span>
+            <div class="alert-body">
+              <div class="alert-title">Installation Complete</div>
+              <div class="alert-desc">Your new frameless shower door has been installed. Please review and sign the completion form.</div>
+            </div>
+          </div>
+          <div class="alert alert-warning">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-body">
+              <div class="alert-title">Scheduling Delay</div>
+              <div class="alert-desc">High demand may extend lead times by 2–3 business days for custom projects this month.</div>
+            </div>
+          </div>
+          <div class="alert alert-error">
+            <span class="alert-icon">❌</span>
+            <div class="alert-body">
+              <div class="alert-title">Form Error</div>
+              <div class="alert-desc">Please complete all required fields before submitting your quote request.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. STATS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">07</p>
+    <h2 class="ds-section-title">Stats & Numbers</h2>
+    <p class="ds-section-desc">Social proof displayed with the elegance it deserves. The display typeface shines in large numerals.</p>
+
+    <div class="ds-grid-4">
+      <div class="stat-card">
+        <div class="stat-number">4,800+</div>
+        <div class="stat-label">Doors Installed</div>
+        <div class="stat-trend">↑ 22% this year</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">5.0</div>
+        <div class="stat-label">Star Rating</div>
+        <div class="stat-trend">★ 1,200 reviews</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">48h</div>
+        <div class="stat-label">Avg. Install Time</div>
+        <div class="stat-trend">↓ Faster than ever</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">15yr</div>
+        <div class="stat-label">In Business</div>
+        <div class="stat-trend">Since 2010</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. AVATARS & DIVIDERS -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">08</p>
+    <h2 class="ds-section-title">Avatars & Dividers</h2>
+    <p class="ds-section-desc">Supporting components for team members, customer profiles, and content separation.</p>
+
+    <div class="ds-grid-2" style="gap: var(--space-12);">
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Avatar Sizes</div>
+        <div class="ds-flex-gap" style="align-items: center;">
+          <div class="avatar avatar-xs">CC</div>
+          <div class="avatar avatar-sm">JD</div>
+          <div class="avatar avatar-md">SM</div>
+          <div class="avatar avatar-lg">RK</div>
+          <div class="avatar avatar-xl">MB</div>
+        </div>
+        <div style="margin-top: var(--space-6);">
+          <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-3);">Avatar Group</div>
+          <div class="avatar-group">
+            <div class="avatar avatar-md">JD</div>
+            <div class="avatar avatar-md" style="background: linear-gradient(135deg, var(--rose-400), var(--rose-600));">SM</div>
+            <div class="avatar avatar-md" style="background: linear-gradient(135deg, var(--slate-600), var(--slate-900));">RK</div>
+            <div class="avatar avatar-md" style="background: linear-gradient(135deg, var(--blue-600), var(--slate-900));">MB</div>
+            <div class="avatar avatar-md" style="background: var(--slate-200); color: var(--slate-600);">+8</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-4);">Dividers</div>
+        <div class="ds-stack" style="gap: var(--space-5);">
+          <div class="divider">or</div>
+          <div class="divider"><span class="divider-ornament">◆</span></div>
+          <div class="divider">Our Products</div>
+          <div style="width: 100%; height: 1px; background: linear-gradient(90deg, transparent, var(--rose-400), var(--blue-400), transparent);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. SHADOWS & SPACING -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">09</p>
+    <h2 class="ds-section-title">Shadows & Spacing</h2>
+    <p class="ds-section-desc">A layered elevation system creates depth and hierarchy. Spacing is on a 4px base grid for perfect consistency.</p>
+
+    <div class="ds-grid-2" style="gap: var(--space-12);">
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-5);">Elevation</div>
+        <div class="ds-stack" style="gap: var(--space-4);">
+          <div class="shadow-demo" style="box-shadow: var(--shadow-sm);">shadow-sm · Borders, inputs</div>
+          <div class="shadow-demo" style="box-shadow: var(--shadow-md);">shadow-md · Cards, dropdowns</div>
+          <div class="shadow-demo" style="box-shadow: var(--shadow-lg);">shadow-lg · Hover states, modals</div>
+          <div class="shadow-demo" style="box-shadow: var(--shadow-xl);">shadow-xl · Drawers, dialogs</div>
+          <div class="shadow-demo" style="box-shadow: var(--shadow-accent);">shadow-accent · CTA buttons</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: var(--text-xs); font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate-400); margin-bottom:var(--space-5);">Spacing Scale (4px base)</div>
+        <div class="spacing-row">
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 4px;"></div><div class="spacing-meta">1 · 4px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 8px;"></div><div class="spacing-meta">2 · 8px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 12px;"></div><div class="spacing-meta">3 · 12px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 16px;"></div><div class="spacing-meta">4 · 16px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 20px;"></div><div class="spacing-meta">5 · 20px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 24px;"></div><div class="spacing-meta">6 · 24px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 32px;"></div><div class="spacing-meta">8 · 32px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 40px;"></div><div class="spacing-meta">10 · 40px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 48px;"></div><div class="spacing-meta">12 · 48px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 64px;"></div><div class="spacing-meta">16 · 64px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 80px;"></div><div class="spacing-meta">20 · 80px</div></div>
+          <div class="spacing-demo"><div class="spacing-bar" style="width: 96px;"></div><div class="spacing-meta">24 · 96px</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. HERO EXAMPLE -->
+<section class="ds-section">
+  <div class="ds-page">
+    <p class="ds-label">10</p>
+    <h2 class="ds-section-title">UI Composition Example</h2>
+    <p class="ds-section-desc">A real-world hero section assembling colors, typography, buttons, and badges in production context.</p>
+
+    <div class="hero-example">
+      <div class="hero-example-inner">
+        <div class="hero-example-eyebrow">A Clear Choice Shower Door Company</div>
+        <h2 class="hero-example-title">Your Bathroom,<br><em>Beautifully Done.</em></h2>
+        <p class="hero-example-subtitle">Premium glass shower doors and enclosures, professionally installed. Serving homeowners and contractors across the United States.</p>
+        <div class="hero-example-actions">
+          <button class="btn btn-accent btn-xl">Get a Free Estimate</button>
+          <button class="btn btn-dark-bg btn-xl">View Our Work</button>
+        </div>
+        <div style="display:flex; gap: var(--space-6); margin-top: var(--space-10);">
+          <div style="color: var(--slate-400); font-size: var(--text-xs); font-weight:300;"><strong style="color:white; font-weight:500; display:block; font-size: var(--text-lg); font-family: var(--font-display);">4,800+</strong>Doors Installed</div>
+          <div style="width:1px; background: rgba(255,255,255,0.1);"></div>
+          <div style="color: var(--slate-400); font-size: var(--text-xs); font-weight:300;"><strong style="color:white; font-weight:500; display:block; font-size: var(--text-lg); font-family: var(--font-display);">★ 5.0</strong>Customer Rating</div>
+          <div style="width:1px; background: rgba(255,255,255,0.1);"></div>
+          <div style="color: var(--slate-400); font-size: var(--text-xs); font-weight:300;"><strong style="color:white; font-weight:500; display:block; font-size: var(--text-lg); font-family: var(--font-display);">15 yrs</strong>In Business</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="ds-footer">
+  <div class="ds-page">
+    <p>CC Shower Door — Design System v1.0 · <strong>A Clear Choice Shower Door Company</strong> · Confidential Brand Document</p>
+  </div>
+</footer>
+
+</body>
+</html>
