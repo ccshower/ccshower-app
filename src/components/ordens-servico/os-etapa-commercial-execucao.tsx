@@ -82,10 +82,11 @@ export function OsEtapaCommercialExecucao({
     if (!confirm(t("os.visit.confirmFinish"))) return;
     startTransition(async () => {
       setMsg(null);
-      const payment = paymentRef.current;
-      const savePay = await salvarCapturaPagamentoVisita(ordem.id, payment);
-      if (!savePay.ok) {
-        setMsg(savePay.message);
+      const payment =
+        paymentCaptureRef.current?.getPayload() ?? visitPaymentFromOrdem(ordem);
+      const flush = await paymentCaptureRef.current?.flushReceipts();
+      if (flush && !flush.ok) {
+        setMsg(flush.message);
         return;
       }
       const r = await finalizarVisitaComercial(ordem.id, anotacoes, payment);

@@ -171,7 +171,7 @@ export function proximosSlotsDisponiveisHoje(
 ): AgendaSlotSugestao[] {
   const agora = horaOperacionalAgora();
   const agoraMin = compararHm(agora, "00:00");
-  let startAt = VISITA_SLOTS_HORARIOS.findIndex((slot) => {
+  const startAt = VISITA_SLOTS_HORARIOS.findIndex((slot) => {
     const slotMin = compararHm(slot, "00:00");
     return slotMin >= agoraMin;
   });

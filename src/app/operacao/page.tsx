@@ -183,6 +183,8 @@ export default async function OperacaoPage({ searchParams }: Props) {
           : null,
         responsavel: null,
         visita_inicial: mapVisitaInicialResumo(visita),
+        instalacao_agendada: null,
+        fornecedor: null,
         eventos: [],
         tem_bloqueio_ativo: bloqueioAtivoIds.has(os.id),
       };

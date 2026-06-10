@@ -64,7 +64,12 @@ export default async function ClientesPage() {
     return {
       ...c,
       equipe: equipe
-        ? { id: equipe.id, nome: equipe.nome, cor_primaria: equipe.cor_primaria }
+        ? {
+            id: equipe.id,
+            nome: equipe.nome,
+            cor_primaria: equipe.cor_primaria,
+            cor_secundaria: equipe.cor_secundaria,
+          }
         : null,
     };
   });

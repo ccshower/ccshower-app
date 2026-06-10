@@ -17,9 +17,11 @@ export default async function AdminEquipesPage() {
     ]);
 
   if (error || unidadesError || usuariosError) {
+    const message =
+      error?.message ?? unidadesError ?? usuariosError?.message ?? "Unknown error";
     return (
       <div className="rounded-sm border border-cc-red-soft bg-cc-red-soft p-4 text-sm font-medium text-cc-red">
-        Error loading teams: {error?.message ?? unidadesError ?? usuariosError}
+        Error loading teams: {message}
       </div>
     );
   }

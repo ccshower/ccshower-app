@@ -19,4 +19,4 @@ Next.js (App Router) + TypeScript + Tailwind + Supabase.
 - `npm run start` — servidor após build
 - `npm run seed:clientes` — popula clientes de teste (40 registros; ver `scripts/seed-clientes.mjs`)
 
-Consulte `docs/ARCHITECTURE.md`, `docs/PRODUCT_RULES.md` e `docs/DATABASE_RULES.md`.
+Consulte `docs/ARCHITECTURE.md`, `docs/PRODUCT_RULES.md`, `docs/DATABASE_RULES.md` e **`docs/DEPLOY.md`** (GitHub + Vercel).

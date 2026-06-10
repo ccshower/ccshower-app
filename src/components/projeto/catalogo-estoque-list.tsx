@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { CatalogoItem } from "@/lib/types/database";
-import { formatCatalogoQuantity } from "@/lib/ordens-servico/catalogo-quantidade";
+import { formatCatalogoQuantidade } from "@/lib/ordens-servico/catalogo-quantidade";
 
 const inputClass =
   "w-full rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none placeholder:text-cc-subtle focus:border-cc-blue-focus focus:shadow-focus";
@@ -120,7 +120,7 @@ export function CatalogoEstoqueList({ itens, embedded = false, onNovo }: Props) 
                     </span>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold tabular-nums tracking-[0.04em] text-violet-800">
-                        {formatCatalogoQuantity(item.quantidade ?? 0)}
+                        {formatCatalogoQuantidade(item.quantidade ?? 0)}
                       </span>
                       <span className="rounded-full border border-cc-border bg-cc-canvas px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
                         {item.unidade}
