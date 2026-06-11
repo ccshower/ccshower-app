@@ -118,8 +118,10 @@ export default async function OrdensServicoPage() {
               id: c.id,
               nome: c.nome,
               telefone: c.telefone,
+              email: c.email ?? null,
               endereco_formatado: c.endereco_formatado,
               tipo_cliente: c.tipo_cliente,
+              observacoes: c.observacoes ?? null,
               latitude: c.latitude ?? null,
               longitude: c.longitude ?? null,
               google_maps_url: c.google_maps_url ?? null,
@@ -130,10 +132,17 @@ export default async function OrdensServicoPage() {
         status_atual: os.status_atual ?? "commercial_pending",
         equipe_atual_id: os.equipe_atual_id ?? os.equipe_id,
         equipe: eq
-          ? { id: eq.id, nome: eq.nome, cor_primaria: eq.cor_primaria }
+          ? {
+              id: eq.id,
+              nome: eq.nome,
+              cor_primaria: eq.cor_primaria,
+              cor_secundaria: eq.cor_secundaria,
+            }
           : null,
         responsavel: resp ? { id: resp.id, nome: resp.nome } : null,
         visita_inicial: mapVisitaInicialResumo(visita),
+        instalacao_agendada: null,
+        fornecedor: null,
         tem_bloqueio_ativo: bloqueioAtivoIds.has(os.id),
       };
     },

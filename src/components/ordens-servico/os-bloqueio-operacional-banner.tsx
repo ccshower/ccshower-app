@@ -48,10 +48,11 @@ export function OsBloqueioOperacionalBanner({ ordem, onAtualizado }: Props) {
 
   if (!bloqueioAtivo || !bloqueio) return null;
 
-  const bloqueioId = bloqueio.id;
+  const crash = bloqueio;
+  const bloqueioId = crash.id;
 
   function submitResolver() {
-    if (bloqueio.status !== BLOQUEIO_STATUS_ATIVO) return;
+    if (crash.status !== BLOQUEIO_STATUS_ATIVO) return;
     if (!window.confirm(t("os.bloqueio.confirmResolve"))) return;
 
     startTransition(async () => {
@@ -78,16 +79,16 @@ export function OsBloqueioOperacionalBanner({ ordem, onAtualizado }: Props) {
         <dl>
           <DetailRow
             label={t("os.bloqueio.fieldStage")}
-            value={tOsStage(parseOsStage(bloqueio.etapa))}
+            value={tOsStage(parseOsStage(crash.etapa))}
           />
-          <DetailRow label={t("os.bloqueio.fieldCategory")} value={bloqueio.categoria} />
-          <DetailRow label={t("os.bloqueio.fieldReason")} value={bloqueio.motivo} />
-          {bloqueio.observacao ? (
-            <DetailRow label={t("os.bloqueio.fieldNotes")} value={bloqueio.observacao} />
+          <DetailRow label={t("os.bloqueio.fieldCategory")} value={crash.categoria} />
+          <DetailRow label={t("os.bloqueio.fieldReason")} value={crash.motivo} />
+          {crash.observacao ? (
+            <DetailRow label={t("os.bloqueio.fieldNotes")} value={crash.observacao} />
           ) : null}
           <DetailRow
             label={t("os.bloqueio.fieldCreatedAt")}
-            value={formatBloqueioData(bloqueio.criado_em)}
+            value={formatBloqueioData(crash.criado_em)}
           />
         </dl>
       </div>
@@ -100,7 +101,7 @@ export function OsBloqueioOperacionalBanner({ ordem, onAtualizado }: Props) {
 
       <button
         type="button"
-        disabled={pending || bloqueio.status !== BLOQUEIO_STATUS_ATIVO}
+        disabled={pending || crash.status !== BLOQUEIO_STATUS_ATIVO}
         onClick={submitResolver}
         className="mt-3 w-full rounded-sm border border-amber-400/80 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-amber-950 hover:bg-amber-100/80 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >

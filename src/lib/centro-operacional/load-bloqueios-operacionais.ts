@@ -34,6 +34,48 @@ type CrashRow = {
   } | null;
 };
 
+function relationOne<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function normalizeCrashRow(row: {
+  id: string;
+  ordem_servico_id: string;
+  etapa: string;
+  categoria: string;
+  motivo: string;
+  criado_em: string;
+  ordens_servico:
+    | {
+        id: string;
+        ativo: boolean;
+        responsavel_id: string | null;
+        clientes: { nome: string | null } | { nome: string | null }[] | null;
+        responsavel: { nome: string | null } | { nome: string | null }[] | null;
+      }
+    | {
+        id: string;
+        ativo: boolean;
+        responsavel_id: string | null;
+        clientes: { nome: string | null } | { nome: string | null }[] | null;
+        responsavel: { nome: string | null } | { nome: string | null }[] | null;
+      }[]
+    | null;
+}): CrashRow {
+  const os = relationOne(row.ordens_servico);
+  return {
+    ...row,
+    ordens_servico: os
+      ? {
+          ...os,
+          clientes: relationOne(os.clientes),
+          responsavel: relationOne(os.responsavel),
+        }
+      : null,
+  };
+}
+
 export async function loadBloqueiosOperacionais(
   unidadeId?: string | null,
 ): Promise<BloqueiosOperacionaisData> {
@@ -75,7 +117,7 @@ export async function loadBloqueiosOperacionais(
 
   const items: BloqueioOperacionalItem[] = [];
 
-  for (const row of (data ?? []) as CrashRow[]) {
+  for (const row of (data ?? []).map(normalizeCrashRow)) {
     const os = row.ordens_servico;
     if (!os?.ativo) continue;
 

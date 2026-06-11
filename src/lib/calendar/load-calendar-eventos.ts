@@ -22,6 +22,36 @@ type AgendaRow = {
   ordens_servico: { etapa_atual: string | null } | null;
 };
 
+function relationOne<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function normalizeAgendaRow(row: {
+  id: string;
+  ordem_servico_id: string;
+  equipe_id: string | null;
+  tipo_evento: string;
+  status: string;
+  data_evento: string | null;
+  data_inicio: string | null;
+  data_fim: string | null;
+  hora_evento: string | null;
+  clientes: { nome: string } | { nome: string }[] | null;
+  equipes:
+    | { nome: string; cor_primaria: string; cor_secundaria: string }
+    | { nome: string; cor_primaria: string; cor_secundaria: string }[]
+    | null;
+  ordens_servico: { etapa_atual: string | null } | { etapa_atual: string | null }[] | null;
+}): AgendaRow {
+  return {
+    ...row,
+    clientes: relationOne(row.clientes),
+    equipes: relationOne(row.equipes),
+    ordens_servico: relationOne(row.ordens_servico),
+  };
+}
+
 export type LoadCalendarEventosOptions = {
   equipeId?: string | null;
   unidadeId?: string | null;
@@ -74,7 +104,8 @@ export async function loadCalendarEventos(
     return { eventos: [], mondayYmd, error: error.message };
   }
 
-  const eventos = ((data ?? []) as AgendaRow[])
+  const eventos = (data ?? [])
+    .map(normalizeAgendaRow)
     .map(mapRowToCalendarEvento)
     .filter((ev): ev is CalendarEvento => ev != null)
     .filter((ev) => eventoInWeekRange(ev.startIso, start, end))

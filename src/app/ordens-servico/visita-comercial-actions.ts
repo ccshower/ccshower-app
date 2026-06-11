@@ -52,7 +52,7 @@ async function loadOsParaVisita(
 ) {
   const { data: os, error } = await supabase
     .from("ordens_servico")
-    .select("id, cliente_id, etapa_atual, status")
+    .select("id, cliente_id, etapa_atual, status, status_atual")
     .eq("id", id)
     .single();
 
@@ -75,6 +75,7 @@ async function loadOsParaVisita(
       cliente_id: os.cliente_id as string,
       etapa_atual: os.etapa_atual as string,
       status: os.status as OrdemServicoStatus,
+      status_atual: (os.status_atual as string) ?? "commercial_pending",
       visita_inicial: visita,
     },
   };

@@ -51,10 +51,31 @@ async function requireAuth() {
   return { supabase, userId: user.id };
 }
 
+type LoadOsInstalacaoResult =
+  | { error: string }
+  | {
+      os: {
+        id: string;
+        cliente_id: string;
+        equipe_id: string;
+        responsavel_id: string | null;
+        valor_previsto: number | null;
+        visit_payment_received: boolean;
+        visit_payment_amount: number | null;
+        visit_payment_method: string | null;
+        installation_payment_received: boolean;
+        installation_payment_amount: number | null;
+        installation_payment_method: string | null;
+        installation_payment_notes: string | null;
+        installation_balance_pending_acknowledged: boolean;
+        installation_execution_notes: string | null;
+      };
+    };
+
 async function loadOsInstalacao(
   supabase: Awaited<ReturnType<typeof createClient>>,
   osId: string,
-) {
+): Promise<LoadOsInstalacaoResult> {
   const { data, error } = await supabase
     .from("ordens_servico")
     .select(

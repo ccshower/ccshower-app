@@ -1,5 +1,6 @@
 import { OPERATIONAL_TZ, zonedWallClockToUtcIso } from "@/lib/ordens-servico/datetime";
 import { VISITA_DURACAO_MINUTOS } from "@/lib/ordens-servico/visita-slots";
+import type { AgendaEvento, AgendaEventoStatus } from "@/lib/types/database";
 
 export type AgendaEventoDatetimeFields = {
   data_evento?: string | null;
@@ -82,12 +83,11 @@ export function compareAgendaEventoStartDesc(
   return -compareAgendaEventoStartAsc(a, b);
 }
 
-export type VisitaInicialResumo = {
-  id: string;
+export type VisitaInicialResumo = Pick<
+  AgendaEvento,
+  "id" | "data_inicio" | "data_fim" | "status" | "tipo_evento"
+> & {
   data_inicio: string;
-  data_fim: string | null;
-  status: string;
-  tipo_evento: string;
 };
 
 /** Normaliza visita técnica para UI — data_inicio/data_fim como fonte oficial. */
@@ -95,7 +95,7 @@ export function mapVisitaInicialResumo(
   visita:
     | (AgendaEventoDatetimeFields & {
         id: string;
-        status: string;
+        status: AgendaEventoStatus | string;
         tipo_evento: string;
       })
     | null
@@ -110,7 +110,7 @@ export function mapVisitaInicialResumo(
     id: visita.id,
     data_inicio,
     data_fim: agendaEventoEndIso(visita),
-    status: visita.status,
+    status: visita.status as AgendaEventoStatus,
     tipo_evento: visita.tipo_evento,
   };
 }

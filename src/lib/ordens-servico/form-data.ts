@@ -7,7 +7,7 @@ export async function loadOrdemServicoFormData() {
     supabase
       .from("clientes")
       .select(
-        "id, nome, telefone, endereco_formatado, tipo_cliente, google_maps_url, latitude, longitude, equipe_id, ativo",
+        "id, nome, telefone, email, endereco_formatado, tipo_cliente, observacoes, google_maps_url, latitude, longitude, equipe_id, ativo",
       )
       .eq("ativo", true)
       .order("nome", { ascending: true }),
@@ -33,8 +33,10 @@ export async function loadOrdemServicoFormData() {
       | "id"
       | "nome"
       | "telefone"
+      | "email"
       | "endereco_formatado"
       | "tipo_cliente"
+      | "observacoes"
       | "google_maps_url"
       | "latitude"
       | "longitude"

@@ -139,7 +139,9 @@ export default async function OperacaoPage({ searchParams }: Props) {
     clienteIds.length > 0
       ? supabase
           .from("clientes")
-          .select("id, nome, telefone, endereco_formatado, tipo_cliente")
+          .select(
+            "id, nome, telefone, email, endereco_formatado, tipo_cliente, observacoes, google_maps_url, latitude, longitude",
+          )
           .in("id", clienteIds)
       : Promise.resolve({ data: [] }),
     equipeIds.length > 0
@@ -169,8 +171,13 @@ export default async function OperacaoPage({ searchParams }: Props) {
               id: c.id,
               nome: c.nome,
               telefone: c.telefone,
+              email: c.email ?? null,
               endereco_formatado: c.endereco_formatado,
               tipo_cliente: c.tipo_cliente,
+              observacoes: c.observacoes ?? null,
+              google_maps_url: c.google_maps_url ?? null,
+              latitude: c.latitude ?? null,
+              longitude: c.longitude ?? null,
             }
           : null,
         equipe: eq

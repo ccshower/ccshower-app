@@ -76,6 +76,83 @@ type VisitaRow = {
   ordens_servico: { etapa_atual: string | null } | null;
 };
 
+function relationOne<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function normalizeCrashRow(row: {
+  id: string;
+  ordem_servico_id: string;
+  etapa: string;
+  categoria: string;
+  motivo: string;
+  criado_em: string;
+  ordens_servico:
+    | {
+        id: string;
+        ativo: boolean;
+        status: string;
+        clientes: { nome: string | null } | { nome: string | null }[] | null;
+        responsavel: { nome: string | null } | { nome: string | null }[] | null;
+      }
+    | {
+        id: string;
+        ativo: boolean;
+        status: string;
+        clientes: { nome: string | null } | { nome: string | null }[] | null;
+        responsavel: { nome: string | null } | { nome: string | null }[] | null;
+      }[]
+    | null;
+}): CrashRow {
+  const os = relationOne(row.ordens_servico);
+  return {
+    ...row,
+    ordens_servico: os
+      ? {
+          ...os,
+          clientes: relationOne(os.clientes),
+          responsavel: relationOne(os.responsavel),
+        }
+      : null,
+  };
+}
+
+function normalizeOsRow(row: {
+  id: string;
+  status: string;
+  etapa_atual: string | null;
+  status_atual: string | null;
+  financial_decision: string | null;
+  atualizado_em: string;
+  clientes: { nome: string | null } | { nome: string | null }[] | null;
+}): OsRow {
+  return {
+    ...row,
+    clientes: relationOne(row.clientes),
+  };
+}
+
+function normalizeVisitaRow(row: {
+  id: string;
+  ordem_servico_id: string;
+  status: string | null;
+  data_inicio?: string | null;
+  data_evento?: string | null;
+  hora_evento?: string | null;
+  clientes: { nome: string | null } | { nome: string | null }[] | null;
+  ordens_servico:
+    | { etapa_atual: string | null }
+    | { etapa_atual: string | null }[]
+    | null;
+}): VisitaRow {
+  return {
+    ...row,
+    clientes: relationOne(row.clientes),
+    ordens_servico: relationOne(row.ordens_servico),
+  };
+}
+
 type RawItem = AtencaoAgoraItem & AtencaoSortMeta;
 
 function diasDesde(iso: string, nowMs: number): number {
@@ -414,9 +491,9 @@ export async function loadAtencaoAgora(
     };
   }
 
-  const crashRows = (crashRes.data ?? []) as CrashRow[];
-  const osRows = (osRes.data ?? []) as OsRow[];
-  const visitaRows = (visitasRes.data ?? []) as VisitaRow[];
+  const crashRows = (crashRes.data ?? []).map(normalizeCrashRow);
+  const osRows = (osRes.data ?? []).map(normalizeOsRow);
+  const visitaRows = (visitasRes.data ?? []).map(normalizeVisitaRow);
 
   const crashOsIds = new Set(
     crashRows

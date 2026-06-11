@@ -50,10 +50,26 @@ function revalidateOs(osId: string) {
   revalidatePath(`/os/${osId}`);
 }
 
+type LoadOsFinanceiroResult =
+  | { error: string }
+  | {
+      os: {
+        id: string;
+        cliente_id: string;
+        equipe_id: string;
+        responsavel_id: string | null;
+        financial_decision: ReturnType<typeof parseFinancialDecision>;
+        valor_comercial: number | null;
+        valor_projeto: number | null;
+        valor_final: number | null;
+        valor_previsto: number | null;
+      };
+    };
+
 async function loadOsFinanceiro(
   supabase: Awaited<ReturnType<typeof createClient>>,
   osId: string,
-) {
+): Promise<LoadOsFinanceiroResult> {
   const { data, error } = await supabase
     .from("ordens_servico")
     .select(

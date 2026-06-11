@@ -62,10 +62,14 @@ async function requireAuth() {
   return { supabase, userId: user.id };
 }
 
+type LoadOsProjectStageResult =
+  | { error: string }
+  | { os: { id: string; empresa_id: string | null } };
+
 async function loadOsProjectStage(
   supabase: Awaited<ReturnType<typeof createClient>>,
   osId: string,
-) {
+): Promise<LoadOsProjectStageResult> {
   const { data, error } = await supabase
     .from("ordens_servico")
     .select("id, etapa_atual, empresa_id")
@@ -670,10 +674,21 @@ export async function salvarObservacoesInstalacao(
   }
 }
 
+type LoadOsParaFinalizarProjetoResult =
+  | { error: string }
+  | {
+      os: {
+        id: string;
+        cliente_id: string;
+        equipe_id: string;
+        responsavel_id: string | null;
+      };
+    };
+
 async function loadOsParaFinalizarProjeto(
   supabase: Awaited<ReturnType<typeof createClient>>,
   osId: string,
-) {
+): Promise<LoadOsParaFinalizarProjetoResult> {
   const { data, error } = await supabase
     .from("ordens_servico")
     .select(
