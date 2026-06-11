@@ -41,7 +41,22 @@ Alternativa: instale [GitHub CLI](https://cli.github.com/) e rode `gh auth login
 
 5. Deploy → cada push em `main` gera deploy automático.
 
-### Google Maps em produção
+### Erro: "No Output Directory named dist found"
+
+Isso acontece quando o projeto foi importado com preset **Vite/Other** e **Output Directory = `dist`** (resto do protótipo antigo). Next.js usa `.next`, não `dist`.
+
+**Correção no Vercel:**
+
+1. Project → **Settings** → **General** → **Framework Preset** → **Next.js**
+2. **Build & Development Settings:**
+   - Build Command: `npm run build` (ou vazio = default Next.js)
+   - Output Directory: **vazio** (não use `dist`)
+   - Install Command: `npm install` (ou vazio)
+3. Salve e rode **Redeploy** (Deployments → ⋯ → Redeploy)
+
+O repo inclui `vercel.json` com `"framework": "nextjs"` para reforçar o preset correto em novos deploys.
+
+---
 
 No Google Cloud Console, em **API key restrictions → HTTP referrers**, adicione:
 
