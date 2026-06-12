@@ -18,82 +18,86 @@ export type GoogleAddress = {
   google_maps_url: string;
 };
 
-type GoogleAddressComponent = {
-  long_name: string;
-  short_name: string;
+type AddressComponent = {
+  longText?: string;
+  shortText?: string;
   types: string[];
 };
 
-type PlacePrediction = {
-  description: string;
-  place_id: string;
+type PlacePredictionLike = {
+  placeId: string;
+  text: { text: string };
+  toPlace: () => PlaceLike;
 };
 
-type GooglePlace = {
-  place_id?: string;
-  formatted_address?: string;
-  url?: string;
-  address_components?: GoogleAddressComponent[];
-  geometry?: {
-    location?: {
-      lat: () => number;
-      lng: () => number;
-    };
+type PlaceLike = {
+  id?: string;
+  formattedAddress?: string;
+  googleMapsURI?: string;
+  location?: { lat: () => number; lng: () => number };
+  addressComponents?: AddressComponent[];
+  fetchFields: (opts: { fields: string[] }) => Promise<void>;
+};
+
+type PlacesLibrary = {
+  AutocompleteSuggestion: {
+    fetchAutocompleteSuggestions: (request: {
+      input: string;
+      sessionToken?: unknown;
+      includedRegionCodes?: string[];
+      language?: string;
+      region?: string;
+    }) => Promise<{
+      suggestions: Array<{
+        placePrediction?: PlacePredictionLike;
+      }>;
+    }>;
   };
+  AutocompleteSessionToken: new () => unknown;
+};
+
+type PredictionItem = {
+  place_id: string;
+  description: string;
+  prediction: PlacePredictionLike;
 };
 
 declare global {
   interface Window {
     google?: {
       maps?: {
-        places?: {
-          PlacesServiceStatus: { OK: string; ZERO_RESULTS: string; REQUEST_DENIED: string };
-          AutocompleteService: new () => {
-            getPlacePredictions: (
-              request: Record<string, unknown>,
-              callback: (
-                predictions: PlacePrediction[] | null,
-                status: string,
-              ) => void,
-            ) => void;
-          };
-          PlacesService: new (el: HTMLElement) => {
-            getDetails: (
-              request: { placeId: string; fields: string[] },
-              callback: (place: GooglePlace | null, status: string) => void,
-            ) => void;
-          };
-        };
+        importLibrary: (name: "places") => Promise<PlacesLibrary>;
       };
     };
     __ccshowerMapsInit?: () => void;
   }
 }
 
-let googleMapsPromise: Promise<void> | null = null;
+let mapsCorePromise: Promise<void> | null = null;
+let placesLibraryPromise: Promise<PlacesLibrary> | null = null;
+let placesLibraryCache: PlacesLibrary | null = null;
 
-function loadGoogleMaps(apiKey: string) {
-  if (!apiKey) return Promise.reject(new Error("Chave do Google Maps ausente"));
-  if (window.google?.maps?.places) return Promise.resolve();
-  if (googleMapsPromise) return googleMapsPromise;
+function loadMapsCore(apiKey: string): Promise<void> {
+  if (window.google?.maps?.importLibrary) return Promise.resolve();
+  if (mapsCorePromise) return mapsCorePromise;
 
-  googleMapsPromise = new Promise((resolve, reject) => {
+  mapsCorePromise = new Promise((resolve, reject) => {
     const finish = () => {
-      if (window.google?.maps?.places) resolve();
-      else reject(new Error("Biblioteca Places nao carregou"));
+      if (window.google?.maps?.importLibrary) resolve();
+      else reject(new Error("Google Maps core did not load"));
     };
 
     const existing = document.querySelector<HTMLScriptElement>(
-      "script[data-google-places]",
+      "script[data-google-maps-core]",
     );
     if (existing) {
-      if (window.google?.maps?.places) {
+      if (window.google?.maps?.importLibrary) {
         resolve();
         return;
       }
       existing.addEventListener("load", finish);
       existing.addEventListener("error", () =>
-        reject(new Error("Falha ao carregar Google Maps")),
+        reject(new Error("Failed to load Google Maps")),
       );
       return;
     }
@@ -104,16 +108,30 @@ function loadGoogleMaps(apiKey: string) {
     };
 
     const script = document.createElement("script");
-    script.dataset.googlePlaces = "true";
+    script.dataset.googleMapsCore = "true";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey,
-    )}&libraries=places&language=en&region=US&loading=async&callback=__ccshowerMapsInit`;
+    )}&v=weekly&loading=async&callback=__ccshowerMapsInit`;
     script.async = true;
-    script.onerror = () => reject(new Error("Falha ao carregar Google Maps"));
+    script.onerror = () => reject(new Error("Failed to load Google Maps"));
     document.head.appendChild(script);
   });
 
-  return googleMapsPromise;
+  return mapsCorePromise;
+}
+
+async function loadPlacesLibrary(apiKey: string): Promise<PlacesLibrary> {
+  if (placesLibraryCache) return placesLibraryCache;
+  if (placesLibraryPromise) return placesLibraryPromise;
+
+  placesLibraryPromise = (async () => {
+    await loadMapsCore(apiKey);
+    const lib = await window.google!.maps!.importLibrary("places");
+    placesLibraryCache = lib;
+    return lib;
+  })();
+
+  return placesLibraryPromise;
 }
 
 function toAddressUpper(value: string): string {
@@ -121,33 +139,34 @@ function toAddressUpper(value: string): string {
 }
 
 function getComponent(
-  components: GoogleAddressComponent[] | undefined,
+  components: AddressComponent[] | undefined,
   type: string,
   short = false,
 ) {
   const found = components?.find((c) => c.types.includes(type));
-  return found ? (short ? found.short_name : found.long_name) : "";
+  if (!found) return "";
+  return (short ? found.shortText : found.longText) ?? "";
 }
 
-function placeToAddress(place: GooglePlace): GoogleAddress {
-  const streetNumber = getComponent(place.address_components, "street_number");
-  const route = getComponent(place.address_components, "route");
+function placeToAddress(place: PlaceLike): GoogleAddress {
+  const streetNumber = getComponent(place.addressComponents, "street_number");
+  const route = getComponent(place.addressComponents, "route");
   const cidade =
-    getComponent(place.address_components, "locality") ||
-    getComponent(place.address_components, "sublocality") ||
-    getComponent(place.address_components, "administrative_area_level_2");
+    getComponent(place.addressComponents, "locality") ||
+    getComponent(place.addressComponents, "sublocality") ||
+    getComponent(place.addressComponents, "administrative_area_level_2");
   const estado = getComponent(
-    place.address_components,
+    place.addressComponents,
     "administrative_area_level_1",
     true,
   );
-  const cep = getComponent(place.address_components, "postal_code");
-  const pais = getComponent(place.address_components, "country", true) || "US";
-  const lat = place.geometry?.location?.lat();
-  const lng = place.geometry?.location?.lng();
-  const formatted = place.formatted_address ?? "";
+  const cep = getComponent(place.addressComponents, "postal_code");
+  const pais = getComponent(place.addressComponents, "country", true) || "US";
+  const lat = place.location?.lat();
+  const lng = place.location?.lng();
+  const formatted = place.formattedAddress ?? "";
   const mapsUrl =
-    place.url ||
+    place.googleMapsURI ||
     (lat !== undefined && lng !== undefined
       ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
       : "");
@@ -159,21 +178,26 @@ function placeToAddress(place: GooglePlace): GoogleAddress {
     estado: (estado || "FL").toUpperCase(),
     cep,
     pais: pais.toUpperCase(),
-    google_place_id: place.place_id ?? "",
+    google_place_id: place.id ?? "",
     latitude: lat === undefined ? "" : String(lat),
     longitude: lng === undefined ? "" : String(lng),
     google_maps_url: mapsUrl,
   };
 }
 
-function placesStatusMessage(status: string): string | null {
-  const S = window.google?.maps?.places?.PlacesServiceStatus;
-  if (!S) return null;
-  if (status === S.OK || status === S.ZERO_RESULTS) return null;
-  if (status === S.REQUEST_DENIED) {
-    return "Google recusou a busca (REQUEST_DENIED). Verifique billing, APIs ativas e restricao HTTP referrer em localhost:3000.";
+function mapsErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes("ApiTargetBlockedMapError") ||
+    msg.includes("ApiNotActivatedMapError") ||
+    msg.includes("RefererNotAllowedMapError")
+  ) {
+    return "Google blocked this request. Enable Maps JavaScript API + Places API (New) in Google Cloud, enable billing, and add this site to the API key HTTP referrers (e.g. localhost:3000/* and your Vercel domain/*).";
   }
-  return `Google Places: ${status}`;
+  if (msg.includes("REQUEST_DENIED")) {
+    return "Google denied the request (REQUEST_DENIED). Check billing, enabled APIs, and API key restrictions.";
+  }
+  return msg || "Google Places unavailable";
 }
 
 export function emptyGoogleAddress(): GoogleAddress {
@@ -237,13 +261,14 @@ export function GooglePlacesField({
   const onAddressRef = useRef(onAddress);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const placesHostRef = useRef<HTMLDivElement | null>(null);
+  const sessionTokenRef = useRef<unknown | null>(null);
+  const requestSeqRef = useRef(0);
 
   const [query, setQuery] = useState(address.endereco_formatado);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+  const [predictions, setPredictions] = useState<PredictionItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const hintId = useId();
@@ -269,12 +294,11 @@ export function GooglePlacesField({
     let mounted = true;
     setError(null);
 
-    loadGoogleMaps(apiKey)
-      .catch((e) => {
-        if (mounted) {
-          setError(e instanceof Error ? e.message : "Google Places indisponivel");
-        }
-      });
+    loadPlacesLibrary(apiKey).catch((e) => {
+      if (mounted) {
+        setError(mapsErrorMessage(e));
+      }
+    });
 
     return () => {
       mounted = false;
@@ -282,10 +306,7 @@ export function GooglePlacesField({
   }, [apiKey, active, resetKey]);
 
   const fetchPredictions = useCallback(
-    (input: string) => {
-      const places = window.google?.maps?.places;
-      if (!places?.AutocompleteService) return;
-
+    async (input: string) => {
       const trimmed = input.trim();
       if (trimmed.length < 3) {
         setPredictions([]);
@@ -294,71 +315,81 @@ export function GooglePlacesField({
         return;
       }
 
+      const seq = ++requestSeqRef.current;
       setLoading(true);
-      const service = new places.AutocompleteService();
-      service.getPlacePredictions(
-        {
-          input: trimmed,
-          componentRestrictions: { country: "us" },
-        },
-        (results, status) => {
-          setLoading(false);
-          const msg = placesStatusMessage(status);
-          if (msg) {
-            setError(msg);
-            setPredictions([]);
-            setOpen(false);
-            return;
-          }
-          setError(null);
-          const list = results ?? [];
-          setPredictions(list);
-          setOpen(list.length > 0);
-          setActiveIndex(-1);
-        },
-      );
+
+      try {
+        const { AutocompleteSuggestion, AutocompleteSessionToken } =
+          await loadPlacesLibrary(apiKey);
+
+        if (!sessionTokenRef.current) {
+          sessionTokenRef.current = new AutocompleteSessionToken();
+        }
+
+        const { suggestions } =
+          await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: trimmed,
+            sessionToken: sessionTokenRef.current,
+            includedRegionCodes: ["us"],
+            language: "en",
+            region: "us",
+          });
+
+        if (seq !== requestSeqRef.current) return;
+
+        const list: PredictionItem[] = suggestions
+          .map((s) => s.placePrediction)
+          .filter((p): p is PlacePredictionLike => Boolean(p?.placeId))
+          .map((p) => ({
+            place_id: p.placeId,
+            description: p.text.text,
+            prediction: p,
+          }));
+
+        setError(null);
+        setPredictions(list);
+        setOpen(list.length > 0);
+        setActiveIndex(-1);
+      } catch (e) {
+        if (seq !== requestSeqRef.current) return;
+        setError(mapsErrorMessage(e));
+        setPredictions([]);
+        setOpen(false);
+      } finally {
+        if (seq === requestSeqRef.current) setLoading(false);
+      }
     },
-    [],
+    [apiKey],
   );
 
-  const selectPlace = useCallback((placeId: string, description: string) => {
-    const places = window.google?.maps?.places;
-    if (!places?.PlacesService) return;
-
-    if (!placesHostRef.current) {
-      placesHostRef.current = document.createElement("div");
-      placesHostRef.current.style.display = "none";
-      document.body.appendChild(placesHostRef.current);
-    }
-
+  const selectPlace = useCallback(async (item: PredictionItem) => {
     setLoading(true);
-    const svc = new places.PlacesService(placesHostRef.current);
-    svc.getDetails(
-      {
-        placeId,
-        fields: ["address_components", "formatted_address", "geometry", "place_id", "url"],
-      },
-      (place, status) => {
-        setLoading(false);
-        const msg = placesStatusMessage(status);
-        if (msg || !place) {
-          setError(msg ?? "Nao foi possivel carregar o endereco.");
-          return;
-        }
-        const next = placeToAddress(place);
-        setQuery(next.endereco_formatado || toAddressUpper(description));
-        setOpen(false);
-        setPredictions([]);
-        onAddressRef.current(next);
-      },
-    );
-  }, []);
 
-  useEffect(() => {
-    return () => {
-      placesHostRef.current?.remove();
-      placesHostRef.current = null;
-    };
+    try {
+      const place = item.prediction.toPlace();
+      await place.fetchFields({
+        fields: [
+          "addressComponents",
+          "formattedAddress",
+          "location",
+          "id",
+          "googleMapsURI",
+        ],
+      });
+
+      sessionTokenRef.current = null;
+
+      const next = placeToAddress(place);
+      setQuery(next.endereco_formatado || toAddressUpper(item.description));
+      setOpen(false);
+      setPredictions([]);
+      setError(null);
+      onAddressRef.current(next);
+    } catch (e) {
+      setError(mapsErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -396,7 +427,9 @@ export function GooglePlacesField({
                 return;
               }
               if (debounceRef.current) clearTimeout(debounceRef.current);
-              debounceRef.current = setTimeout(() => fetchPredictions(v), 280);
+              debounceRef.current = setTimeout(() => {
+                void fetchPredictions(v);
+              }, 280);
             }}
             onFocus={() => {
               if (predictions.length > 0) setOpen(true);
@@ -411,8 +444,7 @@ export function GooglePlacesField({
                 setActiveIndex((i) => Math.max(i - 1, 0));
               } else if (e.key === "Enter" && activeIndex >= 0) {
                 e.preventDefault();
-                const p = predictions[activeIndex];
-                selectPlace(p.place_id, p.description);
+                void selectPlace(predictions[activeIndex]!);
               } else if (e.key === "Escape") {
                 setOpen(false);
               }
@@ -447,7 +479,7 @@ export function GooglePlacesField({
                       i === activeIndex ? "bg-cc-blue-soft" : ""
                     }`}
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => selectPlace(p.place_id, p.description)}
+                    onClick={() => void selectPlace(p)}
                   >
                     {toAddressUpper(p.description)}
                   </button>
