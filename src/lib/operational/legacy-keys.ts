@@ -62,6 +62,8 @@ export const LEGACY_OPERATIONAL_STATUS: Record<string, string> = {
 
 export const LEGACY_TEAM_CODE: Record<string, string> = {
   comercial: "commercial",
+  sales: "commercial",
+  vendas: "commercial",
   financeiro: "financial_review",
   projeto: "project",
   instalacao: "installation",

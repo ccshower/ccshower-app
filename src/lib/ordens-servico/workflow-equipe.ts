@@ -43,12 +43,7 @@ export async function resolveDefaultTeamForStage(
   if (allErr) return { equipeId: null, error: allErr.message };
 
   const lista = (todas ?? []) as EquipeRow[];
-  const needle = codigo.replace("_", " ");
-  const porNome = lista.find(
-    (e) =>
-      e.nome.toLowerCase().includes(needle) ||
-      e.nome.toLowerCase().includes(codigo.split("_")[0] ?? codigo),
-  );
+  const porNome = lista.find((e) => equipeMatchesStage(e, stage));
   if (porNome?.id) return { equipeId: porNome.id };
 
   if (fallbackTeamId) return { equipeId: fallbackTeamId };
@@ -78,7 +73,7 @@ export function normalizeTeamCode(
   if (!v) return null;
   const allowed = Object.values(OS_STAGE_TEAM_CODE);
   if (allowed.includes(v)) return v;
-  return LEGACY_TEAM_CODE[v] ?? LEGACY_TEAM_CODE[raw ?? ""] ?? null;
+  return LEGACY_TEAM_CODE[v] ?? null;
 }
 
 type EquipeStageRow = {
@@ -97,6 +92,14 @@ function normalizeTeamText(value: string): string {
     .replace(/\p{M}/gu, "");
 }
 
+/** Palavras no nome da equipe que indicam etapa commercial (ex.: SALES). */
+const COMMERCIAL_TEAM_NAME_HINTS = [
+  "commercial",
+  "comercial",
+  "sales",
+  "vendas",
+] as const;
+
 function teamNameMatchesStage(nome: string, stage: OsWorkflowStage): boolean {
   if (stage === "blocked" || stage === "completed") return false;
 
@@ -104,6 +107,11 @@ function teamNameMatchesStage(nome: string, stage: OsWorkflowStage): boolean {
   if (!normalized) return false;
 
   const expected = OS_STAGE_TEAM_CODE[stage];
+
+  if (expected === "commercial") {
+    return COMMERCIAL_TEAM_NAME_HINTS.some((hint) => normalized.includes(hint));
+  }
+
   const needle = expected.replace("_", " ");
   if (normalized.includes(normalizeTeamText(needle))) return true;
   if (normalized.includes(normalizeTeamText(expected.split("_")[0] ?? expected))) {

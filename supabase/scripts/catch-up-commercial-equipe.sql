@@ -1,4 +1,4 @@
--- Garante pelo menos uma equipe comercial para cadastro de clientes
+-- Garante equipes comerciais (Commercial, SALES, Comercial, etc.)
 -- Rode no Supabase → SQL Editor
 
 -- Marca equipes existentes pelo nome (quando codigo_operacional ainda é null)
@@ -9,6 +9,8 @@ where codigo_operacional is null
   and (
     lower(nome) like '%commercial%'
     or lower(nome) like '%comercial%'
+    or lower(nome) like '%sales%'
+    or lower(nome) like '%vendas%'
   );
 
 update public.equipes
@@ -35,7 +37,7 @@ where codigo_operacional is null
     or lower(nome) like '%financeiro%'
   );
 
--- Cria equipe Commercial se nenhuma ativa servir a etapa commercial
+-- Cria equipe Commercial genérica só se nenhuma comercial existir
 insert into public.equipes (nome, cor_primaria, cor_secundaria, codigo_operacional, ativo)
 select 'Commercial', '#4a6fa5', '#e8f0f7', 'commercial', true
 where not exists (
@@ -46,6 +48,8 @@ where not exists (
       e.codigo_operacional = 'commercial'
       or lower(e.nome) like '%commercial%'
       or lower(e.nome) like '%comercial%'
+      or lower(e.nome) like '%sales%'
+      or lower(e.nome) like '%vendas%'
     )
 );
 
