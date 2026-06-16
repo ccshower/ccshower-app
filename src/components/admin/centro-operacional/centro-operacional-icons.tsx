@@ -81,6 +81,14 @@ export function IconBox({ className = base }: IconProps) {
   );
 }
 
+export function IconBuilding({ className = base }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+    </svg>
+  );
+}
+
 export function IconArrowUpRight({ className }: IconProps) {
   return (
     <svg
@@ -176,7 +184,8 @@ export type CentroIconId =
   | "dollar"
   | "pen"
   | "truck"
-  | "box";
+  | "box"
+  | "building";
 
 const iconMap = {
   alert: IconAlert,
@@ -188,6 +197,7 @@ const iconMap = {
   pen: IconPen,
   truck: IconTruck,
   box: IconBox,
+  building: IconBuilding,
 } as const;
 
 export function CentroIcon({ id, className }: { id: CentroIconId; className?: string }) {

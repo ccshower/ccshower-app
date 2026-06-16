@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { EquipesClient } from "@/app/admin/equipes/equipes-client";
+import { UnidadesClient } from "@/app/admin/unidades/unidades-client";
 import { UsuariosClient } from "@/app/admin/usuarios/usuarios-client";
 import { CentroAdminEstoquePanel } from "@/components/admin/centro-operacional/centro-admin-estoque-panel";
 import { CentroAdminFinanceiroPanel } from "@/components/admin/centro-operacional/centro-admin-financeiro-panel";
@@ -14,11 +15,12 @@ import type {
   UsuarioWithEquipe,
 } from "@/lib/types/database";
 
-export type CadastroTipo = "usuarios" | "equipes" | "estoque" | "financeiro";
+export type CadastroTipo = "usuarios" | "equipes" | "unidades" | "estoque" | "financeiro";
 
 const TITULO: Record<CadastroTipo, string> = {
   usuarios: "Users",
   equipes: "Teams",
+  unidades: "Units",
   estoque: "Inventory",
   financeiro: "Financial",
 };
@@ -27,6 +29,7 @@ type CadastrosData = {
   usuarios: UsuarioWithEquipe[];
   equipes: Equipe[];
   unidades: Unidade[];
+  unidadesAdmin: Unidade[];
 };
 
 function mergeUsuarios(
@@ -88,7 +91,7 @@ export function CentroAdminCadastrosModal({
 
     const supabase = createClient();
     void (async () => {
-      const [usuariosRes, equipesRes, unidadesRes] = await Promise.all([
+      const [usuariosRes, equipesRes, unidadesRes, unidadesAdminRes] = await Promise.all([
         supabase.from("usuarios").select("*").order("nome", { ascending: true }),
         supabase.from("equipes").select("*").order("nome", { ascending: true }),
         supabase
@@ -97,6 +100,13 @@ export function CentroAdminCadastrosModal({
           .eq("ativo", true)
           .order("matriz", { ascending: false })
           .order("nome", { ascending: true }),
+        tipo === "unidades"
+          ? supabase
+              .from("unidades")
+              .select("id, nome, timezone, matriz, ativo, criado_em")
+              .order("matriz", { ascending: false })
+              .order("nome", { ascending: true })
+          : Promise.resolve({ data: [] as Unidade[], error: null }),
       ]);
 
       if (cancelled) return;
@@ -105,6 +115,7 @@ export function CentroAdminCadastrosModal({
         usuariosRes.error?.message ??
         equipesRes.error?.message ??
         unidadesRes.error?.message ??
+        unidadesAdminRes.error?.message ??
         null;
       if (err) {
         setError(err);
@@ -113,13 +124,14 @@ export function CentroAdminCadastrosModal({
 
       const equipes = (equipesRes.data ?? []) as Equipe[];
       const unidades = (unidadesRes.data ?? []) as Unidade[];
+      const unidadesAdmin = (unidadesAdminRes.data ?? []) as Unidade[];
       const usuarios = mergeUsuarios(
         (usuariosRes.data ?? []) as Usuario[],
         equipes,
         unidades,
       );
 
-      setData({ usuarios, equipes, unidades });
+      setData({ usuarios, equipes, unidades, unidadesAdmin });
     })();
 
     return () => {
@@ -180,6 +192,8 @@ export function CentroAdminCadastrosModal({
             unidades={data.unidades}
             embedded
           />
+        ) : tipo === "unidades" ? (
+          <UnidadesClient initial={data.unidadesAdmin} embedded />
         ) : (
           <EquipesClient
             initial={

@@ -19,6 +19,7 @@ export type CentroAdminMenuItem = {
 export const CENTRO_ADMIN_MENU_ITEMS: CentroAdminMenuItem[] = [
   { href: "/admin/usuarios", label: "Users", icon: "users" },
   { href: "/admin/equipes", label: "Teams", icon: "clipboard" },
+  { href: "/admin/unidades", label: "Units", icon: "building" },
   { href: "/admin/estoque", label: "Inventory", icon: "box" },
   { href: "/admin/financeiro", label: "Financial", icon: "dollar" },
 ];

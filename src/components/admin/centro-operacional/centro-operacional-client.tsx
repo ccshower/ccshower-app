@@ -412,6 +412,10 @@ function CentroHeader({
       setCadastroModal("equipes");
       return;
     }
+    if (item.href === "/admin/unidades") {
+      setCadastroModal("unidades");
+      return;
+    }
     if (item.href === "/admin/estoque") {
       setCadastroModal("estoque");
       return;
