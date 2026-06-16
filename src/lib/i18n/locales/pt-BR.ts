@@ -25,6 +25,10 @@ export const ptBR = {
       commercial: "Comercial",
       other: "Outro",
     },
+    osList: {
+      multiOpen:
+        "{name} possui várias OS abertas. Selecione uma para abrir o painel operacional ou crie uma nova.",
+    },
   },
   os: {
     stage: {
@@ -227,6 +231,18 @@ export const ptBR = {
       },
     },
     card: {
+      teamLabel: "Equipe",
+      visitLabel: "Visita",
+      title: {
+        cancelled: "Cancelado — {name}",
+        completed: "Concluído — {name}",
+        firstVisit: "Primeiro atendimento — {name}",
+        financial: "Financeiro — {name}",
+        project: "Projeto — {name}",
+        installation: "Instalação — {name}",
+        blocked: "Bloqueado — {name}",
+        defaultCustomer: "Cliente",
+      },
       financial: {
         entry: "Entrada",
         balanceShort: "Saldo",
@@ -398,6 +414,12 @@ export const ptBR = {
       completed: "Concluído",
       cancelled: "Cancelado",
     },
+  },
+  maps: {
+    addressLabel: "Endereço",
+    placeholderManual: "Digite o endereço completo (rua, cidade, FL, ZIP)",
+    placeholderAutocomplete: "Digite rua ou número — ex. 5400 Sheridan St",
+    searching: "Buscando endereços…",
   },
   common: {
     team: "Equipe",

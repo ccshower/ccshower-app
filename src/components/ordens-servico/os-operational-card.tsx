@@ -131,7 +131,7 @@ function CardHeaderCliente({
 function EquipeRow({ os, semEquipe }: { os: OrdemServicoWithRelations; semEquipe: boolean }) {
   return (
     <p className="flex items-center gap-2">
-      <span className="shrink-0 text-cc-muted">Team</span>
+      <span className="shrink-0 text-cc-muted">{t("common.team")}</span>
       {semEquipe ? (
         <OsSemEquipeBadge />
       ) : os.equipe ? (
@@ -313,7 +313,7 @@ function OsOperationalCardPadrao({
       <div className="mt-3 space-y-2 text-sm font-light text-cc-deep">
         <EquipeRow os={os} semEquipe={semEquipe} />
         <p className="flex items-center gap-2">
-          <span className="text-cc-muted">Visit</span>
+          <span className="text-cc-muted">{t("os.card.visitLabel")}</span>
           <span className="font-medium text-cc-ink">
             {formatOperacionalVisita(os.visita_inicial?.data_inicio)}
           </span>

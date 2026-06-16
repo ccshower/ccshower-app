@@ -1,4 +1,4 @@
-import { DISPLAY_LOCALE } from "@/lib/i18n";
+import { DISPLAY_LOCALE, t } from "@/lib/i18n";
 
 /** CCSHOWER operational timezone (Florida). */
 export const OPERATIONAL_TZ = "America/New_York";
@@ -100,14 +100,14 @@ export function parseVisitaDateTime(iso: string | undefined | null): {
   return { data, hora };
 }
 
-const VISITA_NAO_AGENDADA = "Visita não agendada";
+const VISITA_NAO_AGENDADA = () => t("os.timeline.visitNotScheduled");
 
-/** Card operação / resumo — ex.: "qua., 28 de mai., 08:00 AM". */
+/** Card operação / resumo — ex.: "Wed, May 28, 8:00 AM". */
 export function formatOperacionalVisita(iso: string | undefined | null): string {
-  if (!iso) return VISITA_NAO_AGENDADA;
+  if (!iso) return VISITA_NAO_AGENDADA();
 
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return VISITA_NAO_AGENDADA;
+  if (Number.isNaN(d.getTime())) return VISITA_NAO_AGENDADA();
 
   return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     weekday: "short",
@@ -120,12 +120,12 @@ export function formatOperacionalVisita(iso: string | undefined | null): string 
   }).format(d);
 }
 
-/** Card comercial — ex.: "sex., 29 de mai. • 9:00 AM". */
+/** Card comercial — ex.: "Fri, May 29 • 9:00 AM". */
 export function formatOperacionalVisitaCard(iso: string | undefined | null): string {
-  if (!iso) return VISITA_NAO_AGENDADA;
+  if (!iso) return VISITA_NAO_AGENDADA();
 
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return VISITA_NAO_AGENDADA;
+  if (Number.isNaN(d.getTime())) return VISITA_NAO_AGENDADA();
 
   const datePart = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     weekday: "short",

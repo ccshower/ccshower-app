@@ -1,7 +1,7 @@
 "use client";
 
 import { OsOperacionalBadge } from "@/components/ordens-servico/os-operacional-badge";
-import { DISPLAY_LOCALE } from "@/lib/i18n";
+import { DISPLAY_LOCALE, t } from "@/lib/i18n";
 import { isOsAberta } from "@/lib/ordens-servico/open-status";
 import { tituloOperacionalCard } from "@/lib/ordens-servico/os-operational-title";
 import type { ClienteOsResumo } from "@/lib/types/database";
@@ -38,8 +38,7 @@ export function ClienteOsListPanel({
   return (
     <div className="space-y-3">
       <p className="text-sm font-light leading-relaxed text-cc-deep">
-        <span className="font-medium text-cc-ink">{clienteNome}</span> possui várias OS
-        abertas. Selecione uma para abrir o painel operacional ou crie uma nova.
+        {t("client.osList.multiOpen", { name: clienteNome })}
       </p>
 
       <ul className="space-y-2">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { Field } from "@/components/ui/field";
 import { validateGoogleMapsApiKey } from "@/lib/google/maps-api-key";
+import { t } from "@/lib/i18n";
 
 export type GoogleAddress = {
   endereco_formatado: string;
@@ -408,7 +409,7 @@ export function GooglePlacesField({
 
   return (
     <div className="space-y-2" ref={wrapRef}>
-      <Field label="Endereco">
+      <Field label={t("maps.addressLabel")}>
         <div className="relative">
           <input
             name="endereco_busca"
@@ -461,8 +462,8 @@ export function GooglePlacesField({
             className="w-full rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2.5 text-sm font-light uppercase text-cc-ink outline-none transition placeholder:normal-case placeholder:text-cc-subtle focus:border-cc-blue-focus focus:shadow-focus"
             placeholder={
               manualOnly
-                ? "Digite o endereco completo (rua, cidade, FL, ZIP)"
-                : "Digite rua ou numero — ex. 5400 Sheridan St"
+                ? t("maps.placeholderManual")
+                : t("maps.placeholderAutocomplete")
             }
           />
           {open && predictions.length > 0 ? (
@@ -494,7 +495,7 @@ export function GooglePlacesField({
           {error ? (
             <span className="text-cc-red">{error}</span>
           ) : (
-            "Buscando enderecos..."
+            t("maps.searching")
           )}
         </p>
       ) : null}

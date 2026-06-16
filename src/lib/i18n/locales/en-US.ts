@@ -25,6 +25,10 @@ export const enUS = {
       commercial: "Commercial",
       other: "Other",
     },
+    osList: {
+      multiOpen:
+        "{name} has multiple open work orders. Select one to open the operations panel or create a new one.",
+    },
   },
   os: {
     stage: {
@@ -227,6 +231,18 @@ export const enUS = {
       },
     },
     card: {
+      teamLabel: "Team",
+      visitLabel: "Visit",
+      title: {
+        cancelled: "Cancelled — {name}",
+        completed: "Completed — {name}",
+        firstVisit: "First visit — {name}",
+        financial: "Financial — {name}",
+        project: "Project — {name}",
+        installation: "Installation — {name}",
+        blocked: "Blocked — {name}",
+        defaultCustomer: "Customer",
+      },
       financial: {
         entry: "Deposit",
         balanceShort: "Balance",
@@ -398,6 +414,12 @@ export const enUS = {
       completed: "Completed",
       cancelled: "Cancelled",
     },
+  },
+  maps: {
+    addressLabel: "Address",
+    placeholderManual: "Enter full address (street, city, FL, ZIP)",
+    placeholderAutocomplete: "Enter street or number — e.g. 5400 Sheridan St",
+    searching: "Searching addresses…",
   },
   common: {
     team: "Team",

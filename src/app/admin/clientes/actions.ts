@@ -6,6 +6,7 @@ import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
 import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
+import { buildInitialCommercialOsTitulo } from "@/lib/ordens-servico/os-operational-title";
 import { resolveEmpresaId } from "@/lib/ordens-servico/resolve-empresa-id";
 import { createClient } from "@/lib/supabase/server";
 
@@ -169,7 +170,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
     const { error: osErr } = await supabase.from("ordens_servico").insert({
       empresa_id,
       cliente_id: created.id,
-      titulo: `Primeiro atendimento — ${created.nome}`,
+      titulo: buildInitialCommercialOsTitulo(created.nome),
       descricao: null,
       observacoes: null,
       anotacoes_tecnicas: null,
