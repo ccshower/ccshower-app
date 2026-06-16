@@ -13,6 +13,8 @@ export const ptBR = {
     invalid: "Equipe inválida ou inativa",
     userWithoutTeam:
       "Seu usuário não está vinculado a uma equipe. Peça ao administrador.",
+    noCommercialTeam:
+      "Nenhuma equipe comercial configurada. Em Admin → Equipes, crie uma equipe \"Commercial\" ou rode o script SQL de equipe comercial.",
   },
   client: {
     type: {

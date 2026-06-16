@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
-import { validateEquipeIdForStage } from "@/lib/ordens-servico/workflow-equipe";
+import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
 import { resolveEmpresaId } from "@/lib/ordens-servico/resolve-empresa-id";
 import { createClient } from "@/lib/supabase/server";
@@ -63,7 +63,44 @@ function canChooseEquipe(usuario: ActiveUsuario) {
 function getEquipeId(formData: FormData, usuario: ActiveUsuario) {
   const requested = emptyToNull(formData.get("equipe_id"));
   if (canChooseEquipe(usuario)) return requested;
-  return usuario.equipe_id;
+  return requested ?? usuario.equipe_id;
+}
+
+async function resolveClienteEquipeId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  usuario: ActiveUsuario,
+): Promise<{ ok: true; equipeId: string } | { ok: false; message: string }> {
+  const candidate = getEquipeId(formData, usuario);
+
+  if (candidate) {
+    const eqVal = await validateEquipeOperacional(supabase, candidate);
+    if (!eqVal.ok) return eqVal;
+
+    const eqStage = await validateEquipeIdForStage(
+      supabase,
+      eqVal.equipe_id,
+      "commercial",
+    );
+    if (eqStage.ok) return { ok: true, equipeId: eqVal.equipe_id };
+  }
+
+  const { equipeId, error } = await resolveDefaultTeamForStage(
+    supabase,
+    "commercial",
+    usuario.equipe_id,
+  );
+
+  if (!equipeId) {
+    return {
+      ok: false,
+      message:
+        error ??
+        'No commercial team configured. Run supabase/scripts/catch-up-commercial-equipe.sql in Supabase or create a team named "Commercial".',
+    };
+  }
+
+  return { ok: true, equipeId };
 }
 
 export async function criarCliente(formData: FormData): Promise<ActionResult> {
@@ -72,7 +109,6 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
     const nome = String(formData.get("nome") ?? "").trim();
     const telefone = String(formData.get("telefone") ?? "").trim();
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
-    const equipe_id = getEquipeId(formData, usuario);
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
     );
@@ -81,17 +117,10 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
-    const eqVal = await validateEquipeOperacional(supabase, equipe_id);
-    if (!eqVal.ok) return eqVal;
+    const equipeResolved = await resolveClienteEquipeId(supabase, formData, usuario);
+    if (!equipeResolved.ok) return equipeResolved;
 
-    const eqStage = await validateEquipeIdForStage(
-      supabase,
-      eqVal.equipe_id,
-      "commercial",
-    );
-    if (!eqStage.ok) return { ok: false, message: eqStage.message };
-
-    const equipeWorkOrder = eqVal.equipe_id;
+    const equipeWorkOrder = equipeResolved.equipeId;
 
     const { data: created, error } = await supabase
       .from("clientes")
@@ -182,7 +211,6 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
     const nome = String(formData.get("nome") ?? "").trim();
     const telefone = String(formData.get("telefone") ?? "").trim();
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
-    const equipe_id = getEquipeId(formData, usuario);
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
     );
@@ -192,15 +220,8 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
-    const eqVal = await validateEquipeOperacional(supabase, equipe_id);
-    if (!eqVal.ok) return eqVal;
-
-    const eqStage = await validateEquipeIdForStage(
-      supabase,
-      eqVal.equipe_id,
-      "commercial",
-    );
-    if (!eqStage.ok) return { ok: false, message: eqStage.message };
+    const equipeResolved = await resolveClienteEquipeId(supabase, formData, usuario);
+    if (!equipeResolved.ok) return equipeResolved;
 
     const { error } = await supabase
       .from("clientes")
@@ -220,7 +241,7 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
         longitude: readNumber(formData.get("longitude")),
         google_maps_url: emptyToNull(formData.get("google_maps_url")),
         observacoes: emptyToNull(formData.get("observacoes")),
-        equipe_id: eqVal.equipe_id,
+        equipe_id: equipeResolved.equipeId,
       })
       .eq("id", id);
 

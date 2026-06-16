@@ -209,6 +209,19 @@ export function filterEquipesForStage<T extends EquipeStageRow>(
   return equipes.filter((e) => equipeMatchesStage(e, stage));
 }
 
+/** Equipe comercial padrão para novo cliente / OS na etapa commercial. */
+export function pickDefaultCommercialEquipeId<T extends EquipeStageRow>(
+  equipes: T[],
+  preferredId?: string | null,
+): string | null {
+  const commercial = filterEquipesForStage(equipes, "commercial");
+  if (!commercial.length) return null;
+  if (preferredId && commercial.some((e) => e.id === preferredId)) {
+    return preferredId;
+  }
+  return commercial[0]?.id ?? null;
+}
+
 export async function validateEquipeIdForStage(
   supabase: SupabaseClient,
   equipeId: string,

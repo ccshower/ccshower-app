@@ -21,7 +21,7 @@ import {
 import { OsSemEquipeBadge } from "@/components/ordens-servico/os-sem-equipe-badge";
 import { clienteSemEquipe } from "@/lib/equipes/validate-equipe-operacional";
 import { t, tClientType } from "@/lib/i18n";
-import { filterEquipesForStage } from "@/lib/ordens-servico/workflow-equipe";
+import { filterEquipesForStage, pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Cliente,
@@ -100,9 +100,13 @@ export function ClienteForm({
     () => filterEquipesForStage(equipes, "commercial"),
     [equipes],
   );
+  const effectiveEquipeId = useMemo(() => {
+    if (cliente?.equipe_id) return cliente.equipe_id;
+    return pickDefaultCommercialEquipeId(equipes, defaultEquipeId);
+  }, [cliente, equipes, defaultEquipeId]);
   const lockedEquipe = useMemo(
-    () => commercialEquipes.find((e) => e.id === defaultEquipeId),
-    [commercialEquipes, defaultEquipeId],
+    () => commercialEquipes.find((e) => e.id === effectiveEquipeId) ?? commercialEquipes[0],
+    [commercialEquipes, effectiveEquipeId],
   );
 
   useEffect(() => {
@@ -126,12 +130,14 @@ export function ClienteForm({
         }
         const equipeId = canChooseEquipe
           ? String(fd.get("equipe_id") ?? "").trim()
-          : String(defaultEquipeId ?? "").trim();
+          : String(effectiveEquipeId ?? "").trim();
         if (!equipeId) {
           setEquipeError(
-            canChooseEquipe
-              ? t("equipe.required")
-              : t("equipe.userWithoutTeam"),
+            commercialEquipes.length === 0
+              ? t("equipe.noCommercialTeam")
+              : canChooseEquipe
+                ? t("equipe.required")
+                : t("equipe.userWithoutTeam"),
           );
           return;
         }
@@ -221,17 +227,18 @@ export function ClienteForm({
       </div>
 
       <Field label={t("equipe.operational")} hint={t("equipe.hint")}>
-        {canChooseEquipe ? (
+        {commercialEquipes.length === 0 ? (
+          <p className="rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2.5 text-sm text-cc-red">
+            {t("equipe.noCommercialTeam")}
+          </p>
+        ) : canChooseEquipe ? (
           <select
             name="equipe_id"
             required
-            defaultValue={cliente?.equipe_id ?? defaultEquipeId ?? ""}
+            defaultValue={effectiveEquipeId ?? ""}
             className={`w-full rounded-sm border-[1.5px] bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus ${equipeError ? "border-cc-red" : "border-cc-border"}`}
             onChange={() => setEquipeError(null)}
           >
-            <option value="" disabled>
-              {t("equipe.selectPlaceholder")}
-            </option>
             {commercialEquipes.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome}
@@ -240,7 +247,7 @@ export function ClienteForm({
           </select>
         ) : (
           <>
-            <input type="hidden" name="equipe_id" value={defaultEquipeId ?? ""} />
+            <input type="hidden" name="equipe_id" value={effectiveEquipeId ?? ""} />
             <p className="rounded-sm border border-cc-border bg-cc-border-light/40 px-3 py-2.5 text-sm text-cc-ink">
               {lockedEquipe?.nome ?? "—"}
             </p>

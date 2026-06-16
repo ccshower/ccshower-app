@@ -1,5 +1,6 @@
 import { getCurrentUsuario, isAdmin } from "@/lib/auth/get-current-usuario";
 import { loadOsPorCliente } from "@/lib/ordens-servico/load-os-por-cliente";
+import { pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Cliente,
@@ -75,7 +76,7 @@ export default async function AdminClientesPage() {
       initialOsPorCliente={osPorCliente}
       osLoadWarning={e4}
       googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
-      defaultEquipeId={usuario?.equipe_id ?? null}
+      defaultEquipeId={pickDefaultCommercialEquipeId(eqList, usuario?.equipe_id)}
       canChooseEquipe={
         isAdmin(usuario) || Boolean(usuario?.pode_ver_todas_equipes)
       }

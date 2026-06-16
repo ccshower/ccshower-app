@@ -11,6 +11,7 @@ import { loadFilaProjeto } from "@/lib/centro-operacional/load-fila-projeto";
 import { loadGargalosOperacionais } from "@/lib/centro-operacional/load-gargalos-operacionais";
 import { loadProducaoMensal } from "@/lib/centro-operacional/load-producao-mensal";
 import { loadSaudeOperacional } from "@/lib/centro-operacional/load-saude-operacional";
+import { pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { loadUnidades } from "@/lib/unidades/load-unidades";
 import { createClient } from "@/lib/supabase/server";
 import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
@@ -91,6 +92,8 @@ export default async function CentroOperacionalPage({
       .order("nome", { ascending: true }),
   ]);
 
+  const eqList = (equipes ?? []) as Equipe[];
+
   return (
     <CentroOperacionalClient
       filaComercial={filaComercial}
@@ -105,10 +108,10 @@ export default async function CentroOperacionalPage({
       producaoMensal={producaoMensal}
       gargalosOperacionais={gargalosOperacionais}
       capacidadeOperacional={capacidadeOperacional}
-      equipes={(equipes ?? []) as Equipe[]}
+      equipes={eqList}
       usuarios={(usuarios ?? []) as Usuario[]}
       googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
-      defaultEquipeId={usuario?.equipe_id ?? null}
+      defaultEquipeId={pickDefaultCommercialEquipeId(eqList, usuario?.equipe_id)}
       canChooseEquipe={isAdminOrManager(usuario) || Boolean(usuario?.pode_ver_todas_equipes)}
       viewerNome={usuario?.nome?.trim() || "User"}
       isAdmin={isAdmin(usuario)}

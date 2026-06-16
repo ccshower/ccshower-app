@@ -13,6 +13,8 @@ export const enUS = {
     invalid: "Invalid or inactive team",
     userWithoutTeam:
       "Your user is not linked to a team. Contact an administrator.",
+    noCommercialTeam:
+      "No commercial team configured. In Admin → Teams, create a team named \"Commercial\" or ask support to run the commercial-team SQL script.",
   },
   client: {
     type: {
