@@ -1,7 +1,14 @@
--- Garante equipes comerciais (Commercial, SALES, Comercial, etc.)
--- Rode no Supabase → SQL Editor
+-- Equipes comerciais (Commercial, SALES, Comercial, etc.)
+-- Rode no Supabase → SQL Editor (bloco inteiro)
 
--- Marca equipes existentes pelo nome (quando codigo_operacional ainda é null)
+-- 1) Permite várias equipes com o mesmo codigo_operacional (ex.: Commercial + SALES)
+drop index if exists public.idx_equipes_codigo_operacional;
+
+create index if not exists idx_equipes_codigo_operacional
+  on public.equipes (codigo_operacional)
+  where codigo_operacional is not null;
+
+-- 2) Marca equipes pelo nome
 update public.equipes
 set codigo_operacional = 'commercial'
 where codigo_operacional is null
@@ -37,7 +44,7 @@ where codigo_operacional is null
     or lower(nome) like '%financeiro%'
   );
 
--- Cria equipe Commercial genérica só se nenhuma comercial existir
+-- 3) Cria Commercial genérica só se nenhuma comercial existir
 insert into public.equipes (nome, cor_primaria, cor_secundaria, codigo_operacional, ativo)
 select 'Commercial', '#4a6fa5', '#e8f0f7', 'commercial', true
 where not exists (
@@ -53,7 +60,7 @@ where not exists (
     )
 );
 
--- Conferir
+-- 4) Conferir
 select id, nome, codigo_operacional, ativo
 from public.equipes
 order by nome;
