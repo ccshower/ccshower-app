@@ -23,10 +23,14 @@ import {
 } from "./actions";
 
 const USER_PERMISSION_FIELDS = [
-  { name: "pode_editar_agenda", label: "Edit schedule" },
-  { name: "pode_ver_todas_equipes", label: "View all teams" },
-  { name: "pode_gerenciar_estoque", label: "Manage inventory" },
-  { name: "pode_resolver_crash", label: "Resolve operational blocks" },
+  { name: "pode_editar_agenda", label: "Edit schedule", shortLabel: "Schedule" },
+  { name: "pode_ver_todas_equipes", label: "View all teams", shortLabel: "Teams" },
+  { name: "pode_gerenciar_estoque", label: "Manage inventory", shortLabel: "Inventory" },
+  {
+    name: "pode_resolver_crash",
+    label: "Resolve operational blocks",
+    shortLabel: "Blocks",
+  },
 ] as const;
 
 function mergeUserRows(
@@ -421,10 +425,13 @@ export function UsuariosClient({
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1 max-w-[220px]">
-                    <PermCell label="Agenda" on={u.pode_editar_agenda} />
-                    <PermCell label="Teams" on={u.pode_ver_todas_equipes} />
-                    <PermCell label="Inventory" on={u.pode_gerenciar_estoque} />
-                    <PermCell label="Crash" on={u.pode_resolver_crash} />
+                    {USER_PERMISSION_FIELDS.map((permission) => (
+                      <PermCell
+                        key={permission.name}
+                        label={permission.shortLabel}
+                        on={u[permission.name]}
+                      />
+                    ))}
                   </div>
                 </td>
                 <td className="px-3 py-2">
@@ -681,18 +688,20 @@ function UserForm({
         <legend className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep">
           Permissions
         </legend>
-        {USER_PERMISSION_FIELDS.map(({ name, label }) => (
+        {USER_PERMISSION_FIELDS.map((permission) => (
           <label
-            key={name}
+            key={permission.name}
+            htmlFor={`user-perm-${permission.name}`}
             className="flex items-center gap-2 text-sm font-light text-cc-deep"
           >
             <input
+              id={`user-perm-${permission.name}`}
               type="checkbox"
-              name={name}
-              defaultChecked={initial?.[name]}
+              name={permission.name}
+              defaultChecked={initial?.[permission.name]}
               className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
             />
-            {label}
+            <span>{permission.label}</span>
           </label>
         ))}
       </fieldset>
