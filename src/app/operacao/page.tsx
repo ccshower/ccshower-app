@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { getCurrentUsuario, isAdmin } from "@/lib/auth/get-current-usuario";
+import { getCurrentUsuario } from "@/lib/auth/get-current-usuario";
 import { canViewFinancialValues } from "@/lib/auth/financial-visibility";
 import {
   canFilterCalendarByEquipe,
@@ -9,6 +9,10 @@ import {
   type CalendarEquipeOption,
 } from "@/lib/calendar/calendar-equipe-filter";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ordemServicoMultiEquipeFilterOr,
+  resolveOperacaoEquipeIds,
+} from "@/lib/ordens-servico/operacao-equipe-filter";
 
 import { CampoPageFrame } from "@/components/layout/campo-page-frame";
 import {
@@ -37,7 +41,6 @@ export default async function OperacaoPage({ searchParams }: Props) {
   const { usuario } = await getCurrentUsuario();
   if (!usuario?.ativo) redirect("/login?erro=inativo");
 
-  const admin = isAdmin(usuario);
   const params = await searchParams;
   const equipeFilterId = resolveCalendarEquipeFilter(usuario, params.equipe);
   const canFilterEquipes = canFilterCalendarByEquipe(usuario);
@@ -59,6 +62,12 @@ export default async function OperacaoPage({ searchParams }: Props) {
   }
   const viewerCanSeeFinancial = canViewFinancialValues(usuario, viewerEquipe);
 
+  const operacaoEquipeIds = await resolveOperacaoEquipeIds(
+    supabase,
+    usuario,
+    viewerEquipe,
+  );
+
   let osQuery = supabase
     .from("ordens_servico")
     .select("*")
@@ -66,8 +75,11 @@ export default async function OperacaoPage({ searchParams }: Props) {
     .in("status", ["open", "scheduled", "in_progress"])
     .order("atualizado_em", { ascending: false });
 
-  if (equipeFilterId) {
+  if (canFilterEquipes && equipeFilterId) {
     osQuery = osQuery.or(ordemServicoEquipeFilterOr(equipeFilterId));
+  } else if (!canFilterEquipes && operacaoEquipeIds.length > 0) {
+    const teamOr = ordemServicoMultiEquipeFilterOr(operacaoEquipeIds);
+    if (teamOr) osQuery = osQuery.or(teamOr);
   }
 
   const [{ data: ordens, error: eOs }, equipesRes] = await Promise.all([
