@@ -22,6 +22,13 @@ import {
   type ActionResult,
 } from "./actions";
 
+const USER_PERMISSION_FIELDS = [
+  { name: "pode_editar_agenda", label: "Edit schedule" },
+  { name: "pode_ver_todas_equipes", label: "View all teams" },
+  { name: "pode_gerenciar_estoque", label: "Manage inventory" },
+  { name: "pode_resolver_crash", label: "Resolve operational blocks" },
+] as const;
+
 function mergeUserRows(
   rows: UsuarioWithEquipe[],
   row: UsuarioWithEquipe,
@@ -674,42 +681,20 @@ function UserForm({
         <legend className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep">
           Permissions
         </legend>
-        <label className="flex items-center gap-2 text-sm font-light text-cc-deep">
-          <input
-            type="checkbox"
-            name="pode_editar_agenda"
-            defaultChecked={initial?.pode_editar_agenda}
-            className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
-          />
-          pode_editar_agenda
-        </label>
-        <label className="flex items-center gap-2 text-sm font-light text-cc-deep">
-          <input
-            type="checkbox"
-            name="pode_ver_todas_equipes"
-            defaultChecked={initial?.pode_ver_todas_equipes}
-            className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
-          />
-          pode_ver_todas_equipes
-        </label>
-        <label className="flex items-center gap-2 text-sm font-light text-cc-deep">
-          <input
-            type="checkbox"
-            name="pode_gerenciar_estoque"
-            defaultChecked={initial?.pode_gerenciar_estoque}
-            className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
-          />
-          pode_gerenciar_estoque
-        </label>
-        <label className="flex items-center gap-2 text-sm font-light text-cc-deep">
-          <input
-            type="checkbox"
-            name="pode_resolver_crash"
-            defaultChecked={initial?.pode_resolver_crash}
-            className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
-          />
-          pode_resolver_crash
-        </label>
+        {USER_PERMISSION_FIELDS.map(({ name, label }) => (
+          <label
+            key={name}
+            className="flex items-center gap-2 text-sm font-light text-cc-deep"
+          >
+            <input
+              type="checkbox"
+              name={name}
+              defaultChecked={initial?.[name]}
+              className="h-4 w-4 rounded-sm border-[1.5px] border-cc-border-strong accent-cc-blue"
+            />
+            {label}
+          </label>
+        ))}
       </fieldset>
 
       <div className="flex justify-end gap-2 pt-1">
