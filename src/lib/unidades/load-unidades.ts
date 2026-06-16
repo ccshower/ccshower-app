@@ -10,7 +10,7 @@ export async function loadUnidades(): Promise<{
 
   const { data, error } = await supabase
     .from("unidades")
-    .select("id, nome, timezone, matriz, ativo, criado_em")
+    .select("id, nome, timezone, matriz, meta_producao_mensal, ativo, criado_em")
     .eq("ativo", true)
     .order("matriz", { ascending: false })
     .order("nome", { ascending: true });

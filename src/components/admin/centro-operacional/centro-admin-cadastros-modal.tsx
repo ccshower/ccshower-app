@@ -96,14 +96,14 @@ export function CentroAdminCadastrosModal({
         supabase.from("equipes").select("*").order("nome", { ascending: true }),
         supabase
           .from("unidades")
-          .select("id, nome, timezone, matriz, ativo, criado_em")
+          .select("id, nome, timezone, matriz, meta_producao_mensal, ativo, criado_em")
           .eq("ativo", true)
           .order("matriz", { ascending: false })
           .order("nome", { ascending: true }),
         tipo === "unidades"
           ? supabase
               .from("unidades")
-              .select("id, nome, timezone, matriz, ativo, criado_em")
+              .select("id, nome, timezone, matriz, meta_producao_mensal, ativo, criado_em")
               .order("matriz", { ascending: false })
               .order("nome", { ascending: true })
           : Promise.resolve({ data: [] as Unidade[], error: null }),

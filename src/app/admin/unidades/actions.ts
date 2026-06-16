@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { PRODUCAO_MENSAL_META } from "@/lib/centro-operacional/producao-mensal";
 
 async function requireAdminSupabase() {
   const supabase = await createClient();
@@ -30,6 +31,14 @@ function normalizeTimezone(raw: string) {
   return tz.length ? tz : DEFAULT_TIMEZONE;
 }
 
+function parseMetaProducaoMensal(raw: string): number | null {
+  const cleaned = raw.replace(/[$,\s]/g, "");
+  if (!cleaned.length) return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
+
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
 async function clearMatrizFlag(supabase: Awaited<ReturnType<typeof requireAdminSupabase>>) {
@@ -50,9 +59,17 @@ export async function criarUnidade(formData: FormData): Promise<ActionResult> {
       return { ok: false, message: "Name is required" };
     }
     const timezone = normalizeTimezone(String(formData.get("timezone") ?? ""));
+    const metaRaw = String(formData.get("meta_producao_mensal") ?? "");
+    const metaParsed = parseMetaProducaoMensal(metaRaw);
+    const meta_producao_mensal =
+      metaParsed ?? (metaRaw.trim() ? null : PRODUCAO_MENSAL_META);
+    if (meta_producao_mensal === null) {
+      return { ok: false, message: "Monthly goal must be a valid amount" };
+    }
     const { error } = await supabase.from("unidades").insert({
       nome,
       timezone,
+      meta_producao_mensal,
       matriz: false,
       ativo: true,
     });
@@ -81,6 +98,12 @@ export async function atualizarUnidade(formData: FormData): Promise<ActionResult
     }
     const timezone = normalizeTimezone(String(formData.get("timezone") ?? ""));
     const matriz = formData.get("matriz") === "on";
+    const metaParsed = parseMetaProducaoMensal(
+      String(formData.get("meta_producao_mensal") ?? ""),
+    );
+    if (metaParsed === null) {
+      return { ok: false, message: "Monthly goal must be a valid amount" };
+    }
 
     if (matriz) {
       await clearMatrizFlag(supabase);
@@ -88,7 +111,7 @@ export async function atualizarUnidade(formData: FormData): Promise<ActionResult
 
     const { error } = await supabase
       .from("unidades")
-      .update({ nome, timezone, matriz })
+      .update({ nome, timezone, matriz, meta_producao_mensal: metaParsed })
       .eq("id", id);
     if (error) {
       return { ok: false, message: error.message };

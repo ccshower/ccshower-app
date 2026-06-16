@@ -63,6 +63,20 @@ export async function loadProducaoMensal(
 
   const supabase = await createClient();
 
+  let metaMensal = PRODUCAO_MENSAL_META;
+  if (unidadeId) {
+    const { data: unidadeRow } = await supabase
+      .from("unidades")
+      .select("meta_producao_mensal")
+      .eq("id", unidadeId)
+      .maybeSingle();
+    const raw = unidadeRow?.meta_producao_mensal;
+    const parsed = typeof raw === "number" ? raw : Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      metaMensal = parsed;
+    }
+  }
+
   let osQuery = supabase
     .from("ordens_servico")
     .select("valor_final")
@@ -105,7 +119,7 @@ export async function loadProducaoMensal(
   }
 
   return {
-    metaMensal: PRODUCAO_MENSAL_META,
+    metaMensal,
     valorRealizado,
     instalacoesConcluidas: instalacoesConcluidas.size,
     error: null,

@@ -1,4 +1,4 @@
-/** Meta mensal fixa até existir configuração administrativa. */
+/** Default monthly production goal when a unit has no configured value. */
 export const PRODUCAO_MENSAL_META = 250_000;
 
 export type ProducaoMensalData = {

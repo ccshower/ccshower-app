@@ -12,6 +12,7 @@ import {
 import { Field } from "@/components/ui/field";
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import { createClient } from "@/lib/supabase/client";
+import { formatProducaoValor } from "@/lib/centro-operacional/producao-mensal";
 import type { Unidade } from "@/lib/types/database";
 
 const TIMEZONE_OPTIONS = [
@@ -137,6 +138,7 @@ export function UnidadesClient({
           <thead>
             <tr className="border-b border-cc-border bg-cc-border-light text-xs font-semibold uppercase tracking-[0.08em] text-cc-muted">
               <th className="px-3 py-2 font-medium">Name</th>
+              <th className="px-3 py-2 font-medium">Monthly goal</th>
               <th className="px-3 py-2 font-medium">Timezone</th>
               <th className="px-3 py-2 font-medium">HQ</th>
               <th className="px-3 py-2 font-medium">Active</th>
@@ -147,6 +149,9 @@ export function UnidadesClient({
             {rows.map((u) => (
               <tr key={u.id} className="border-b border-cc-border last:border-0">
                 <td className="px-3 py-2 font-medium text-cc-ink">{u.nome}</td>
+                <td className="px-3 py-2 tabular-nums text-cc-deep">
+                  {formatProducaoValor(u.meta_producao_mensal ?? 0)}
+                </td>
                 <td className="px-3 py-2 text-cc-deep">{u.timezone}</td>
                 <td className="px-3 py-2">
                   {u.matriz ? (
@@ -193,7 +198,7 @@ export function UnidadesClient({
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-cc-muted">
+                <td colSpan={6} className="px-3 py-6 text-center text-sm text-cc-muted">
                   No units registered.
                 </td>
               </tr>
@@ -222,6 +227,17 @@ export function UnidadesClient({
           <Field label="Name">
             <input
               name="nome"
+              required
+              className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
+            />
+          </Field>
+          <Field label="Monthly production goal">
+            <input
+              name="meta_producao_mensal"
+              type="number"
+              min="0"
+              step="1000"
+              defaultValue={250000}
               required
               className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
             />
@@ -282,6 +298,17 @@ export function UnidadesClient({
                 name="nome"
                 required
                 defaultValue={editing.nome}
+                className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
+              />
+            </Field>
+            <Field label="Monthly production goal">
+              <input
+                name="meta_producao_mensal"
+                type="number"
+                min="0"
+                step="1000"
+                defaultValue={editing.meta_producao_mensal ?? 250000}
+                required
                 className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
               />
             </Field>

@@ -4,6 +4,8 @@ export type Unidade = {
   id: string;
   nome: string;
   timezone: string;
+  /** Monthly production goal shown in Operational Center. */
+  meta_producao_mensal: number;
   /** Jacksonville — recebe legado e é fallback de novos registros. */
   matriz: boolean;
   ativo: boolean;

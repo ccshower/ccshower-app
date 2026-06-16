@@ -6,7 +6,7 @@ export default async function UnidadesAdminPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("unidades")
-    .select("id, nome, timezone, matriz, ativo, criado_em")
+    .select("id, nome, timezone, matriz, meta_producao_mensal, ativo, criado_em")
     .order("matriz", { ascending: false })
     .order("nome", { ascending: true });
 
