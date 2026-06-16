@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
@@ -56,6 +57,14 @@ export function LoginForm() {
           placeholder="••••••••"
         />
       </Field>
+      <div className="flex justify-end">
+        <Link
+          href="/login/forgot-password"
+          className="text-xs font-medium text-cc-blue-deep underline-offset-2 hover:underline"
+        >
+          {t("login.forgotPassword")}
+        </Link>
+      </div>
       {searchParams?.get("erro") === "credenciais" && !pending ? (
         <p className="text-sm font-medium text-cc-red" role="alert">
           {t("login.invalidCredentials")}

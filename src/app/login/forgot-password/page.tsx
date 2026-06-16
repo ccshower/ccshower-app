@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import { t } from "@/lib/i18n";
@@ -7,13 +6,13 @@ import { getUsuarioWithEquipe } from "@/lib/auth/get-usuario-with-equipe";
 import { resolveHomePath } from "@/lib/auth/usuario-comercial";
 import { createClient } from "@/lib/supabase/server";
 
-import { LoginForm } from "./login-form";
+import { ForgotPasswordForm } from "./forgot-password-form";
 
 type Props = {
-  searchParams?: Promise<{ erro?: string; sucesso?: string }>;
+  searchParams?: Promise<{ erro?: string }>;
 };
 
-export default async function LoginPage({ searchParams }: Props) {
+export default async function ForgotPasswordPage({ searchParams }: Props) {
   const sp = (await searchParams) ?? {};
   const supabase = await createClient();
   const {
@@ -26,18 +25,6 @@ export default async function LoginPage({ searchParams }: Props) {
       redirect(resolveHomePath(usuario, equipe));
     }
   }
-
-  const erro =
-    sp.erro === "inativo"
-      ? t("login.inactiveUser")
-      : sp.erro === "credenciais"
-        ? t("login.invalidCredentials")
-        : sp.erro === "callback"
-          ? t("login.authCallbackError")
-          : null;
-
-  const sucesso =
-    sp.sucesso === "senha-atualizada" ? t("login.passwordUpdated") : null;
 
   return (
     <div className="min-h-dvh flex flex-col bg-cc-canvas">
@@ -56,34 +43,20 @@ export default async function LoginPage({ searchParams }: Props) {
         <div className="rounded-ds-lg border border-cc-border bg-cc-surface shadow-sheet">
           <div className="flex items-center justify-between border-b border-cc-border px-4 py-3">
             <span className="text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep">
-              {t("login.credentials")}
+              {t("login.forgotPasswordTitle")}
             </span>
-            <span
-              className="h-2 w-2 shrink-0 rounded-full bg-cc-blue"
-              title={t("login.sessionViaSupabase")}
-              aria-hidden
-            />
+            <span className="h-2 w-2 shrink-0 rounded-full bg-cc-blue" aria-hidden />
           </div>
           <div className="p-4 sm:p-5">
-            {erro ? (
+            {sp.erro === "link-invalido" ? (
               <p
                 className="mb-4 rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2.5 text-sm font-medium text-cc-red"
                 role="alert"
               >
-                {erro}
+                {t("login.resetLinkInvalid")}
               </p>
             ) : null}
-            {sucesso ? (
-              <p
-                className="mb-4 rounded-sm border border-cc-blue-soft bg-cc-blue-soft px-3 py-2.5 text-sm font-medium text-cc-blue-deep"
-                role="status"
-              >
-                {sucesso}
-              </p>
-            ) : null}
-            <Suspense fallback={<p className="text-sm text-cc-muted">{t("common.loading")}</p>}>
-              <LoginForm />
-            </Suspense>
+            <ForgotPasswordForm />
           </div>
         </div>
       </div>
