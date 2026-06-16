@@ -196,6 +196,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
 
     revalidatePath("/clientes");
     revalidatePath("/admin/clientes");
+    revalidatePath("/admin/centro-operacional");
     revalidatePath("/operacao");
     revalidatePath("/ordens-servico");
     return { ok: true, id: created.id, nome: created.nome };
@@ -249,6 +250,7 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
 
     revalidatePath("/clientes");
     revalidatePath("/admin/clientes");
+    revalidatePath("/admin/centro-operacional");
     revalidatePath("/operacao");
     return { ok: true };
   } catch (e) {
@@ -268,6 +270,7 @@ export async function setClienteAtivo(id: string, ativo: boolean): Promise<Actio
 
     revalidatePath("/clientes");
     revalidatePath("/admin/clientes");
+    revalidatePath("/admin/centro-operacional");
     revalidatePath("/operacao");
     return { ok: true };
   } catch (e) {
