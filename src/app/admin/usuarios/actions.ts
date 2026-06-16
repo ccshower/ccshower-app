@@ -37,6 +37,31 @@ function emptyToNull(v: string) {
   return t.length ? t : null;
 }
 
+function normalizeTipoUsuario(raw: string): TipoUsuario | null {
+  const t = raw.trim().toLowerCase();
+  if (t === "standard" || t === "comum") return "comum";
+  if (t === "manager" || t === "gerente") return "manager";
+  if (t === "admin" || t === "administrador") return "admin";
+  return isValidTipoUsuario(t) ? t : null;
+}
+
+function mapAuthCreateError(message: string): string {
+  if (message.includes("Database error creating new user")) {
+    return 'Auth rejected user creation (broken trigger on auth.users). Run supabase/scripts/catch-up-auth-user-bootstrap.sql in Supabase SQL Editor, then try again.';
+  }
+  return message;
+}
+
+function mapUsuarioDbError(message: string): string {
+  if (message.includes("usuarios_tipo_usuario_check")) {
+    return 'Invalid user type in the database. Run supabase/scripts/catch-up-usuario-tipo-manager.sql in Supabase (allows comum, manager, admin).';
+  }
+  if (message.includes("violates check constraint")) {
+    return `Database rejected user data: ${message}`;
+  }
+  return message;
+}
+
 export async function criarUsuario(formData: FormData): Promise<ActionResult> {
   try {
     await requireAdminSupabase();
@@ -48,7 +73,8 @@ export async function criarUsuario(formData: FormData): Promise<ActionResult> {
     const telefone = emptyToNull(String(formData.get("telefone") ?? ""));
     const equipe_id = emptyToNull(String(formData.get("equipe_id") ?? ""));
     const unidade_id = emptyToNull(String(formData.get("unidade_id") ?? ""));
-    const tipo_usuario = String(formData.get("tipo_usuario") ?? "comum") as TipoUsuario;
+    const tipoRaw = String(formData.get("tipo_usuario") ?? "comum");
+    const tipo_usuario = normalizeTipoUsuario(tipoRaw);
 
     if (!nome || !email || !password) {
       return { ok: false, message: "Nome, e-mail e senha são obrigatórios" };
@@ -56,7 +82,7 @@ export async function criarUsuario(formData: FormData): Promise<ActionResult> {
     if (password.length < 6) {
       return { ok: false, message: "Senha com pelo menos 6 caracteres" };
     }
-    if (!isValidTipoUsuario(tipo_usuario)) {
+    if (!tipo_usuario) {
       return { ok: false, message: "Tipo de usuário inválido" };
     }
 
@@ -71,12 +97,17 @@ export async function criarUsuario(formData: FormData): Promise<ActionResult> {
       email,
       password,
       email_confirm: true,
+      user_metadata: { nome, tipo_usuario },
     });
     if (authErr || !created.user) {
-      return { ok: false, message: authErr?.message ?? "Erro ao criar login" };
+      return {
+        ok: false,
+        message: mapAuthCreateError(authErr?.message ?? "Erro ao criar login"),
+      };
     }
 
-    const updates = {
+    const row = {
+      id: created.user.id,
       nome,
       email,
       telefone,
@@ -87,25 +118,11 @@ export async function criarUsuario(formData: FormData): Promise<ActionResult> {
       ativo: true,
     };
 
-    const { error: upErr, data: updated } = await admin
-      .from("usuarios")
-      .update(updates)
-      .eq("id", created.user.id)
-      .select("id")
-      .maybeSingle();
+    const { error: upErr } = await admin.from("usuarios").upsert(row, { onConflict: "id" });
 
     if (upErr) {
       await admin.auth.admin.deleteUser(created.user.id);
-      return { ok: false, message: upErr.message };
-    }
-
-    if (!updated) {
-      await admin.auth.admin.deleteUser(created.user.id);
-      return {
-        ok: false,
-        message:
-          "Não foi possível atualizar public.usuarios após criar o login. Confirme se o trigger em auth.users cria a linha em usuarios.",
-      };
+      return { ok: false, message: mapUsuarioDbError(upErr.message) };
     }
 
     revalidatePath("/admin/usuarios");
@@ -133,13 +150,14 @@ export async function atualizarUsuario(formData: FormData): Promise<ActionResult
     const telefone = emptyToNull(String(formData.get("telefone") ?? ""));
     const equipe_id = emptyToNull(String(formData.get("equipe_id") ?? ""));
     const unidade_id = emptyToNull(String(formData.get("unidade_id") ?? ""));
-    const tipo_usuario = String(formData.get("tipo_usuario") ?? "comum") as TipoUsuario;
+    const tipoRaw = String(formData.get("tipo_usuario") ?? "comum");
+    const tipo_usuario = normalizeTipoUsuario(tipoRaw);
     const password = String(formData.get("password") ?? "").trim();
 
     if (!nome || !email) {
       return { ok: false, message: "Nome e e-mail são obrigatórios" };
     }
-    if (!isValidTipoUsuario(tipo_usuario)) {
+    if (!tipo_usuario) {
       return { ok: false, message: "Tipo de usuário inválido" };
     }
     if (password && password.length < 6) {
@@ -175,7 +193,7 @@ export async function atualizarUsuario(formData: FormData): Promise<ActionResult
       .eq("id", id);
 
     if (upRow) {
-      return { ok: false, message: upRow.message };
+      return { ok: false, message: mapUsuarioDbError(upRow.message) };
     }
 
     revalidatePath("/admin/usuarios");
