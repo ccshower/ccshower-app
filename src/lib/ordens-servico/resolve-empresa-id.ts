@@ -2,48 +2,53 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type EmpresaRow = {
   empresa_id?: string | null;
-  unidade_id?: string | null;
 };
 
+async function loadEmpresaId(
+  supabase: SupabaseClient,
+  table: "clientes" | "usuarios",
+  id: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from(table)
+    .select("empresa_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  const row = data as EmpresaRow | null;
+  return row?.empresa_id ?? null;
+}
+
+async function loadDefaultEmpresaId(supabase: SupabaseClient): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("empresas")
+    .select("id")
+    .eq("ativo", true)
+    .order("criado_em", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return (data?.id as string | undefined) ?? null;
+}
+
 /**
- * Resolve empresa_id para multi-tenant.
- * Ordem: cliente/usuário → unidade_id → unidade matriz.
- * (empresa_id legado; unidade_id é o tenant operacional atual.)
+ * Resolve empresa_id (FK → public.empresas).
+ * Ordem: cliente → usuário → primeira empresa ativa.
  */
 export async function resolveEmpresaId(
   supabase: SupabaseClient,
   opts: { clienteId?: string; userId?: string },
 ): Promise<string | null> {
   if (opts.clienteId) {
-    const { data: cli } = await supabase
-      .from("clientes")
-      .select("empresa_id, unidade_id")
-      .eq("id", opts.clienteId)
-      .maybeSingle();
-
-    const row = cli as EmpresaRow | null;
-    if (row?.empresa_id) return row.empresa_id;
-    if (row?.unidade_id) return row.unidade_id;
+    const fromCliente = await loadEmpresaId(supabase, "clientes", opts.clienteId);
+    if (fromCliente) return fromCliente;
   }
 
   if (opts.userId) {
-    const { data: user } = await supabase
-      .from("usuarios")
-      .select("empresa_id, unidade_id")
-      .eq("id", opts.userId)
-      .maybeSingle();
-
-    const row = user as EmpresaRow | null;
-    if (row?.empresa_id) return row.empresa_id;
-    if (row?.unidade_id) return row.unidade_id;
+    const fromUser = await loadEmpresaId(supabase, "usuarios", opts.userId);
+    if (fromUser) return fromUser;
   }
 
-  const { data: matriz } = await supabase
-    .from("unidades")
-    .select("id")
-    .eq("matriz", true)
-    .limit(1)
-    .maybeSingle();
-
-  return (matriz?.id as string | undefined) ?? null;
+  return loadDefaultEmpresaId(supabase);
 }

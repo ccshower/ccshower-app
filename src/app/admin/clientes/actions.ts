@@ -122,6 +122,15 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
 
     const equipeWorkOrder = equipeResolved.equipeId;
 
+    const empresa_id = await resolveEmpresaId(supabase, { userId });
+    if (!empresa_id) {
+      return {
+        ok: false,
+        message:
+          'No active company (empresas) found. Run supabase/scripts/catch-up-empresa-id-unidade.sql in Supabase.',
+      };
+    }
+
     const { data: created, error } = await supabase
       .from("clientes")
       .insert({
@@ -141,6 +150,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
         google_maps_url: emptyToNull(formData.get("google_maps_url")),
         observacoes: emptyToNull(formData.get("observacoes")),
         equipe_id: equipeWorkOrder,
+        empresa_id,
         criado_por: userId,
         ativo: true,
       })
@@ -150,19 +160,6 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
     if (error) return { ok: false, message: error.message };
 
     // Work order inicial (fluxo vivo) — nasce automaticamente ao salvar cliente.
-    // Não há responsável/ownership por usuário; userId entra apenas como auditoria (criado_por).
-    const empresa_id = await resolveEmpresaId(supabase, {
-      clienteId: created.id,
-      userId,
-    });
-    if (!empresa_id) {
-      return {
-        ok: false,
-        message:
-          "Cliente criado, mas não foi possível identificar empresa_id para criar a Work Order.",
-      };
-    }
-
     const snapshot = buildOperationalSnapshot(
       equipeWorkOrder,
       "commercial",
