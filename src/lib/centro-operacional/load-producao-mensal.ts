@@ -47,6 +47,38 @@ function somaValorFinal(rows: OsConcluidaRow[]): number {
   }, 0);
 }
 
+function parseMetaProducaoMensal(raw: unknown): number {
+  const parsed = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return parsed;
+}
+
+async function resolveMetaMensal(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  unidadeId?: string | null,
+): Promise<number> {
+  if (unidadeId) {
+    const { data: unidadeRow } = await supabase
+      .from("unidades")
+      .select("meta_producao_mensal")
+      .eq("id", unidadeId)
+      .maybeSingle();
+    const meta = parseMetaProducaoMensal(unidadeRow?.meta_producao_mensal);
+    return meta > 0 ? meta : PRODUCAO_MENSAL_META;
+  }
+
+  const { data: unidadesRows } = await supabase
+    .from("unidades")
+    .select("meta_producao_mensal")
+    .eq("ativo", true);
+
+  const total = (unidadesRows ?? []).reduce(
+    (acc, row) => acc + parseMetaProducaoMensal(row.meta_producao_mensal),
+    0,
+  );
+  return total > 0 ? total : PRODUCAO_MENSAL_META;
+}
+
 export async function loadProducaoMensal(
   unidadeId?: string | null,
 ): Promise<ProducaoMensalData> {
@@ -63,19 +95,7 @@ export async function loadProducaoMensal(
 
   const supabase = await createClient();
 
-  let metaMensal = PRODUCAO_MENSAL_META;
-  if (unidadeId) {
-    const { data: unidadeRow } = await supabase
-      .from("unidades")
-      .select("meta_producao_mensal")
-      .eq("id", unidadeId)
-      .maybeSingle();
-    const raw = unidadeRow?.meta_producao_mensal;
-    const parsed = typeof raw === "number" ? raw : Number(raw);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      metaMensal = parsed;
-    }
-  }
+  const metaMensal = await resolveMetaMensal(supabase, unidadeId);
 
   let osQuery = supabase
     .from("ordens_servico")
