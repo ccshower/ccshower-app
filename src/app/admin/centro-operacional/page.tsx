@@ -56,7 +56,7 @@ export default async function CentroOperacionalPage({
   const unidadeId = resolveUnidadeId(usuario, unidades, params.unidade);
 
   const [
-    { fila: filaComercial, detalhes: filaComercialDetalhes, error: filaComercialError },
+    { fila: filaComercial, error: filaComercialError },
     { fila: filaProjeto, error: filaProjetoError },
     agendaGlobal,
     saudeOperacional,
@@ -97,7 +97,6 @@ export default async function CentroOperacionalPage({
   return (
     <CentroOperacionalClient
       filaComercial={filaComercial}
-      filaComercialDetalhes={filaComercialDetalhes}
       filaComercialError={filaComercialError ?? equipesError?.message ?? usuariosError?.message ?? null}
       filaProjeto={filaProjeto}
       filaProjetoError={filaProjetoError}

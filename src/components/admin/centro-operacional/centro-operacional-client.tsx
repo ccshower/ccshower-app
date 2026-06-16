@@ -20,9 +20,7 @@ import {
 } from "@/components/admin/centro-operacional/centro-agenda-ui";
 import { ClienteForm } from "@/app/admin/clientes/clientes-client";
 import { criarCliente } from "@/app/admin/clientes/actions";
-import { agendarVisitaExistente } from "@/app/ordens-servico/actions";
 import { OperationalModal } from "@/components/operacional/operational-modal";
-import { AgendarVisitaModal } from "@/components/ordens-servico/agendar-visita-modal";
 import {
   CentroIcon,
   IconActivity,
@@ -73,13 +71,11 @@ import {
   type FilaProjetoItem,
 } from "@/lib/centro-operacional/fila-projeto";
 import { osWorkspacePath } from "@/lib/ordens-servico/os-routes";
-import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import { t } from "@/lib/i18n";
-import type { ClienteWithRelations, Equipe, Unidade, Usuario } from "@/lib/types/database";
+import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
 
 type CentroOperacionalClientProps = {
   filaComercial: FilaComercialItem[];
-  filaComercialDetalhes: Record<string, ClienteWithRelations>;
   filaComercialError: string | null;
   filaProjeto: FilaProjetoItem[];
   filaProjetoError: string | null;
@@ -104,7 +100,6 @@ type CentroOperacionalClientProps = {
 
 export function CentroOperacionalClient({
   filaComercial,
-  filaComercialDetalhes,
   filaComercialError,
   filaProjeto,
   filaProjetoError,
@@ -187,7 +182,6 @@ export function CentroOperacionalClient({
 
         <FilaComercialSection
           fila={filaComercial}
-          clientesDetalhes={filaComercialDetalhes}
           loadError={filaComercialError}
           equipes={equipes}
           usuarios={usuarios}
@@ -987,7 +981,6 @@ function EquipeCapacidadePopover({
 
 function FilaComercialSection({
   fila,
-  clientesDetalhes,
   loadError,
   equipes,
   usuarios,
@@ -996,7 +989,6 @@ function FilaComercialSection({
   canChooseEquipe,
 }: {
   fila: FilaComercialItem[];
-  clientesDetalhes: Record<string, ClienteWithRelations>;
   loadError: string | null;
   equipes: Equipe[];
   usuarios: Usuario[];
@@ -1006,24 +998,8 @@ function FilaComercialSection({
 }) {
   const router = useRouter();
   const [cadastroOpen, setCadastroOpen] = useState(false);
-  const [agendarItem, setAgendarItem] = useState<{
-    osId: string;
-    cliente: ClienteWithRelations;
-    equipeId: string | null;
-  } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const openAgendarVisita = (item: FilaComercialItem) => {
-    const detalhe = clientesDetalhes[item.clienteId];
-    if (!detalhe) return;
-    setFormError(null);
-    setAgendarItem({
-      osId: item.osId,
-      cliente: detalhe,
-      equipeId: item.equipeId,
-    });
-  };
 
   return (
     <>
@@ -1051,7 +1027,7 @@ function FilaComercialSection({
               Could not load commercial queue: {loadError}
             </p>
           ) : null}
-          {formError && !agendarItem ? (
+          {formError ? (
             <p className="border-b border-cc-border bg-cc-red-soft px-4 py-3 text-sm font-medium text-cc-red sm:px-5">
               {formError}
             </p>
@@ -1067,7 +1043,7 @@ function FilaComercialSection({
                   key={item.osId}
                   item={item}
                   last={i === fila.length - 1}
-                  onOpen={() => openAgendarVisita(item)}
+                  onOpen={() => router.push(osWorkspacePath(item.osId))}
                 />
               ))
             )}
@@ -1109,41 +1085,6 @@ function FilaComercialSection({
           }}
         />
       </OperationalModal>
-
-      {agendarItem ? (
-        <AgendarVisitaModal
-          open
-          osId={agendarItem.osId}
-          clienteId={agendarItem.cliente.id}
-          clienteNome={agendarItem.cliente.nome}
-          tipoCliente={parseClientType(agendarItem.cliente.tipo_cliente)}
-          equipes={equipes}
-          defaultEquipeId={agendarItem.equipeId ?? defaultEquipeId}
-          initialEquipeId={agendarItem.equipeId ?? agendarItem.cliente.equipe_id}
-          clienteContato={{
-            telefone: agendarItem.cliente.telefone,
-            endereco_formatado: agendarItem.cliente.endereco_formatado,
-          }}
-          pending={pending}
-          errorMessage={agendarItem && formError ? formError : null}
-          onClose={() => {
-            setFormError(null);
-            setAgendarItem(null);
-          }}
-          onSubmit={(fd) => {
-            startTransition(async () => {
-              const result = await agendarVisitaExistente(fd);
-              if (!result.ok) {
-                setFormError(result.message);
-                return;
-              }
-              setFormError(null);
-              setAgendarItem(null);
-              router.refresh();
-            });
-          }}
-        />
-      ) : null}
     </>
   );
 }
@@ -1278,10 +1219,12 @@ function FilaComercialRow({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cc-canvas/80 sm:gap-4 sm:px-5 sm:py-3`}
+        className="group flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cc-canvas/80 sm:gap-4 sm:px-5 sm:py-3"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-cc-ink">{item.clienteNome}</div>
+          <div className="truncate text-sm font-medium text-cc-ink group-hover:text-cc-blue-deep">
+            {item.clienteNome}
+          </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             {item.equipeNome ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-cc-muted">
@@ -1302,6 +1245,7 @@ function FilaComercialRow({
             <span className="text-xs text-cc-muted">{formatDataCadastro(item.criadoEm)}</span>
           </div>
         </div>
+        <IconChevronRight className="h-4 w-4 shrink-0 text-cc-border-strong group-hover:text-cc-muted" />
       </button>
     </li>
   );

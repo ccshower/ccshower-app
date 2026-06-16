@@ -14,7 +14,6 @@ import {
   parseOsStage,
 } from "@/lib/ordens-servico/operacional-snapshot";
 import { osWorkspacePath } from "@/lib/ordens-servico/os-routes";
-import { OPERATIONAL_TZ } from "@/lib/ordens-servico/datetime";
 import {
   hojeOperacionalYmd,
   isoRangeDiaOperacional,
@@ -25,7 +24,6 @@ import type { Priority } from "@/lib/mock/centro-operacional/operational-dashboa
 
 import {
   ATENCAO_OS_DIAS_PARADO,
-  ATENCAO_VISITA_NAO_CONFIRMADA_HORAS,
   buildAtencaoFilters,
   compareAtencaoItems,
   formatAbertoHa,
@@ -159,12 +157,6 @@ function diasDesde(iso: string, nowMs: number): number {
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return 0;
   return Math.max(0, Math.floor((nowMs - t) / 86_400_000));
-}
-
-function eventDayYmd(startIso: string): string {
-  return new Date(startIso).toLocaleDateString("en-CA", {
-    timeZone: OPERATIONAL_TZ,
-  });
 }
 
 function resolvePriority(dias: number, base: Priority = "urgente"): Priority {
@@ -315,7 +307,6 @@ function buildVisitaItems(rows: VisitaRow[], nowMs: number): RawItem[] {
 
     const cliente = ev.clientes?.nome?.trim() || "Client";
     const hora = operationalWallClockHm(startIso) ?? "—";
-    const ymd = eventDayYmd(startIso);
     const href = osWorkspacePath(osId);
     const status = ev.status ?? "";
 
@@ -345,31 +336,6 @@ function buildVisitaItems(rows: VisitaRow[], nowMs: number): RawItem[] {
       });
       continue;
     }
-
-    const horasAte = (startMs - nowMs) / 3_600_000;
-    if (
-      startMs > nowMs &&
-      horasAte <= ATENCAO_VISITA_NAO_CONFIRMADA_HORAS &&
-      (status === "scheduled" || status === "agendado")
-    ) {
-      seenOs.add(osId);
-      out.push({
-        id: `visita-pendente-${ev.id}`,
-        osId,
-        eventoId: ev.id,
-        href,
-        cliente,
-        os: formatOsRef(osId),
-        etapa: "Commercial",
-        motivo: `Visit not confirmed — ${ymd} at ${hora}`,
-        priority: horasAte <= 24 ? "urgente" : "normal",
-        type: "critica",
-        tempo: horasAte <= 24 ? "Next 24h" : "Next 48h",
-        acao: "Confirm visit",
-        sortGroup: 3,
-        sortDias: 0,
-      });
-    }
   }
 
   return out;
@@ -398,16 +364,7 @@ export async function loadAtencaoAgora(
 ): Promise<AtencaoAgoraData> {
   const nowMs = Date.now();
   const hoje = hojeOperacionalYmd();
-  const rangePassado = isoRangeDiaOperacional(hoje);
-  const rangeFuturo = rangePassado
-    ? {
-        start: rangePassado.start,
-        end: new Date(
-          new Date(rangePassado.end).getTime() +
-            ATENCAO_VISITA_NAO_CONFIRMADA_HORAS * 3_600_000,
-        ).toISOString(),
-      }
-    : null;
+  const rangeVisitas = isoRangeDiaOperacional(hoje);
 
   const supabase = await createClient();
 
@@ -449,23 +406,22 @@ export async function loadAtencaoAgora(
     .eq("ativo", true);
   if (unidadeId) osQuery = osQuery.eq("unidade_id", unidadeId);
 
-  let visitasQuery =
-    rangePassado && rangeFuturo
-      ? supabase
-          .from("agenda_eventos")
-          .select(
-            `
+  let visitasQuery = rangeVisitas
+    ? supabase
+        .from("agenda_eventos")
+        .select(
+          `
             ${AGENDA_EVENTO_DATETIME_COLUMNS},
             ordem_servico_id,
             clientes!cliente_id ( nome ),
             ordens_servico!ordem_servico_id ( etapa_atual )
           `,
-          )
-          .eq("tipo_evento", "technical_visit")
-          .or(
-            `and(data_inicio.gte.${rangePassado.start},data_inicio.lte.${rangeFuturo.end}),and(data_evento.gte.${rangePassado.start},data_evento.lte.${rangeFuturo.end})`,
-          )
-      : null;
+        )
+        .eq("tipo_evento", "technical_visit")
+        .or(
+          `and(data_inicio.gte.${rangeVisitas.start},data_inicio.lte.${rangeVisitas.end}),and(data_evento.gte.${rangeVisitas.start},data_evento.lte.${rangeVisitas.end})`,
+        )
+    : null;
   if (visitasQuery && unidadeId) {
     visitasQuery = visitasQuery.eq("unidade_id", unidadeId);
   }
