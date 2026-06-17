@@ -5,6 +5,12 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 
 import { Field } from "@/components/ui/field";
 import { OperationalModal } from "@/components/operacional/operational-modal";
+import {
+  inferOperationalStageFromTeamName,
+  operationalStageLabel,
+  operationalStageOptions,
+  parseOperationalStageCode,
+} from "@/lib/equipes/operational-stage-options";
 import type { Equipe, Unidade, UsuarioWithEquipe } from "@/lib/types/database";
 import { createClient } from "@/lib/supabase/client";
 
@@ -68,6 +74,58 @@ function EquipeNomeComMembros({
           <p className="text-xs text-cc-muted">No linked users</p>
         )}
       </span>
+    </span>
+  );
+}
+
+function OperationalStageSelect({
+  name = "codigo_operacional",
+  defaultValue,
+  required = true,
+}: {
+  name?: string;
+  defaultValue?: string | null;
+  required?: boolean;
+}) {
+  const options = operationalStageOptions();
+  const parsed = parseOperationalStageCode(defaultValue);
+
+  return (
+    <Field
+      label="Operational stage"
+      hint="Defines which workflow step this team handles (Commercial, Financial, Project, Installation). Multiple teams can share the same stage — e.g. Commercial and SALES both use Commercial."
+    >
+      <select
+        name={name}
+        required={required}
+        defaultValue={parsed ?? ""}
+        className="w-full rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
+      >
+        <option value="" disabled>
+          Select stage…
+        </option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+function OperationalStageBadge({ code }: { code: string | null | undefined }) {
+  const parsed = parseOperationalStageCode(code);
+  if (!parsed) {
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+        Not set
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex rounded-full bg-cc-blue-soft px-2 py-0.5 text-xs font-medium text-cc-blue-deep">
+      {operationalStageLabel(parsed)}
     </span>
   );
 }
@@ -149,7 +207,7 @@ export function EquipesClient({
               Teams
             </h1>
             <p className="mt-1 text-sm font-light text-cc-muted">
-              Team colors for quick identification in the field.
+              Team colors and operational stage for workflow routing (commercial, project, etc.).
             </p>
           </div>
         ) : null}
@@ -179,6 +237,7 @@ export function EquipesClient({
           <thead>
             <tr className="border-b border-cc-border bg-cc-border-light text-xs font-semibold uppercase tracking-[0.08em] text-cc-muted">
               <th className="px-3 py-2 font-medium">Name</th>
+              <th className="px-3 py-2 font-medium">Operational stage</th>
               <th className="px-3 py-2 font-medium">Colors</th>
               <th className="px-3 py-2 font-medium">Unit</th>
               <th className="px-3 py-2 font-medium">Active</th>
@@ -193,6 +252,9 @@ export function EquipesClient({
                     nome={e.nome}
                     membros={usuariosPorEquipe.get(e.id) ?? []}
                   />
+                </td>
+                <td className="px-3 py-2">
+                  <OperationalStageBadge code={e.codigo_operacional} />
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
@@ -260,7 +322,7 @@ export function EquipesClient({
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-cc-muted">
+                <td colSpan={6} className="px-3 py-6 text-center text-sm text-cc-muted">
                   No teams registered.
                 </td>
               </tr>
@@ -293,6 +355,7 @@ export function EquipesClient({
               className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
             />
           </Field>
+          <OperationalStageSelect />
           <Field label="Unit">
             <select
               name="unidade_id"
@@ -372,6 +435,12 @@ export function EquipesClient({
                 className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
               />
             </Field>
+            <OperationalStageSelect
+              defaultValue={
+                editing.codigo_operacional ??
+                inferOperationalStageFromTeamName(editing.nome)
+              }
+            />
             <Field label="Unit">
               <select
                 name="unidade_id"

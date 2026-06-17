@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  inferOperationalStageFromTeamName,
+  parseOperationalStageCode,
+} from "@/lib/equipes/operational-stage-options";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireAdminSupabase() {
@@ -37,6 +41,24 @@ function normalizeHex(raw: string, fallback: string) {
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
+function resolveCodigoOperacional(
+  formData: FormData,
+  nome: string,
+): { code: string } | { error: string } {
+  const fromForm = parseOperationalStageCode(
+    String(formData.get("codigo_operacional") ?? ""),
+  );
+  if (fromForm) return { code: fromForm };
+
+  const inferred = inferOperationalStageFromTeamName(nome);
+  if (inferred) return { code: inferred };
+
+  return {
+    error:
+      'Operational stage is required (Commercial, Financial, Project, or Installation).',
+  };
+}
+
 export async function criarEquipe(formData: FormData): Promise<ActionResult> {
   try {
     const supabase = await requireAdminSupabase();
@@ -53,10 +75,15 @@ export async function criarEquipe(formData: FormData): Promise<ActionResult> {
       "#e8f0f7",
     );
     const unidade_id = String(formData.get("unidade_id") ?? "").trim() || null;
+    const codigo = resolveCodigoOperacional(formData, nome);
+    if ("error" in codigo) {
+      return { ok: false, message: codigo.error };
+    }
     const { error } = await supabase.from("equipes").insert({
       nome,
       cor_primaria,
       cor_secundaria,
+      codigo_operacional: codigo.code,
       ...(unidade_id ? { unidade_id } : {}),
       ativo: true,
     });
@@ -93,12 +120,17 @@ export async function atualizarEquipe(formData: FormData): Promise<ActionResult>
       "#e8f0f7",
     );
     const unidade_id = String(formData.get("unidade_id") ?? "").trim() || null;
+    const codigo = resolveCodigoOperacional(formData, nome);
+    if ("error" in codigo) {
+      return { ok: false, message: codigo.error };
+    }
     const { error } = await supabase
       .from("equipes")
       .update({
         nome,
         cor_primaria,
         cor_secundaria,
+        codigo_operacional: codigo.code,
         ...(unidade_id ? { unidade_id } : {}),
       })
       .eq("id", id);
