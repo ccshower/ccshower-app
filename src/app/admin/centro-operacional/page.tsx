@@ -9,6 +9,7 @@ import { loadAtencaoAgora } from "@/lib/centro-operacional/load-atencao-agora";
 import { loadBloqueiosOperacionais } from "@/lib/centro-operacional/load-bloqueios-operacionais";
 import { loadCapacidadeOperacional } from "@/lib/centro-operacional/load-capacidade-operacional";
 import { loadFilaComercial } from "@/lib/centro-operacional/load-fila-comercial";
+import { loadFilaFinanceiro } from "@/lib/centro-operacional/load-fila-financeiro";
 import { loadFilaProjeto } from "@/lib/centro-operacional/load-fila-projeto";
 import { loadGargalosOperacionais } from "@/lib/centro-operacional/load-gargalos-operacionais";
 import { loadProducaoMensal } from "@/lib/centro-operacional/load-producao-mensal";
@@ -55,6 +56,7 @@ export default async function CentroOperacionalPage({
 
   const [
     { fila: filaComercial, error: filaComercialError },
+    { fila: filaFinanceiro, error: filaFinanceiroError },
     { fila: filaProjeto, error: filaProjetoError },
     agendaGlobal,
     saudeOperacional,
@@ -67,6 +69,7 @@ export default async function CentroOperacionalPage({
     { data: usuarios, error: usuariosError },
   ] = await Promise.all([
     loadFilaComercial(unidadeId),
+    loadFilaFinanceiro(unidadeId),
     loadFilaProjeto(unidadeId),
     loadAgendaGlobal(unidadeId),
     loadSaudeOperacional(unidadeId),
@@ -96,6 +99,8 @@ export default async function CentroOperacionalPage({
     <CentroOperacionalClient
       filaComercial={filaComercial}
       filaComercialError={filaComercialError ?? equipesError?.message ?? usuariosError?.message ?? null}
+      filaFinanceiro={filaFinanceiro}
+      filaFinanceiroError={filaFinanceiroError}
       filaProjeto={filaProjeto}
       filaProjetoError={filaProjetoError}
       agendaGlobal={agendaGlobal}

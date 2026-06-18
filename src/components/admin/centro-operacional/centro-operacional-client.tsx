@@ -67,9 +67,15 @@ import {
   type FilaComercialItem,
 } from "@/lib/centro-operacional/fila-comercial";
 import {
+  filaFinanceiroDecisionConfig,
+  filaFinanceiroStatusBadge,
+  type FilaFinanceiroItem,
+} from "@/lib/centro-operacional/fila-financeiro";
+import {
   filaProjetoStatusBadge,
   type FilaProjetoItem,
 } from "@/lib/centro-operacional/fila-projeto";
+import { formatFinanceiroValor } from "@/lib/financeiro-operacional/financeiro-operacional";
 import { osWorkspacePathWithUnidade } from "@/lib/unidades/centro-unidade-persist";
 import { t } from "@/lib/i18n";
 import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
@@ -77,6 +83,8 @@ import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
 type CentroOperacionalClientProps = {
   filaComercial: FilaComercialItem[];
   filaComercialError: string | null;
+  filaFinanceiro: FilaFinanceiroItem[];
+  filaFinanceiroError: string | null;
   filaProjeto: FilaProjetoItem[];
   filaProjetoError: string | null;
   agendaGlobal: AgendaGlobalData;
@@ -101,6 +109,8 @@ type CentroOperacionalClientProps = {
 export function CentroOperacionalClient({
   filaComercial,
   filaComercialError,
+  filaFinanceiro,
+  filaFinanceiroError,
   filaProjeto,
   filaProjetoError,
   agendaGlobal,
@@ -188,6 +198,12 @@ export function CentroOperacionalClient({
           googleMapsApiKey={googleMapsApiKey}
           defaultEquipeId={defaultEquipeId}
           canChooseEquipe={canChooseEquipe}
+          unidadeId={unidadeSelecionadaId}
+        />
+
+        <FilaFinanceiroSection
+          fila={filaFinanceiro}
+          loadError={filaFinanceiroError}
           unidadeId={unidadeSelecionadaId}
         />
 
@@ -1100,6 +1116,119 @@ function FilaComercialSection({
         />
       </OperationalModal>
     </>
+  );
+}
+
+function FilaFinanceiroSection({
+  fila,
+  loadError,
+  unidadeId,
+}: {
+  fila: FilaFinanceiroItem[];
+  loadError: string | null;
+  unidadeId: string | null;
+}) {
+  const router = useRouter();
+
+  return (
+    <section className="mt-3 sm:mt-4">
+      <div className="overflow-hidden rounded-ds-xl border border-cc-border bg-cc-surface shadow-sheet">
+        <div className="flex items-center justify-between gap-3 border-b border-cc-border bg-cc-canvas/80 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cc-muted">
+            <CentroIcon id="dollar" className="h-3.5 w-3.5 text-emerald-600" />
+            Financial Queue
+          </div>
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+            {fila.length} OS
+          </span>
+        </div>
+        {loadError ? (
+          <p className="border-b border-cc-border px-4 py-3 text-sm text-cc-red sm:px-5">
+            Could not load financial queue: {loadError}
+          </p>
+        ) : null}
+        <ul>
+          {fila.length === 0 ? (
+            <li className="px-4 py-6 text-center text-sm text-cc-muted sm:px-5">
+              No OS awaiting financial review.
+            </li>
+          ) : (
+            fila.map((item, i) => (
+              <FilaFinanceiroRow
+                key={item.osId}
+                item={item}
+                last={i === fila.length - 1}
+                onOpen={() =>
+                  router.push(osWorkspacePathWithUnidade(item.osId, unidadeId))
+                }
+              />
+            ))
+          )}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function FilaFinanceiroRow({
+  item,
+  last,
+  onOpen,
+}: {
+  item: FilaFinanceiroItem;
+  last: boolean;
+  onOpen: () => void;
+}) {
+  const status = filaFinanceiroStatusBadge(item.statusAtual);
+  const decision = filaFinanceiroDecisionConfig[item.financialDecision];
+
+  return (
+    <li className={last ? "" : "border-b border-cc-border"}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cc-canvas/80 sm:gap-4 sm:px-5 sm:py-3"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-cc-ink">{item.clienteNome}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            {item.equipeNome ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-cc-muted">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full border border-cc-border"
+                  style={{ background: item.equipeCorPrimaria ?? undefined }}
+                  aria-hidden
+                />
+                {item.equipeNome}
+              </span>
+            ) : (
+              <span className="text-xs text-cc-muted">No team</span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 rounded-ds px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} aria-hidden />
+              {status.label}
+            </span>
+            <span
+              className={`text-[10px] font-medium uppercase tracking-wide ${decision.badge}`}
+            >
+              {decision.label}
+            </span>
+            {item.valorFinal != null && item.valorFinal > 0 ? (
+              <span className="text-[10px] font-medium tabular-nums text-cc-deep">
+                {formatFinanceiroValor(item.valorFinal)}
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                Amount pending
+              </span>
+            )}
+          </div>
+        </div>
+        <IconChevronRight className="h-4 w-4 shrink-0 text-cc-border-strong group-hover:text-cc-muted" />
+      </button>
+    </li>
   );
 }
 

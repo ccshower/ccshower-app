@@ -46,6 +46,18 @@ begin
       unidade_id = coalesce(unidade_id, v_jax), ativo = true
   where lower(nome) = lower('Design & Projects');
 
+  -- Financial
+  insert into public.equipes (nome, cor_primaria, cor_secundaria, codigo_operacional, unidade_id, ativo)
+  select 'Financial', '#059669', '#D1FAE5', 'financial_review', v_jax, true
+  where not exists (
+    select 1 from public.equipes e where e.codigo_operacional = 'financial_review' and e.ativo = true
+  );
+
+  update public.equipes
+  set cor_primaria = '#059669', cor_secundaria = '#D1FAE5', codigo_operacional = 'financial_review',
+      unidade_id = coalesce(unidade_id, v_jax), ativo = true
+  where lower(nome) in ('financial', 'financeiro', 'back office');
+
   -- Installation
   insert into public.equipes (nome, cor_primaria, cor_secundaria, codigo_operacional, unidade_id, ativo)
   select 'Install 1', '#F97316', '#FFEDD5', 'installation', v_jax, true
