@@ -345,8 +345,13 @@ export const enUS = {
       saving: "Saving…",
       suggestedTotal: "Sum of partial values: ${value} — total field is editable.",
       photosRequired: "At least one photo required (project needs reference).",
+      photoCount: "{count} photo(s)",
+      photosUploaded: "{count} photo(s) uploaded for this environment.",
+      savedOk: "Environments saved.",
       removePhotoConfirm: "Remove this photo?",
       nameRequiredForPhotos: "Enter the environment name before adding photos.",
+      orphanPhotosHint:
+        "Photos not linked to an environment — re-upload from the correct bathroom card.",
     },
     visitPayment: {
       receivedLabel: "Payment received at visit",

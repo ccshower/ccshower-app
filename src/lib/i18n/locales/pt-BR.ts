@@ -345,8 +345,13 @@ export const ptBR = {
       saving: "Salvando…",
       suggestedTotal: "Soma dos parciais: ${value} — total editável.",
       photosRequired: "Pelo menos uma foto (projeto precisa de referência).",
+      photoCount: "{count} foto(s)",
+      photosUploaded: "{count} foto(s) enviada(s) neste ambiente.",
+      savedOk: "Ambientes salvos.",
       removePhotoConfirm: "Remover esta foto?",
       nameRequiredForPhotos: "Informe o nome do ambiente antes de adicionar fotos.",
+      orphanPhotosHint:
+        "Fotos sem ambiente vinculado — envie de novo pelo card do banheiro correto.",
     },
     visitPayment: {
       receivedLabel: "Pagamento recebido na visita",

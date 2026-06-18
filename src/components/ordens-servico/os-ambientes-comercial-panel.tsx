@@ -55,27 +55,33 @@ function VisitPhotoGrid({
   }
 
   return (
-    <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+    <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
       {anexos.map((a) => (
-        <li
-          key={a.id}
-          className="relative aspect-square overflow-hidden rounded-sm border border-cc-border"
-        >
-          {a.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={a.url} alt={a.nome_arquivo} className="h-full w-full object-cover" />
-          ) : null}
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              if (!confirm(t("os.ambientes.removePhotoConfirm"))) return;
-              onRemove(a.id);
-            }}
-            className="absolute right-1 top-1 rounded-sm bg-black/55 px-1 text-[10px] text-white"
-          >
-            ×
-          </button>
+        <li key={a.id} className="space-y-1">
+          <div className="relative aspect-square overflow-hidden rounded-sm border border-cc-border bg-cc-border-light">
+            {a.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={a.url} alt={a.nome_arquivo} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-cc-muted">
+                {a.nome_arquivo}
+              </div>
+            )}
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                if (!confirm(t("os.ambientes.removePhotoConfirm"))) return;
+                onRemove(a.id);
+              }}
+              className="absolute right-1 top-1 rounded-sm bg-black/55 px-1 text-[10px] text-white"
+            >
+              ×
+            </button>
+          </div>
+          <p className="truncate text-[10px] font-light text-cc-muted" title={a.nome_arquivo}>
+            {a.nome_arquivo}
+          </p>
         </li>
       ))}
     </ul>
@@ -98,6 +104,7 @@ export function OsAmbientesComercialPanel({
       : [],
   );
   const [anexos, setAnexos] = useState<OsAnexoComUrl[]>(ordem.anexos_visita ?? []);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const useMultiAmbiente = rows.some((r) => r.nome.trim().length > 0);
@@ -159,24 +166,50 @@ export function OsAmbientesComercialPanel({
     setRows((prev) => prev.filter((r) => r.id !== id));
   }
 
+  async function doSalvarAmbientes(
+    notifyParent = true,
+  ): Promise<{ ok: true; ambientes: OsAmbiente[] } | { ok: false }> {
+    onMessage?.(null);
+    setFeedback(null);
+    const toSave = rows.filter((r) => r.nome.trim().length > 0);
+    const r = await salvarAmbientesComercial(ordem.id, toSave);
+    if (!r.ok) {
+      onMessage?.(r.message);
+      return { ok: false };
+    }
+    const ambientes = r.ambientes ?? [];
+    if (ambientes.length > 0) {
+      setRows(ambientes.map(ambienteRowFromDb));
+    }
+    if (notifyParent) {
+      onAmbientesSaved?.(ambientes);
+    }
+    return { ok: true, ambientes };
+  }
+
   function salvarAmbientes(): Promise<boolean> {
     return new Promise((resolve) => {
       startTransition(async () => {
-        onMessage?.(null);
-        const toSave = rows.filter((r) => r.nome.trim().length > 0);
-        const r = await salvarAmbientesComercial(ordem.id, toSave);
-        if (!r.ok) {
-          onMessage?.(r.message);
-          resolve(false);
-          return;
+        const r = await doSalvarAmbientes(true);
+        if (r.ok) {
+          await carregarAnexos();
+          setFeedback(t("os.ambientes.savedOk"));
         }
-        if (r.ambientes) {
-          setRows(r.ambientes.map(ambienteRowFromDb));
-          onAmbientesSaved?.(r.ambientes);
-        }
-        resolve(true);
+        resolve(r.ok);
       });
     });
+  }
+
+  function resolveAmbienteId(
+    clientId: string,
+    nome: string,
+    ambientes: OsAmbiente[],
+  ): string {
+    return (
+      ambientes.find((a) => a.id === clientId)?.id ??
+      ambientes.find((a) => a.nome.trim() === nome.trim())?.id ??
+      clientId
+    );
   }
 
   async function onFilesForAmbiente(ambienteId: string, nome: string, files: FileList | null) {
@@ -187,14 +220,20 @@ export function OsAmbientesComercialPanel({
     }
     startTransition(async () => {
       onMessage?.(null);
-      const saved = await salvarAmbientes();
-      if (!saved) return;
-      const r = await uploadAnexosVisitaViaApi(ordem.id, files, ambienteId);
+      setFeedback(null);
+      const saved = await doSalvarAmbientes(false);
+      if (!saved.ok) return;
+
+      const resolvedId = resolveAmbienteId(ambienteId, nome, saved.ambientes);
+      const r = await uploadAnexosVisitaViaApi(ordem.id, files, resolvedId);
       if (!r.ok) {
         onMessage?.(r.message);
         return;
       }
+
       await carregarAnexos();
+      onAmbientesSaved?.(saved.ambientes);
+      setFeedback(t("os.ambientes.photosUploaded", { count: String(r.uploaded) }));
     });
   }
 
@@ -220,6 +259,11 @@ export function OsAmbientesComercialPanel({
 
   return (
     <div className="space-y-4">
+      {feedback ? (
+        <p className="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {feedback}
+        </p>
+      ) : null}
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -310,9 +354,18 @@ export function OsAmbientesComercialPanel({
 
                 {row.nome.trim() ? (
                   <div className="mt-3 border-t border-cc-border pt-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
-                      {t("os.visit.photos")}
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+                        {t("os.visit.photos")}
+                      </p>
+                      {(anexosPorAmbiente.get(row.id) ?? []).length > 0 ? (
+                        <span className="text-[10px] font-medium text-cc-deep">
+                          {t("os.ambientes.photoCount", {
+                            count: String((anexosPorAmbiente.get(row.id) ?? []).length),
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
                     <OsPhotoUploadActions
                       disabled={disabled || pending}
                       onFilesSelected={(files) =>
@@ -344,6 +397,19 @@ export function OsAmbientesComercialPanel({
           </div>
         ) : null}
       </section>
+
+      {useMultiAmbiente && anexosGerais.length > 0 ? (
+        <section className="rounded-sm border border-amber-200 bg-amber-50/60 p-3">
+          <p className="text-xs font-medium text-amber-900">
+            {t("os.ambientes.orphanPhotosHint")}
+          </p>
+          <VisitPhotoGrid
+            anexos={anexosGerais}
+            disabled={disabled || pending}
+            onRemove={removerAnexo}
+          />
+        </section>
+      ) : null}
 
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <OsValorEditableField
