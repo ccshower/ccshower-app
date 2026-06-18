@@ -11,11 +11,10 @@ import {
 } from "@/lib/ordens-servico/separation-list";
 import {
   AGENDA_EVENTO_DATETIME_COLUMNS,
-  hasAgendaEventoStart,
   spreadAgendaEventoDatetime,
   spreadAgendaEventoRange,
 } from "@/lib/ordens-servico/agenda-evento-query";
-import { buildAgendaIntervalIso, parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import { buildAgendaIntervalIso } from "@/lib/ordens-servico/datetime";
 import { compararYmd, hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
 import { parseValorEtapaInput } from "@/lib/ordens-servico/os-valores-etapa";
 import {
@@ -109,9 +108,6 @@ function mapDbErrorValores(message: string): string {
 function mapDbErrorProjeto(message: string): string {
   return mapDbErrorValores(message);
 }
-
-const PROJETO_CONCLUSAO_INCOMPLETA_MSG =
-  "You must set supplier, material ETA, and schedule installation before completing the project.";
 
 export async function listarFornecedores(): Promise<{
   itens: Fornecedor[];
@@ -421,91 +417,6 @@ export async function agendarInstalacaoProjeto(
   }
 }
 
-const AGENDA_STATUS_CANCELADOS = new Set(["cancelled", "cancelado"]);
-
-async function validarProjetoProntoParaConclusao(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  osId: string,
-): Promise<ActionResult> {
-  const { data, error } = await supabase
-    .from("ordens_servico")
-    .select("fornecedor_id, data_prevista_material")
-    .eq("id", osId)
-    .single();
-
-  if (error || !data) {
-    return { ok: false, message: error?.message ?? "Work order not found" };
-  }
-
-  const fornecedor_id = data.fornecedor_id ?? null;
-  const data_prevista_material = data.data_prevista_material
-    ? String(data.data_prevista_material).slice(0, 10)
-    : null;
-
-  const { data: instalacaoRows, error: evErr } = await supabase
-    .from("agenda_eventos")
-    .select(`${AGENDA_EVENTO_DATETIME_COLUMNS}, equipe_id, criado_em`)
-    .eq("ordem_servico_id", osId)
-    .eq("tipo_evento", "installation")
-    .order("criado_em", { ascending: false });
-
-  if (evErr) return { ok: false, message: evErr.message };
-
-  const instalacaoAgendada = (instalacaoRows ?? []).find(
-    (ev) =>
-      !AGENDA_STATUS_CANCELADOS.has(ev.status ?? "") &&
-      hasAgendaEventoStart(ev),
-  );
-
-  const instalacaoParsed = instalacaoAgendada
-    ? parseVisitaDateTime(
-        instalacaoAgendada.data_inicio ??
-          instalacaoAgendada.data_evento ??
-          "",
-      )
-    : { data: "", hora: "" };
-
-  const debug = {
-    fornecedor_id,
-    data_prevista_material,
-    equipe_instalacao_id: instalacaoAgendada?.equipe_id ?? null,
-    data_instalacao: instalacaoParsed.data || null,
-    hora_instalacao: instalacaoParsed.hora || null,
-    instalacao_status: instalacaoAgendada?.status ?? null,
-    instalacao_evento_id: instalacaoAgendada?.id ?? null,
-    tem_fornecedor: Boolean(fornecedor_id),
-    tem_data_material: Boolean(data_prevista_material),
-    tem_instalacao_agendada: Boolean(instalacaoAgendada),
-  };
-
-  console.log("[validarProjetoProntoParaConclusao]", { osId, ...debug });
-
-  if (!fornecedor_id || !data_prevista_material) {
-    console.warn("[validarProjetoProntoParaConclusao] bloqueado: fornecedor ou material", {
-      osId,
-      falta_fornecedor: !fornecedor_id,
-      falta_data_material: !data_prevista_material,
-    });
-    return { ok: false, message: PROJETO_CONCLUSAO_INCOMPLETA_MSG };
-  }
-
-  if (!instalacaoAgendada) {
-    console.warn("[validarProjetoProntoParaConclusao] bloqueado: instalação não agendada", {
-      osId,
-      eventos_instalacao_encontrados: (instalacaoRows ?? []).length,
-      eventos_instalacao: (instalacaoRows ?? []).map((ev) => ({
-        id: ev.id,
-        status: ev.status,
-        equipe_id: ev.equipe_id,
-        tem_data: hasAgendaEventoStart(ev),
-      })),
-    });
-    return { ok: false, message: PROJETO_CONCLUSAO_INCOMPLETA_MSG };
-  }
-
-  return { ok: true, id: osId };
-}
-
 /** Persiste apenas `valor_projeto` — não altera valor comercial nem final. */
 export async function salvarValorProjeto(
   osId: string,
@@ -768,9 +679,6 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
     if ("error" in loaded) return { ok: false, message: loaded.error };
 
     const { os } = loaded;
-
-    const pronto = await validarProjetoProntoParaConclusao(supabase, osId);
-    if (!pronto.ok) return pronto;
 
     const ev = await registrarEventoProjetoConcluido(supabase, {
       ordem_servico_id: osId,
