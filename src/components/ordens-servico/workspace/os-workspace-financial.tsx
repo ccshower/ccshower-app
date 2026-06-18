@@ -164,6 +164,8 @@ export function OsWorkspaceFinancial({
 
       onAtualizado={onAtualizado}
 
+      onConcluido={onConcluido}
+
     />
 
   );
@@ -180,6 +182,8 @@ function OsWorkspaceFinancialForm({
 
   onAtualizado,
 
+  onConcluido,
+
 }: {
 
   ordem: OrdemServicoWithRelations;
@@ -187,6 +191,8 @@ function OsWorkspaceFinancialForm({
   fluxoBloqueado?: boolean;
 
   onAtualizado: () => void;
+
+  onConcluido: () => void;
 
 }) {
 

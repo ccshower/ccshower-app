@@ -328,10 +328,10 @@ export function OsVisitaAgendaPicker({
           </div>
 
           {dataVisita ? (
-            <div className="mt-4 space-y-4 border-t border-cc-border-light pt-3">
+            <div className="mt-4 max-h-[min(420px,55vh)] space-y-4 overflow-y-auto overscroll-y-contain border-t border-cc-border-light pt-3">
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
-                  Start — {equipe?.nome ?? "Team"}
+                  Start time — {equipe?.nome ?? "Team"}
                 </p>
                 {loadingSlots ? (
                   <p className="text-xs text-cc-muted">Loading schedule…</p>
@@ -379,7 +379,7 @@ export function OsVisitaAgendaPicker({
               {horaVisita ? (
                 <div>
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
-                    End
+                    End time
                   </p>
                   <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
                     {horariosFim.map((slot) => {

@@ -17,7 +17,7 @@ export const AGENDA_SLOT_INTERVALO_MINUTOS = 30;
 export const AGENDA_HORARIO_INICIO = "08:00";
 
 /** Último horário disponível (pode ser hora de término). */
-export const AGENDA_HORARIO_FIM = "20:30";
+export const AGENDA_HORARIO_FIM = "20:00";
 
 /** Duração padrão quando não há hora fim explícita (legado / sugestões). */
 export const VISITA_DURACAO_MINUTOS = 60;
@@ -57,7 +57,7 @@ function gerarHorariosAgenda(): VisitaSlotHora[] {
   return out;
 }
 
-/** Marcos de horário a cada 30 min — 08:00 … 20:30. */
+/** Marcos de horário a cada 30 min — 08:00 … 20:00. */
 export const VISITA_SLOTS_HORARIOS = gerarHorariosAgenda() as readonly VisitaSlotHora[];
 
 export function hojeOperacionalYmd(): string {

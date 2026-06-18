@@ -1,7 +1,6 @@
 import { tOsStage } from "@/lib/i18n";
 import {
   OS_STAGE_TEAM_CODE,
-  type OsWorkflowStage,
 } from "@/lib/ordens-servico/workflow";
 import {
   equipeMatchesStage,
@@ -47,7 +46,7 @@ export function inferOperationalStageFromTeamName(
   nome: string,
 ): OperationalStageCode | null {
   const row = { nome, ativo: true, codigo_operacional: null as string | null };
-  const stages: OsWorkflowStage[] = [
+  const stages: OperationalStageCode[] = [
     "commercial",
     "financial_review",
     "project",
@@ -55,7 +54,7 @@ export function inferOperationalStageFromTeamName(
   ];
   for (const stage of stages) {
     if (equipeMatchesStage(row, stage)) {
-      return OS_STAGE_TEAM_CODE[stage] as OperationalStageCode;
+      return stage;
     }
   }
   return null;
