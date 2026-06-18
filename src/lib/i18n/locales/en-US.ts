@@ -145,7 +145,7 @@ export const enUS = {
         cncNone: "No technical drawing uploaded",
         separationList: "Separation list",
         separationListTitle: "Separation list",
-        separationListSubtitle: "Items required to execute installation.",
+        separationListSubtitle: "Optional — items needed to execute installation.",
         separationListCount: "{count} items",
         separationListRegistered: "List registered",
         separationListRegisteredCount: "{count} items registered",

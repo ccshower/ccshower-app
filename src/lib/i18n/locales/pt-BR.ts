@@ -145,7 +145,7 @@ export const ptBR = {
         cncNone: "Nenhum desenho técnico enviado",
         separationList: "Lista de Separação",
         separationListTitle: "Lista de Separação",
-        separationListSubtitle: "Itens necessários para executar a instalação.",
+        separationListSubtitle: "Opcional — itens necessários para executar a instalação.",
         separationListCount: "{count} itens",
         separationListRegistered: "Lista registrada",
         separationListRegisteredCount: "{count} itens cadastrados",

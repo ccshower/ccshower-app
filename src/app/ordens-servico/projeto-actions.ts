@@ -769,20 +769,6 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
 
     const { os } = loaded;
 
-    const { count: listCount, error: listErr } = await supabase
-      .from("os_separation_list_items")
-      .select("id", { count: "exact", head: true })
-      .eq("ordem_servico_id", osId);
-
-    if (listErr) return { ok: false, message: listErr.message };
-    if (!listCount) {
-      return {
-        ok: false,
-        message:
-          "Add at least one item to the separation list.",
-      };
-    }
-
     const pronto = await validarProjetoProntoParaConclusao(supabase, osId);
     if (!pronto.ok) return pronto;
 
