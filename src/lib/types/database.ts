@@ -151,6 +151,7 @@ export type OsAnexo = {
   id: string;
   empresa_id: string;
   ordem_servico_id: string;
+  os_ambiente_id?: string | null;
   tipo: string;
   storage_path: string;
   nome_arquivo: string;
@@ -158,6 +159,19 @@ export type OsAnexo = {
   tamanho_bytes: number;
   criado_por: string | null;
   criado_em: string;
+};
+
+export type OsAmbiente = {
+  id: string;
+  ordem_servico_id: string;
+  empresa_id: string | null;
+  nome: string;
+  especificacoes: string | null;
+  valor_comercial: number | null;
+  sort_order: number;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
 };
 
 export type OsAnexoComUrl = OsAnexo & { url: string };
@@ -244,6 +258,7 @@ export type OrdemServicoWithRelations = OrdemServico & {
   eventos?: AgendaEventoTimeline[];
   criado_por_usuario?: Pick<Usuario, "id" | "nome"> | null;
   anexos_visita?: OsAnexoComUrl[];
+  ambientes?: OsAmbiente[];
   lista_separacao?: OsSeparationListItem[];
   anexo_cnc?: OsAnexoComUrl | null;
   /** All technical drawing uploads for the project stage. */

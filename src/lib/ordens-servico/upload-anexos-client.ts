@@ -10,6 +10,7 @@ export type UploadReceiptClientResult =
 export async function uploadAnexosVisitaViaApi(
   osId: string,
   files: FileList | File[],
+  osAmbienteId?: string | null,
 ): Promise<UploadAnexosClientResult> {
   const list = Array.from(files);
   if (list.length === 0) {
@@ -19,6 +20,9 @@ export async function uploadAnexosVisitaViaApi(
   const formData = new FormData();
   for (const file of list) {
     formData.append("files", file);
+  }
+  if (osAmbienteId) {
+    formData.append("os_ambiente_id", osAmbienteId);
   }
 
   let response: Response;

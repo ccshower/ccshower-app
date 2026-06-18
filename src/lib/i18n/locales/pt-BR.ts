@@ -137,6 +137,10 @@ export const ptBR = {
       noRoute: "Sem rota disponível",
       noLastEvent: "Nenhum evento registrado ainda",
       project: {
+        visitPhotosTitle: "Fotos da visita comercial",
+        visitPhotosHint: "Fotos de referência da visita — agrupadas por ambiente.",
+        visitPhotosGeneral: "Fotos gerais da visita",
+        visitPhotosNone: "Nenhuma foto da visita registrada",
         cncTitle: "Desenho Técnico",
         cncHint: "Opcional — envie um ou mais desenhos técnicos para a instalação.",
         cncUpload: "Enviar Desenho Técnico",
@@ -323,6 +327,26 @@ export const ptBR = {
       noMaps: "Endereço sem link de rota",
       confirmFinish:
         "Finalizar visita e enviar OS para Financeiro? Esta ação segue o fluxo oficial.",
+    },
+    ambientes: {
+      title: "Ambientes",
+      hint: "Um item por banheiro — especificações em texto livre; fotos por ambiente.",
+      add: "Adicionar ambiente",
+      empty: "Nenhum ambiente — adicione um por banheiro ou use o bloco único de fotos abaixo.",
+      roomLabel: "Ambiente {n}",
+      remove: "Remover",
+      name: "Nome",
+      namePlaceholder: "Ex.: Suíte master, Banheiro social…",
+      specifications: "Especificações",
+      specificationsPlaceholder:
+        "Medidas exatas, recortes, ferragens, vidro, observações…",
+      partialValue: "Valor parcial ($)",
+      save: "Salvar ambientes",
+      saving: "Salvando…",
+      suggestedTotal: "Soma dos parciais: ${value} — total editável.",
+      photosRequired: "Pelo menos uma foto (projeto precisa de referência).",
+      removePhotoConfirm: "Remover esta foto?",
+      nameRequiredForPhotos: "Informe o nome do ambiente antes de adicionar fotos.",
     },
     visitPayment: {
       receivedLabel: "Pagamento recebido na visita",

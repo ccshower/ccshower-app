@@ -25,6 +25,7 @@ import {
 import { OsVisitaAgendaPicker } from "@/components/ordens-servico/os-visita-agenda-picker";
 import { Field } from "@/components/ui/field";
 import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa";
+import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
 import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
@@ -689,6 +690,8 @@ export function OsWorkspaceProject({
           </button>
         </div>
       </section>
+
+      <OsAmbientesVisitPhotosProject ordem={ordem} />
 
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <p className={sectionLabel}>{t("os.workspace.project.cncTitle")}</p>

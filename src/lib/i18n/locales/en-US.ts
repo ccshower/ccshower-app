@@ -137,6 +137,10 @@ export const enUS = {
       noRoute: "No route available",
       noLastEvent: "No events recorded yet",
       project: {
+        visitPhotosTitle: "Commercial visit photos",
+        visitPhotosHint: "Reference photos from the visit — grouped by environment.",
+        visitPhotosGeneral: "General visit photos",
+        visitPhotosNone: "No visit photos on file",
         cncTitle: "Technical drawing",
         cncHint: "Optional — upload one or more technical drawings for installation.",
         cncUpload: "Upload technical drawing",
@@ -323,6 +327,26 @@ export const enUS = {
       noMaps: "Address without route link",
       confirmFinish:
         "Finish visit and send work order to Financial? This follows the official workflow.",
+    },
+    ambientes: {
+      title: "Environments",
+      hint: "One row per bathroom or scope — specs in free text; photos per environment.",
+      add: "Add environment",
+      empty: "No environments yet — add one for each bathroom, or use a single photo block below.",
+      roomLabel: "Environment {n}",
+      remove: "Remove",
+      name: "Name",
+      namePlaceholder: "E.g. Master suite, Guest bath…",
+      specifications: "Specifications",
+      specificationsPlaceholder:
+        "Exact measurements, cutouts, hardware, glass, notes…",
+      partialValue: "Partial value ($)",
+      save: "Save environments",
+      saving: "Saving…",
+      suggestedTotal: "Sum of partial values: ${value} — total field is editable.",
+      photosRequired: "At least one photo required (project needs reference).",
+      removePhotoConfirm: "Remove this photo?",
+      nameRequiredForPhotos: "Enter the environment name before adding photos.",
     },
     visitPayment: {
       receivedLabel: "Payment received at visit",

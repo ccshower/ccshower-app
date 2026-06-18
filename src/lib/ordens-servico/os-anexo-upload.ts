@@ -82,11 +82,28 @@ export async function uploadAnexosVisitaComercialFromFormData(
   userId: string,
   os: OsAnexoUploadContext,
   formData: FormData,
+  osAmbienteId?: string | null,
 ): Promise<UploadAnexosResult> {
   const osId = os.id;
 
   if (!canUploadAnexosVisitaComercial(os)) {
     return { ok: false, message: "OS nao esta na etapa comercial para anexos" };
+  }
+
+  let ambienteId: string | null = null;
+  if (osAmbienteId) {
+    const { data: amb, error: ambErr } = await supabase
+      .from("os_ambientes")
+      .select("id")
+      .eq("id", osAmbienteId)
+      .eq("ordem_servico_id", osId)
+      .eq("ativo", true)
+      .maybeSingle();
+
+    if (ambErr || !amb?.id) {
+      return { ok: false, message: "Invalid environment for this work order" };
+    }
+    ambienteId = amb.id as string;
   }
 
   const files = formData.getAll("files").filter((f): f is File => f instanceof File);
@@ -126,6 +143,7 @@ export async function uploadAnexosVisitaComercialFromFormData(
     const { error: insErr } = await supabase.from("os_anexos").insert({
       empresa_id: os.empresa_id,
       ordem_servico_id: osId,
+      os_ambiente_id: ambienteId,
       tipo: OS_ANEXO_TIPO_VISITA,
       storage_path: path,
       nome_arquivo: file.name,

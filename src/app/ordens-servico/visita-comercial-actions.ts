@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { transicionarEtapaOrdemServico } from "@/app/ordens-servico/actions";
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
+import { validarFotosVisitaObrigatorias } from "@/app/ordens-servico/ambientes-actions";
 import {
   OS_ANEXOS_BUCKET,
   OS_ANEXO_TIPO_PAYMENT_RECEIPT,
@@ -422,6 +423,9 @@ export async function finalizarVisitaComercial(
       ? buildFinanciamentoUpdate(financiamento)
       : null;
     if (financiamentoRow && !financiamentoRow.ok) return financiamentoRow;
+
+    const fotosCheck = await validarFotosVisitaObrigatorias(supabase, osId);
+    if (!fotosCheck.ok) return fotosCheck;
 
     const { error: noteErr } = await supabase
       .from("ordens_servico")
