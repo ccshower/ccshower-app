@@ -347,6 +347,8 @@ export const ptBR = {
       photosRequired: "Pelo menos uma foto (projeto precisa de referência).",
       photoCount: "{count} foto(s)",
       photosUploaded: "{count} foto(s) enviada(s) neste ambiente.",
+      photosLinkPending:
+        "Foto enviada, mas ainda nao aparece neste ambiente. Clique em Salvar ambientes e tente de novo.",
       savedOk: "Ambientes salvos.",
       removePhotoConfirm: "Remover esta foto?",
       nameRequiredForPhotos: "Informe o nome do ambiente antes de adicionar fotos.",

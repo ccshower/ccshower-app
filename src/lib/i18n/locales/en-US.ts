@@ -347,6 +347,8 @@ export const enUS = {
       photosRequired: "At least one photo required (project needs reference).",
       photoCount: "{count} photo(s)",
       photosUploaded: "{count} photo(s) uploaded for this environment.",
+      photosLinkPending:
+        "Photo uploaded but not linked to this environment yet. Click Save environments and try again.",
       savedOk: "Environments saved.",
       removePhotoConfirm: "Remove this photo?",
       nameRequiredForPhotos: "Enter the environment name before adding photos.",

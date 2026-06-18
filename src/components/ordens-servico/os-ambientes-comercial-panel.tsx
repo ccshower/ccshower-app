@@ -109,20 +109,26 @@ export function OsAmbientesComercialPanel({
 
   const useMultiAmbiente = rows.some((r) => r.nome.trim().length > 0);
 
-  const carregarAnexos = useCallback(async () => {
+  const carregarAnexos = useCallback(async (): Promise<OsAnexoComUrl[] | null> => {
     const { anexos: lista, error } = await listarAnexosVisitaComUrls(ordem.id);
-    if (!error) setAnexos(lista);
-  }, [ordem.id]);
-
-  useEffect(() => {
-    void carregarAnexos();
-  }, [carregarAnexos]);
-
-  useEffect(() => {
-    if ((ordem.ambientes ?? []).length > 0) {
-      setRows((ordem.ambientes ?? []).map(ambienteRowFromDb));
+    if (error) {
+      onMessage?.(error);
+      return null;
     }
-  }, [ordem.ambientes, ordem.id]);
+    setAnexos(lista);
+    return lista;
+  }, [ordem.id, onMessage]);
+
+  useEffect(() => {
+    setRows(
+      (ordem.ambientes ?? []).length > 0
+        ? (ordem.ambientes ?? []).map(ambienteRowFromDb)
+        : [],
+    );
+    setAnexos(ordem.anexos_visita ?? []);
+    void carregarAnexos();
+    // Sincroniza apenas ao trocar de OS — evita sobrescrever rows locais após upload.
+  }, [ordem.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     onRowsChange?.(rows);
@@ -148,6 +154,24 @@ export function OsAmbientesComercialPanel({
     }
     return map;
   }, [anexos]);
+
+  function anexosForRow(row: OsAmbienteFormRow): OsAnexoComUrl[] {
+    const direct = anexosPorAmbiente.get(row.id) ?? [];
+    if (direct.length > 0) return direct;
+
+    const nome = row.nome.trim().toLowerCase();
+    if (!nome) return [];
+
+    const idsByName = (ordem.ambientes ?? [])
+      .filter((a) => a.nome.trim().toLowerCase() === nome)
+      .map((a) => a.id);
+
+    if (idsByName.length === 0) return [];
+
+    return anexos.filter(
+      (a) => a.os_ambiente_id != null && idsByName.includes(a.os_ambiente_id),
+    );
+  }
 
   const anexosGerais = useMemo(
     () => anexos.filter((a) => !a.os_ambiente_id),
@@ -231,8 +255,15 @@ export function OsAmbientesComercialPanel({
         return;
       }
 
-      await carregarAnexos();
-      onAmbientesSaved?.(saved.ambientes);
+      const loaded = await carregarAnexos();
+      if (!loaded) return;
+
+      const linkedCount = loaded.filter((a) => a.os_ambiente_id === resolvedId).length;
+      if (r.uploaded > 0 && linkedCount === 0) {
+        onMessage?.(t("os.ambientes.photosLinkPending"));
+        return;
+      }
+
       setFeedback(t("os.ambientes.photosUploaded", { count: String(r.uploaded) }));
     });
   }
@@ -358,10 +389,10 @@ export function OsAmbientesComercialPanel({
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
                         {t("os.visit.photos")}
                       </p>
-                      {(anexosPorAmbiente.get(row.id) ?? []).length > 0 ? (
+                      {(anexosForRow(row).length > 0 ? (
                         <span className="text-[10px] font-medium text-cc-deep">
                           {t("os.ambientes.photoCount", {
-                            count: String((anexosPorAmbiente.get(row.id) ?? []).length),
+                            count: String(anexosForRow(row).length),
                           })}
                         </span>
                       ) : null}
@@ -373,7 +404,7 @@ export function OsAmbientesComercialPanel({
                       }
                     />
                     <VisitPhotoGrid
-                      anexos={anexosPorAmbiente.get(row.id) ?? []}
+                      anexos={anexosForRow(row)}
                       disabled={disabled || pending}
                       onRemove={removerAnexo}
                     />
