@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   CentroIcon,
   IconChevronRight,
@@ -10,6 +12,7 @@ import type {
   AgendaGlobalEvento,
 } from "@/lib/centro-operacional/agenda-global";
 import { agendaTipoConfig } from "@/lib/mock/centro-operacional/operational-dashboard";
+import { osWorkspacePath } from "@/lib/ordens-servico/os-routes";
 
 const agendaOperacionalBadgeConfig: Record<
   AgendaGlobalBadgeOperacional,
@@ -36,6 +39,7 @@ const agendaOperacionalBadgeConfig: Record<
 export function AgendaRow(
   props: AgendaGlobalEvento & { last: boolean; compact?: boolean },
 ) {
+  const router = useRouter();
   const {
     hora,
     tipo,
@@ -44,6 +48,7 @@ export function AgendaRow(
     endereco,
     badgeOperacional,
     temporal,
+    ordemServicoId,
     last,
     compact = false,
   } = props;
@@ -56,7 +61,8 @@ export function AgendaRow(
   return (
     <button
       type="button"
-      className={`group flex w-full items-center text-left transition-colors hover:bg-cc-canvas ${
+      onClick={() => router.push(osWorkspacePath(ordemServicoId))}
+      className={`group flex w-full cursor-pointer items-center text-left transition-colors hover:bg-cc-canvas ${
         compact ? "gap-2 px-3 py-2" : "gap-3 px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4"
       } ${last ? "" : "border-b border-cc-border"}`}
     >

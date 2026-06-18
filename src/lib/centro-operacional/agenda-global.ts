@@ -11,6 +11,7 @@ export type AgendaGlobalBadgeOperacional =
 /** Evento da Agenda Global — badge e lista usam o mesmo array. */
 export type AgendaGlobalEvento = Omit<AgendaEvent, "status"> & {
   id: string;
+  ordemServicoId: string;
   /** Passado = horário já ocorreu; futuro = ainda não começou. */
   temporal: AgendaGlobalEventoTemporal;
   /** Somente estados operacionais — null = sem badge. */

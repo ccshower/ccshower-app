@@ -26,6 +26,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const AGENDA_GLOBAL_SELECT = `
   ${AGENDA_EVENTO_DATETIME_COLUMNS},
+  ordem_servico_id,
   etapa,
   titulo,
   descricao,
@@ -38,6 +39,7 @@ const FINANCIAL_EVENT_TYPES = new Set(["financial_approved", "financial_rejected
 
 type AgendaGlobalRow = {
   id: string;
+  ordem_servico_id?: string | null;
   tipo_evento: string;
   etapa?: string | null;
   status?: string | null;
@@ -102,6 +104,9 @@ function eventDayYmd(startIso: string): string | null {
 function parseAgendaGlobalRow(row: AgendaGlobalRow): ParsedAgendaGlobalEvent | null {
   if (isCancelledStatus(row.status)) return null;
 
+  const ordemServicoId = row.ordem_servico_id?.trim();
+  if (!ordemServicoId) return null;
+
   const startIso = agendaEventoStartIso(row);
   if (!startIso) return null;
 
@@ -115,6 +120,7 @@ function parseAgendaGlobalRow(row: AgendaGlobalRow): ParsedAgendaGlobalEvent | n
 
   return {
     id: row.id,
+    ordemServicoId,
     hora,
     tipo: mapTipoLabel(row.tipo_evento, row.etapa),
     cliente,
