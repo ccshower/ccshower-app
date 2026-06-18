@@ -5,6 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import { createPortal } from "react-dom";
 
 import type { Unidade } from "@/lib/types/database";
+import { persistCentroUnidadeCookie } from "@/lib/unidades/centro-unidade-cookie.client";
+import { CENTRO_UNIDADE_PARAM } from "@/lib/unidades/centro-unidade-persist";
 
 const TODAS_LABEL = "All units";
 
@@ -102,6 +104,10 @@ export function CentroUnidadeSelect({
     };
   }, [open]);
 
+  useEffect(() => {
+    persistCentroUnidadeCookie(selectedId);
+  }, [selectedId]);
+
   const selected = unidades.find((u) => u.id === selectedId) ?? null;
   const label = selected ? selected.nome : TODAS_LABEL;
 
@@ -110,7 +116,8 @@ export function CentroUnidadeSelect({
     if (id === selectedId) return;
     const basePath = pathname ?? "/admin/centro-operacional";
     startTransition(() => {
-      router.replace(id ? `${basePath}?unidade=${id}` : basePath, {
+      persistCentroUnidadeCookie(id);
+      router.replace(id ? `${basePath}?${CENTRO_UNIDADE_PARAM}=${id}` : basePath, {
         scroll: false,
       });
     });

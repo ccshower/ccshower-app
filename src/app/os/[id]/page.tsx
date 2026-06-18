@@ -18,10 +18,12 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ unidade?: string }>;
 };
 
-export default async function OsWorkspaceRoutePage({ params }: Props) {
+export default async function OsWorkspaceRoutePage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { unidade } = await searchParams;
   const { usuario, equipe } = await getUsuarioWithEquipe();
   if (!usuario?.ativo) redirect("/login");
 
@@ -30,7 +32,7 @@ export default async function OsWorkspaceRoutePage({ params }: Props) {
   const viewerCanSeeFinancial = canViewFinancialValues(usuario, equipe);
   const profile = resolveCampoProfile(usuario, equipe);
   const campoTab = profile ? resolveCampoNavTabForOs(profile) : "operacao";
-  const backHref = resolveOsWorkspaceBackPath(usuario, equipe);
+  const backHref = resolveOsWorkspaceBackPath(usuario, equipe, unidade);
 
   if (error || !ordem) {
     return (

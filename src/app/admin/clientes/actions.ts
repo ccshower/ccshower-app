@@ -8,6 +8,10 @@ import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/orde
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
 import { buildInitialCommercialOsTitulo } from "@/lib/ordens-servico/os-operational-title";
 import { resolveEmpresaId } from "@/lib/ordens-servico/resolve-empresa-id";
+import {
+  loadUnidadeIdFromEquipe,
+  syncUnidadeOperacionalCliente,
+} from "@/lib/unidades/sync-unidade-operacional";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult =
@@ -122,6 +126,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
     if (!equipeResolved.ok) return equipeResolved;
 
     const equipeWorkOrder = equipeResolved.equipeId;
+    const unidade_id = await loadUnidadeIdFromEquipe(supabase, equipeWorkOrder);
 
     const empresa_id = await resolveEmpresaId(supabase, { userId });
     if (!empresa_id) {
@@ -152,6 +157,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
         observacoes: emptyToNull(formData.get("observacoes")),
         equipe_id: equipeWorkOrder,
         empresa_id,
+        ...(unidade_id ? { unidade_id } : {}),
         criado_por: userId,
         ativo: true,
       })
@@ -222,6 +228,11 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
     const equipeResolved = await resolveClienteEquipeId(supabase, formData, usuario);
     if (!equipeResolved.ok) return equipeResolved;
 
+    const unidade_id = await loadUnidadeIdFromEquipe(
+      supabase,
+      equipeResolved.equipeId,
+    );
+
     const { error } = await supabase
       .from("clientes")
       .update({
@@ -241,10 +252,13 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
         google_maps_url: emptyToNull(formData.get("google_maps_url")),
         observacoes: emptyToNull(formData.get("observacoes")),
         equipe_id: equipeResolved.equipeId,
+        ...(unidade_id ? { unidade_id } : {}),
       })
       .eq("id", id);
 
     if (error) return { ok: false, message: error.message };
+
+    await syncUnidadeOperacionalCliente(supabase, id, unidade_id);
 
     revalidatePath("/clientes");
     revalidatePath("/admin/clientes");

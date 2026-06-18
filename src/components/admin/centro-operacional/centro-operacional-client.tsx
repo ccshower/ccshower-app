@@ -70,7 +70,7 @@ import {
   filaProjetoStatusBadge,
   type FilaProjetoItem,
 } from "@/lib/centro-operacional/fila-projeto";
-import { osWorkspacePath } from "@/lib/ordens-servico/os-routes";
+import { osWorkspacePathWithUnidade } from "@/lib/unidades/centro-unidade-persist";
 import { t } from "@/lib/i18n";
 import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
 
@@ -188,9 +188,14 @@ export function CentroOperacionalClient({
           googleMapsApiKey={googleMapsApiKey}
           defaultEquipeId={defaultEquipeId}
           canChooseEquipe={canChooseEquipe}
+          unidadeId={unidadeSelecionadaId}
         />
 
-        <FilaProjetoSection fila={filaProjeto} loadError={filaProjetoError} />
+        <FilaProjetoSection
+          fila={filaProjeto}
+          loadError={filaProjetoError}
+          unidadeId={unidadeSelecionadaId}
+        />
 
         <section className="mt-10">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -299,6 +304,7 @@ export function CentroOperacionalClient({
                   <AgendaRow
                     key={e.id}
                     {...e}
+                    unidadeId={unidadeSelecionadaId}
                     last={i === agendaEvents.length - 1}
                   />
                 ))
@@ -991,6 +997,7 @@ function FilaComercialSection({
   googleMapsApiKey,
   defaultEquipeId,
   canChooseEquipe,
+  unidadeId,
 }: {
   fila: FilaComercialItem[];
   loadError: string | null;
@@ -999,6 +1006,7 @@ function FilaComercialSection({
   googleMapsApiKey: string;
   defaultEquipeId: string | null;
   canChooseEquipe: boolean;
+  unidadeId: string | null;
 }) {
   const router = useRouter();
   const [cadastroOpen, setCadastroOpen] = useState(false);
@@ -1047,7 +1055,9 @@ function FilaComercialSection({
                   key={item.osId}
                   item={item}
                   last={i === fila.length - 1}
-                  onOpen={() => router.push(osWorkspacePath(item.osId))}
+                  onOpen={() =>
+                    router.push(osWorkspacePathWithUnidade(item.osId, unidadeId))
+                  }
                 />
               ))
             )}
@@ -1096,9 +1106,11 @@ function FilaComercialSection({
 function FilaProjetoSection({
   fila,
   loadError,
+  unidadeId,
 }: {
   fila: FilaProjetoItem[];
   loadError: string | null;
+  unidadeId: string | null;
 }) {
   const router = useRouter();
 
@@ -1130,7 +1142,9 @@ function FilaProjetoSection({
                 key={item.osId}
                 item={item}
                 last={i === fila.length - 1}
-                onOpen={() => router.push(osWorkspacePath(item.osId))}
+                onOpen={() =>
+                  router.push(osWorkspacePathWithUnidade(item.osId, unidadeId))
+                }
               />
             ))
           )}

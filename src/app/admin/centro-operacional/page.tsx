@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { cookies } from "next/headers";
+
 import { CentroOperacionalClient } from "@/components/admin/centro-operacional/centro-operacional-client";
 import { getCurrentUsuario, isAdmin, isAdminOrManager } from "@/lib/auth/get-current-usuario";
 import { loadAgendaGlobal } from "@/lib/centro-operacional/load-agenda-global";
@@ -13,6 +15,10 @@ import { loadProducaoMensal } from "@/lib/centro-operacional/load-producao-mensa
 import { loadSaudeOperacional } from "@/lib/centro-operacional/load-saude-operacional";
 import { pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { loadUnidades } from "@/lib/unidades/load-unidades";
+import {
+  CENTRO_UNIDADE_COOKIE,
+  resolveCentroUnidadeId,
+} from "@/lib/unidades/centro-unidade-persist";
 import { createClient } from "@/lib/supabase/server";
 import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
 
@@ -24,36 +30,28 @@ export const metadata: Metadata = {
 };
 
 /**
- * Admin escolhe a unidade via ?unidade=<id> (sem parâmetro = todas).
+ * Admin escolhe a unidade via ?unidade=<id> ou cookie (sem parâmetro = todas).
  * Não-admin fica travado na própria unidade.
  */
-function resolveUnidadeId(
-  usuario: Usuario | null,
-  unidades: Unidade[],
-  param: string | undefined,
-): string | null {
-  if (!isAdminOrManager(usuario)) {
-    return usuario?.unidade_id ?? null;
-  }
-  if (param && unidades.some((u) => u.id === param)) {
-    return param;
-  }
-  return null;
-}
-
 export default async function CentroOperacionalPage({
   searchParams,
 }: {
   searchParams: Promise<{ unidade?: string }>;
 }) {
-  const [{ usuario }, params, { unidades }] = await Promise.all([
+  const [{ usuario }, params, { unidades }, cookieStore] = await Promise.all([
     getCurrentUsuario(),
     searchParams,
     loadUnidades(),
+    cookies(),
   ]);
   const supabase = await createClient();
 
-  const unidadeId = resolveUnidadeId(usuario, unidades, params.unidade);
+  const unidadeId = resolveCentroUnidadeId(
+    usuario,
+    unidades,
+    params.unidade,
+    cookieStore.get(CENTRO_UNIDADE_COOKIE)?.value,
+  );
 
   const [
     { fila: filaComercial, error: filaComercialError },

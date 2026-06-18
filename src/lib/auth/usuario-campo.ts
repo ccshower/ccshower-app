@@ -2,6 +2,7 @@ import { isAdmin } from "@/lib/auth/is-admin";
 import { isManager } from "@/lib/auth/tipo-usuario";
 import type { CampoNavTab, CampoProfileId } from "@/lib/auth/campo-nav";
 import { equipeMatchesStage } from "@/lib/ordens-servico/workflow-equipe";
+import { centroOperacionalPath } from "@/lib/unidades/centro-unidade-persist";
 import type { Equipe, Usuario } from "@/lib/types/database";
 
 export type { CampoNavTab, CampoProfileId } from "@/lib/auth/campo-nav";
@@ -90,6 +91,11 @@ export function resolveHomePath(
 export function resolveOsWorkspaceBackPath(
   usuario: Usuario,
   equipe: UsuarioEquipeContext | null | undefined,
+  unidadeId?: string | null,
 ): string {
-  return resolveHomePath(usuario, equipe);
+  const home = resolveHomePath(usuario, equipe);
+  if (home === "/admin/centro-operacional" && unidadeId) {
+    return centroOperacionalPath(unidadeId);
+  }
+  return home;
 }
