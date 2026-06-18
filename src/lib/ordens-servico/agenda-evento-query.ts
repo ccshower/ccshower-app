@@ -148,6 +148,23 @@ export function spreadAgendaEventoDatetime(
     start.getTime() + durationMinutes * 60_000,
   ).toISOString();
 
+  return spreadAgendaEventoRange(inicioUtc, fimUtc);
+}
+
+/** Persiste intervalo explícito início → fim. */
+export function spreadAgendaEventoRange(isoInicio: string, isoFim: string) {
+  const start = new Date(isoInicio);
+  const end = new Date(isoFim);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new Error("data de início ou fim da agenda inválida");
+  }
+  if (end.getTime() <= start.getTime()) {
+    throw new Error("hora fim deve ser posterior ao início");
+  }
+
+  const inicioUtc = start.toISOString();
+  const fimUtc = end.toISOString();
+
   return {
     data_inicio: inicioUtc,
     data_fim: fimUtc,

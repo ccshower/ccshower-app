@@ -85,7 +85,9 @@ function revalidateOs(osId?: string) {
   revalidatePath("/ordens-servico");
   revalidatePath("/clientes");
   revalidatePath("/admin/clientes");
+  revalidatePath("/admin/centro-operacional");
   revalidatePath("/operacao");
+  revalidatePath("/financeiro");
   revalidatePath("/calendar");
   revalidatePath("/os", "layout");
   if (osId) revalidatePath(`/os/${osId}`);

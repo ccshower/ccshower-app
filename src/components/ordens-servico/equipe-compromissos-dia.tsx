@@ -38,7 +38,9 @@ export function EquipeCompromissosDia({
           key={item.id}
           className="text-sm font-light text-cc-deep"
         >
-          <span className="tabular-nums font-medium text-cc-ink">{item.hora}</span>
+          <span className="tabular-nums font-medium text-cc-ink">
+            {item.horaFim ? `${item.hora} – ${item.horaFim}` : item.hora}
+          </span>
           <span className="text-cc-muted"> - </span>
           {item.clienteNome}
         </li>

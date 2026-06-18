@@ -18,6 +18,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   equipes: Equipe[];
   onAtualizado: () => void;
+  onConcluido: () => void;
   viewerCanSeeFinancial?: boolean;
 };
 
@@ -26,6 +27,7 @@ export function OsWorkspaceEtapa({
   ordem,
   equipes,
   onAtualizado,
+  onConcluido,
   viewerCanSeeFinancial = false,
 }: Props) {
   const etapa = parseOsStage(ordem.etapa_atual);
@@ -47,7 +49,7 @@ export function OsWorkspaceEtapa({
           ordem={ordem}
           equipes={equipes}
           fluxoBloqueado={fluxoBloqueado}
-          onAgendado={onAtualizado}
+          onAgendado={onConcluido}
         />,
       );
     }
@@ -56,6 +58,7 @@ export function OsWorkspaceEtapa({
         ordem={ordem}
         fluxoBloqueado={fluxoBloqueado}
         onAtualizado={onAtualizado}
+        onConcluido={onConcluido}
       />,
     );
   }
@@ -66,6 +69,7 @@ export function OsWorkspaceEtapa({
         ordem={ordem}
         fluxoBloqueado={fluxoBloqueado}
         onAtualizado={onAtualizado}
+        onConcluido={onConcluido}
         viewerCanSeeFinancial={viewerCanSeeFinancial}
       />,
     );
@@ -78,6 +82,7 @@ export function OsWorkspaceEtapa({
         equipes={equipes}
         fluxoBloqueado={fluxoBloqueado}
         onAtualizado={onAtualizado}
+        onConcluido={onConcluido}
       />,
     );
   }
@@ -88,6 +93,7 @@ export function OsWorkspaceEtapa({
         ordem={ordem}
         fluxoBloqueado={fluxoBloqueado}
         onAtualizado={onAtualizado}
+        onConcluido={onConcluido}
       />,
     );
   }

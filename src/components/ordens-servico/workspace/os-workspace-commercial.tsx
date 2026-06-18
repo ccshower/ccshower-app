@@ -32,6 +32,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   fluxoBloqueado?: boolean;
   onAtualizado: () => void;
+  onConcluido: () => void;
 };
 
 /** Execução etapa commercial — página /os/[id] apenas. */
@@ -39,6 +40,7 @@ export function OsWorkspaceCommercial({
   ordem,
   fluxoBloqueado = false,
   onAtualizado,
+  onConcluido,
 }: Props) {
   const [valorComercial, setValorComercial] = useState(initialValorComercialInput(ordem));
   const [financiamento, setFinanciamento] = useFinanciamentoState(ordem);
@@ -124,7 +126,7 @@ export function OsWorkspaceCommercial({
         setMsg(r.message);
         return;
       }
-      onAtualizado();
+      onConcluido();
     });
   }
 

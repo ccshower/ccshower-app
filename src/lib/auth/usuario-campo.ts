@@ -85,3 +85,11 @@ export function resolveHomePath(
   if (isUsuarioFinanceiro(usuario, equipe)) return "/financeiro";
   return "/operacao";
 }
+
+/** Voltar do workspace /os/[id] para o painel operacional do usuário. */
+export function resolveOsWorkspaceBackPath(
+  usuario: Usuario,
+  equipe: UsuarioEquipeContext | null | undefined,
+): string {
+  return resolveHomePath(usuario, equipe);
+}

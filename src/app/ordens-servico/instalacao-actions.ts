@@ -37,7 +37,10 @@ function mapSeparationListRow(row: SeparationListRow): OsSeparationListItem {
 
 function revalidateOs(osId: string) {
   revalidatePath("/ordens-servico");
+  revalidatePath("/admin/centro-operacional");
   revalidatePath("/operacao");
+  revalidatePath("/financeiro");
+  revalidatePath("/calendar");
   revalidatePath("/os", "layout");
   revalidatePath(`/os/${osId}`);
 }

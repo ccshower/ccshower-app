@@ -1,9 +1,16 @@
 export async function uploadCncViaApi(
   osId: string,
-  file: File,
-): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  files: File | File[],
+): Promise<{ ok: true; id: string; count?: number } | { ok: false; message: string }> {
+  const list = Array.isArray(files) ? files : [files];
+  if (!list.length) {
+    return { ok: false, message: "Selecione um arquivo de Desenho Técnico" };
+  }
+
   const formData = new FormData();
-  formData.set("file", file);
+  for (const file of list) {
+    formData.append("file", file);
+  }
 
   const res = await fetch(`/api/os/${osId}/cnc`, {
     method: "POST",
@@ -11,7 +18,7 @@ export async function uploadCncViaApi(
   });
 
   const data = (await res.json()) as
-    | { ok: true; id: string }
+    | { ok: true; id: string; count?: number }
     | { ok: false; message: string };
 
   if (!res.ok || !data.ok) {

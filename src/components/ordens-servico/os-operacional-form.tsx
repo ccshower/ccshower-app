@@ -11,6 +11,7 @@ import type { ClientType } from "@/lib/clientes/tipo-cliente";
 import { OS_STATUS, type OrdemServicoStatus } from "@/lib/ordens-servico/constants";
 import { tOsStatus } from "@/lib/i18n";
 import { defaultVisitaDateTime, parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import { horaFimPadraoParaInicio } from "@/lib/ordens-servico/visita-slots";
 import type { Equipe, OrdemServicoWithRelations, Usuario } from "@/lib/types/database";
 
 const inputClass =
@@ -56,9 +57,27 @@ export function OsOperacionalForm(props: OsOperacionalFormProps) {
 
   const isEdit = props.mode === "edit";
   const ordem = isEdit ? props.ordem : null;
-  const visitaDefaults = isEdit
-    ? parseVisitaDateTime(ordem?.visita_inicial?.data_inicio)
-    : defaultVisitaDateTime();
+  const visitaDefaults = useMemo(() => {
+    if (isEdit && ordem?.visita_inicial?.data_inicio) {
+      const start = parseVisitaDateTime(ordem.visita_inicial.data_inicio);
+      const end = ordem.visita_inicial.data_fim
+        ? parseVisitaDateTime(ordem.visita_inicial.data_fim)
+        : null;
+      return {
+        data: start.data,
+        hora: start.hora,
+        horaFim:
+          end?.hora.slice(0, 5) ??
+          horaFimPadraoParaInicio(start.hora) ??
+          "10:00",
+      };
+    }
+    const defaults = defaultVisitaDateTime();
+    return {
+      ...defaults,
+      horaFim: horaFimPadraoParaInicio(defaults.hora) ?? "10:00",
+    };
+  }, [isEdit, ordem?.visita_inicial?.data_inicio, ordem?.visita_inicial?.data_fim]);
 
   const [equipeId, setEquipeId] = useState(
     () =>
@@ -70,6 +89,7 @@ export function OsOperacionalForm(props: OsOperacionalFormProps) {
   );
   const [dataVisita, setDataVisita] = useState(visitaDefaults.data);
   const [horaVisita, setHoraVisita] = useState(visitaDefaults.hora);
+  const [horaFimVisita, setHoraFimVisita] = useState(visitaDefaults.horaFim);
 
   const clienteNome = isEdit
     ? ordem?.cliente?.nome
@@ -158,6 +178,7 @@ export function OsOperacionalForm(props: OsOperacionalFormProps) {
         onEquipeChange={(id) => {
           setEquipeId(id);
           setHoraVisita("");
+          setHoraFimVisita("");
         }}
       />
 
@@ -166,8 +187,10 @@ export function OsOperacionalForm(props: OsOperacionalFormProps) {
         equipeId={equipeId}
         dataVisita={dataVisita}
         horaVisita={horaVisita}
+        horaFimVisita={horaFimVisita}
         onDataChange={setDataVisita}
         onHoraChange={setHoraVisita}
+        onHoraFimChange={setHoraFimVisita}
         excluirEventoId={ordem?.visita_inicial?.id}
       />
 
@@ -219,7 +242,7 @@ export function OsOperacionalForm(props: OsOperacionalFormProps) {
         </button>
         <button
           type="submit"
-          disabled={pending || !dataVisita || !horaVisita}
+          disabled={pending || !dataVisita || !horaVisita || !horaFimVisita}
           className="rounded-sm bg-cc-ink px-4 py-2.5 text-xs font-medium uppercase tracking-[0.08em] text-white shadow-sheet hover:bg-cc-deep disabled:opacity-40"
         >
           {pending

@@ -6,6 +6,7 @@ import {
   addDaysOperationalYmd,
 } from "@/lib/calendar/operational-calendar";
 import {
+  agendaEventoEndIso,
   agendaEventoStartIso,
   AGENDA_EVENTO_DATETIME_COLUMNS,
 } from "@/lib/ordens-servico/agenda-evento-query";
@@ -18,29 +19,24 @@ import {
 } from "@/lib/ordens-servico/agenda-equipe-dia";
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import {
+  formatIntervaloAgenda,
+  horaFimPadraoParaInicio,
+  horarioOperacionalJaPassou,
+  hojeOperacionalYmd,
+  intervaloTemConflito,
+  intervalosOcupadosFromEventos,
   isoRangeDiaOperacional,
   normalizarSlotHora,
   proximosSlotsDisponiveis,
   proximosSlotsDisponiveisHoje,
   proximosSlotsDisponiveisNoDia,
-  slotEstaOcupado,
-  slotsOcupadosFromEventos,
-  horarioOperacionalJaPassou,
-  hojeOperacionalYmd,
+  validarIntervaloAgenda,
   VISITA_SLOTS_HORARIOS,
+  type AgendaIntervaloOcupado,
   type AgendaSlotSugestao,
   type VisitaSlotHora,
 } from "@/lib/ordens-servico/visita-slots";
 import { createClient } from "@/lib/supabase/server";
-
-/** Resolve slot oficial a partir do ISO (parse + hora de parede do calendário). */
-function resolverSlotOperacionalFromIso(iso: string): VisitaSlotHora | null {
-  const { hora } = parseVisitaDateTime(iso);
-  const fromParse = normalizarSlotHora(hora);
-  if (fromParse) return fromParse;
-  const hm = operationalWallClockHm(iso);
-  return hm ? normalizarSlotHora(hm) : null;
-}
 
 const AGENDA_STATUS_CANCELADOS = new Set(["cancelled", "cancelado"]);
 
@@ -56,38 +52,13 @@ export type ValidarSlotVisitaResult =
       message: string;
       conflito: true;
       horaSolicitada: string;
+      horaFimSolicitada: string;
       sugestoes: AgendaSlotSugestao[];
     };
 
 const AGENDA_EQUIPE_DIA_SELECT = `${AGENDA_EVENTO_DATETIME_COLUMNS}, cliente_id, titulo, clientes!cliente_id ( nome, endereco_formatado, latitude, longitude )`;
 
 type AgendaEventoDiaRow = AgendaEventoEquipeDiaRow;
-
-function normalizarHoraParede(hm: string): string | null {
-  const m = hm.trim().match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return null;
-  return `${m[1].padStart(2, "0")}:${m[2]}`;
-}
-
-/** Mesma hora de parede (HH:mm) que outro compromisso ativo no dia. */
-function horaParedeConflita(
-  eventos: AgendaEventoDiaRow[],
-  hmSolicitado: string,
-): boolean {
-  const alvo = normalizarHoraParede(hmSolicitado);
-  if (!alvo) return false;
-
-  for (const ev of eventos) {
-    const iso = agendaEventoStartIso(ev);
-    if (!iso) continue;
-    const hm =
-      operationalWallClockHm(iso) ??
-      normalizarHoraParede(parseVisitaDateTime(iso).hora);
-    if (hm && hm === alvo) return true;
-  }
-
-  return false;
-}
 
 async function listarEventosAgendaEquipeNoDia(
   equipeId: string,
@@ -126,20 +97,21 @@ async function listarEventosAgendaEquipeNoDia(
 
 function resultadoConflitoAgenda(
   dataVisita: string,
-  horaSolicitada: string,
-  ocupados: readonly string[],
+  horaInicio: string,
+  horaFim: string,
+  ocupados: readonly AgendaIntervaloOcupado[],
 ): Extract<ValidarSlotVisitaResult, { conflito: true }> {
-  const refSlot = normalizarSlotHora(horaSolicitada);
+  const refSlot = normalizarSlotHora(horaInicio) ?? horaInicio;
   return {
     ok: false,
     conflito: true,
-    horaSolicitada,
-    sugestoes: proximosSlotsDisponiveis(
-      ocupados,
-      refSlot ?? horaSolicitada,
-      3,
-    ).map((hora) => ({ dataYmd: dataVisita, hora })),
-    message: `Time ${horaSolicitada} unavailable for this team on this date`,
+    horaSolicitada: horaInicio,
+    horaFimSolicitada: horaFim,
+    sugestoes: proximosSlotsDisponiveis(ocupados, refSlot, 3).map((s) => ({
+      ...s,
+      dataYmd: dataVisita,
+    })),
+    message: `Time ${formatIntervaloAgenda(horaInicio, horaFim)} unavailable for this team on this date`,
   };
 }
 
@@ -156,7 +128,7 @@ async function buscarProximasSugestoesAgenda(
   let data = dataInicial;
 
   for (let dia = 0; dia < MAX_DIAS_SUGESTAO_AGENDA && out.length < limite; dia++) {
-    const { ocupados, error } = await buscarHorariosOcupadosVisita(
+    const { intervalos, error } = await buscarIntervalosOcupadosVisita(
       equipeId,
       data,
       data === dataInicial ? excluirEventoId : undefined,
@@ -165,8 +137,8 @@ async function buscarProximasSugestoesAgenda(
 
     const restantes =
       data === hoje
-        ? proximosSlotsDisponiveisHoje(data, ocupados, limite - out.length)
-        : proximosSlotsDisponiveisNoDia(data, ocupados, limite - out.length);
+        ? proximosSlotsDisponiveisHoje(data, intervalos, limite - out.length)
+        : proximosSlotsDisponiveisNoDia(data, intervalos, limite - out.length);
 
     out.push(...restantes);
     data = addDaysOperationalYmd(data, 1);
@@ -186,10 +158,11 @@ async function requireAuthSupabase() {
 
 export type BuscarAgendaEquipeNoDiaResult = AgendaEquipeDiaResumo & {
   ocupados: VisitaSlotHora[];
+  intervalos: AgendaIntervaloOcupado[];
   error?: string;
 };
 
-/** Compromissos da equipe no dia + slots ocupados (agenda_eventos). */
+/** Compromissos da equipe no dia + intervalos ocupados (agenda_eventos). */
 export async function buscarAgendaEquipeNoDia(
   equipeId: string,
   dataVisita: string,
@@ -199,6 +172,7 @@ export async function buscarAgendaEquipeNoDia(
     compromissos: [],
     paradasRota: [],
     ocupados: [],
+    intervalos: [],
   };
 
   try {
@@ -219,10 +193,12 @@ export async function buscarAgendaEquipeNoDia(
 
     if (error) return { ...vazio, error };
 
+    const intervalos = intervalosOcupadosFromEventos(eventos);
     const resumo = mapAgendaEquipeDiaResumo(eventos);
     return {
       ...resumo,
-      ocupados: slotsOcupadosFromEventos(eventos),
+      intervalos,
+      ocupados: intervalos.map((i) => i.inicio),
     };
   } catch (e) {
     return {
@@ -232,7 +208,17 @@ export async function buscarAgendaEquipeNoDia(
   }
 }
 
-/** Horários já ocupados da equipe na data (agenda_eventos). */
+/** Intervalos já ocupados da equipe na data (agenda_eventos). */
+export async function buscarIntervalosOcupadosVisita(
+  equipeId: string,
+  dataVisita: string,
+  excluirEventoId?: string | null,
+): Promise<{ intervalos: AgendaIntervaloOcupado[]; error?: string }> {
+  const r = await buscarAgendaEquipeNoDia(equipeId, dataVisita, excluirEventoId);
+  return { intervalos: r.intervalos, error: r.error };
+}
+
+/** @deprecated Prefer buscarIntervalosOcupadosVisita */
 export async function buscarHorariosOcupadosVisita(
   equipeId: string,
   dataVisita: string,
@@ -244,69 +230,102 @@ export async function buscarHorariosOcupadosVisita(
 
 export type { CompromissoEquipeDia, RotaParadaAgenda };
 
-/** Valida conflito equipe + data + hora antes de gravar evento. */
+function resolverHoraFimSolicitada(
+  horaInicio: string,
+  horaFim?: string | null,
+): VisitaSlotHora | null {
+  if (horaFim?.trim()) {
+    const parsed = validarIntervaloAgenda(horaInicio, horaFim);
+    return parsed.ok ? parsed.fim : null;
+  }
+  return horaFimPadraoParaInicio(horaInicio);
+}
+
+function isEventoId(value: string | null | undefined): boolean {
+  if (!value?.trim()) return false;
+  return /^[0-9a-f-]{36}$/i.test(value.trim());
+}
+
+/** Valida conflito equipe + data + intervalo antes de gravar evento. */
 export async function validarSlotVisitaDisponivel(
   equipeId: string,
   dataVisita: string,
-  horaVisita: string,
+  horaInicio: string,
+  horaFimOuExcluir?: string | null,
   excluirEventoId?: string | null,
 ): Promise<ValidarSlotVisitaResult> {
-  const slot = normalizarSlotHora(horaVisita);
-  if (!slot) {
-    return { ok: false, message: "Invalid visit time" };
+  let horaFim: string | null | undefined = horaFimOuExcluir;
+  let excluirId = excluirEventoId ?? null;
+
+  if (isEventoId(horaFimOuExcluir)) {
+    excluirId = horaFimOuExcluir!.trim();
+    horaFim = null;
   }
-  if (!VISITA_SLOTS_HORARIOS.includes(slot)) {
+
+  const intervalo = validarIntervaloAgenda(
+    horaInicio,
+    horaFim ?? resolverHoraFimSolicitada(horaInicio, null) ?? "",
+  );
+  if (!intervalo.ok) {
+    return { ok: false, message: intervalo.message };
+  }
+
+  if (!VISITA_SLOTS_HORARIOS.includes(intervalo.inicio)) {
     return {
       ok: false,
       message: "Select an available time slot in the schedule",
     };
   }
 
-  const { ocupados, error } = await buscarHorariosOcupadosVisita(
+  const { intervalos, error } = await buscarIntervalosOcupadosVisita(
     equipeId,
     dataVisita,
-    excluirEventoId,
+    excluirId,
   );
 
   if (error) return { ok: false, message: error };
 
-  if (slotEstaOcupado(ocupados, slot)) {
-    return resultadoConflitoAgenda(dataVisita, slot, ocupados);
+  if (
+    intervaloTemConflito(intervalo.inicio, intervalo.fim, intervalos)
+  ) {
+    return resultadoConflitoAgenda(
+      dataVisita,
+      intervalo.inicio,
+      intervalo.fim,
+      intervalos,
+    );
   }
 
   return { ok: true };
 }
 
 /**
- * Reagendamento no calendário: mesma ocupação da agenda de visitas (slots + hora de parede),
- * sem exigir VISITA_SLOTS no compromisso que já existe.
+ * Reagendamento no calendário: valida intervalo completo (início + fim efetivo).
  */
 export async function avaliarSlotReagendamentoCalendario(
   equipeId: string,
   dataVisita: string,
   isoInicio: string,
+  isoFim: string | null | undefined,
   excluirEventoId?: string | null,
 ): Promise<ValidarSlotVisitaResult> {
-  const hm =
+  const hmInicio =
     operationalWallClockHm(isoInicio) ??
-    normalizarHoraParede(parseVisitaDateTime(isoInicio).hora);
-  if (!hm) {
+    parseVisitaDateTime(isoInicio).hora.slice(0, 5);
+  if (!hmInicio) {
     return { ok: false, message: "Invalid appointment date or time" };
   }
 
-  const slot = resolverSlotOperacionalFromIso(isoInicio);
-  const horaExibicao = slot ?? hm;
+  const hmFim =
+    (isoFim ? operationalWallClockHm(isoFim) : null) ??
+    (isoFim ? parseVisitaDateTime(isoFim).hora.slice(0, 5) : null) ??
+    resolverHoraFimSolicitada(hmInicio, null);
 
-  const { eventos, error } = await listarEventosAgendaEquipeNoDia(
-    equipeId,
-    dataVisita,
-    excluirEventoId,
-  );
-  if (error) return { ok: false, message: error };
+  if (!hmFim) {
+    return { ok: false, message: "Invalid appointment end time" };
+  }
 
-  const ocupados = slotsOcupadosFromEventos(eventos);
-
-  if (horarioOperacionalJaPassou(dataVisita, hm)) {
+  if (horarioOperacionalJaPassou(dataVisita, hmInicio)) {
     const sugestoes = await buscarProximasSugestoesAgenda(
       equipeId,
       dataVisita,
@@ -316,19 +335,18 @@ export async function avaliarSlotReagendamentoCalendario(
     return {
       ok: false,
       conflito: true,
-      horaSolicitada: horaExibicao,
+      horaSolicitada: hmInicio,
+      horaFimSolicitada: hmFim,
       sugestoes,
-      message: `Time ${horaExibicao} has already passed for today`,
+      message: `Time ${formatIntervaloAgenda(hmInicio, hmFim)} has already passed for today`,
     };
   }
 
-  if (slot && slotEstaOcupado(ocupados, slot)) {
-    return resultadoConflitoAgenda(dataVisita, horaExibicao, ocupados);
-  }
-
-  if (horaParedeConflita(eventos, hm)) {
-    return resultadoConflitoAgenda(dataVisita, horaExibicao, ocupados);
-  }
-
-  return { ok: true };
+  return validarSlotVisitaDisponivel(
+    equipeId,
+    dataVisita,
+    hmInicio,
+    hmFim,
+    excluirEventoId,
+  );
 }

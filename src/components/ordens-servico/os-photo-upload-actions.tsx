@@ -9,6 +9,9 @@ type Props = {
   onFilesSelected: (files: FileList | null) => void;
   takePhotoLabel?: string;
   choosePhotosLabel?: string;
+  /** Gallery/file picker accept attribute (camera always uses image/*). */
+  galleryAccept?: string;
+  galleryMultiple?: boolean;
   className?: string;
 };
 
@@ -21,6 +24,8 @@ export function OsPhotoUploadActions({
   onFilesSelected,
   takePhotoLabel = t("os.visit.takePhoto"),
   choosePhotosLabel = t("os.visit.choosePhotos"),
+  galleryAccept = "image/*",
+  galleryMultiple = true,
   className,
 }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -51,8 +56,8 @@ export function OsPhotoUploadActions({
       <input
         ref={galleryRef}
         type="file"
-        accept="image/*"
-        multiple
+        accept={galleryAccept}
+        multiple={galleryMultiple}
         className="sr-only"
         disabled={disabled}
         onChange={(e) => handleFiles(e.target.files)}

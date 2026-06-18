@@ -1,5 +1,8 @@
 import { DISPLAY_LOCALE } from "@/lib/i18n";
-import { agendaEventoStartIso } from "@/lib/ordens-servico/agenda-evento-query";
+import {
+  agendaEventoEndIso,
+  agendaEventoStartIso,
+} from "@/lib/ordens-servico/agenda-evento-query";
 import {
   buildDataEventoIso,
   isoRangeDiaOperacional,
@@ -7,27 +10,55 @@ import {
   parseVisitaDateTime,
 } from "@/lib/ordens-servico/datetime";
 
-/** Duração padrão de cada slot de visita técnica (1h). */
+/** Intervalo entre marcos de horário na agenda (visitas e instalações). */
+export const AGENDA_SLOT_INTERVALO_MINUTOS = 30;
+
+/** Primeiro horário disponível no dia operacional. */
+export const AGENDA_HORARIO_INICIO = "08:00";
+
+/** Último horário disponível (pode ser hora de término). */
+export const AGENDA_HORARIO_FIM = "20:30";
+
+/** Duração padrão quando não há hora fim explícita (legado / sugestões). */
 export const VISITA_DURACAO_MINUTOS = 60;
 
-/** Slots operacionais de visita (1h) — evolução futura: rota, região, trânsito. */
-export const VISITA_SLOTS_HORARIOS = [
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-] as const;
+export type VisitaSlotHora = string;
 
-export type VisitaSlotHora = (typeof VISITA_SLOTS_HORARIOS)[number];
+export type AgendaIntervaloOcupado = {
+  inicio: VisitaSlotHora;
+  fim: VisitaSlotHora;
+};
 
 export type AgendaSlotSugestao = {
   dataYmd: string;
   hora: VisitaSlotHora;
+  horaFim: VisitaSlotHora;
 };
+
+function minutosDesdeMeiaNoite(hm: string): number {
+  const m = hm.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return -1;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function hmFromMinutos(min: number): VisitaSlotHora {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function gerarHorariosAgenda(): VisitaSlotHora[] {
+  const inicio = minutosDesdeMeiaNoite(AGENDA_HORARIO_INICIO);
+  const fim = minutosDesdeMeiaNoite(AGENDA_HORARIO_FIM);
+  const out: VisitaSlotHora[] = [];
+  for (let min = inicio; min <= fim; min += AGENDA_SLOT_INTERVALO_MINUTOS) {
+    out.push(hmFromMinutos(min));
+  }
+  return out;
+}
+
+/** Marcos de horário a cada 30 min — 08:00 … 20:30. */
+export const VISITA_SLOTS_HORARIOS = gerarHorariosAgenda() as readonly VisitaSlotHora[];
 
 export function hojeOperacionalYmd(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: OPERATIONAL_TZ });
@@ -35,80 +66,167 @@ export function hojeOperacionalYmd(): string {
 
 export { isoRangeDiaOperacional };
 
-/** Normaliza HH:mm para slot oficial (ex.: 09:00). */
+/** Normaliza HH:mm para marco oficial (:00 ou :30 dentro da janela operacional). */
 export function normalizarSlotHora(hora: string): VisitaSlotHora | null {
   const m = hora.trim().match(/^(\d{1,2}):(\d{2})/);
   if (!m) return null;
+  const mi = Number(m[2]);
+  if (mi !== 0 && mi !== 30) return null;
   const slot = `${m[1].padStart(2, "0")}:${m[2]}`;
-  return VISITA_SLOTS_HORARIOS.includes(slot as VisitaSlotHora)
-    ? (slot as VisitaSlotHora)
-    : null;
+  return VISITA_SLOTS_HORARIOS.includes(slot) ? slot : null;
 }
 
-export function slotsOcupadosFromEventos(
+export function compararHm(a: string, b: string): number {
+  return minutosDesdeMeiaNoite(a) - minutosDesdeMeiaNoite(b);
+}
+
+/** Horários de término válidos após o início (mínimo 30 min, até 20:30). */
+export function horariosFimParaInicio(inicio: string): VisitaSlotHora[] {
+  const inicioNorm = normalizarSlotHora(inicio);
+  if (!inicioNorm) return [];
+  const minInicio = minutosDesdeMeiaNoite(inicioNorm);
+  const minFimMinimo = minInicio + AGENDA_SLOT_INTERVALO_MINUTOS;
+  const maxFim = minutosDesdeMeiaNoite(AGENDA_HORARIO_FIM);
+  return VISITA_SLOTS_HORARIOS.filter((slot) => {
+    const min = minutosDesdeMeiaNoite(slot);
+    return min >= minFimMinimo && min <= maxFim;
+  });
+}
+
+export function horaFimPadraoParaInicio(inicio: string): VisitaSlotHora | null {
+  const candidato = hmFromMinutos(
+    minutosDesdeMeiaNoite(inicio) + VISITA_DURACAO_MINUTOS,
+  );
+  const norm = normalizarSlotHora(candidato);
+  if (norm && compararHm(norm, inicio) > 0) return norm;
+  const opcoes = horariosFimParaInicio(inicio);
+  return opcoes[opcoes.length - 1] ?? null;
+}
+
+export function intervaloTemConflito(
+  inicioHm: string,
+  fimHm: string,
+  ocupados: readonly AgendaIntervaloOcupado[],
+): boolean {
+  const a0 = minutosDesdeMeiaNoite(inicioHm);
+  const a1 = minutosDesdeMeiaNoite(fimHm);
+  if (a0 < 0 || a1 <= a0) return true;
+
+  for (const o of ocupados) {
+    const b0 = minutosDesdeMeiaNoite(o.inicio);
+    const b1 = minutosDesdeMeiaNoite(o.fim);
+    if (a0 < b1 && a1 > b0) return true;
+  }
+  return false;
+}
+
+export function intervalosOcupadosFromEventos(
   eventos: {
     data_evento?: string | null;
     data_inicio?: string | null;
+    data_fim?: string | null;
     hora_evento?: string | null;
     status?: string;
   }[],
-): VisitaSlotHora[] {
-  const set = new Set<VisitaSlotHora>();
+): AgendaIntervaloOcupado[] {
+  const out: AgendaIntervaloOcupado[] = [];
+
   for (const ev of eventos) {
     if (ev.status === "cancelled" || ev.status === "cancelado") continue;
-    const iso = agendaEventoStartIso(ev);
-    if (!iso) continue;
-    const { hora } = parseVisitaDateTime(iso);
-    const slot = normalizarSlotHora(hora);
-    if (slot) set.add(slot);
-  }
-  return [...set];
-}
+    const startIso = agendaEventoStartIso(ev);
+    if (!startIso) continue;
+    const endIso = agendaEventoEndIso(ev);
+    if (!endIso) continue;
 
-export function slotEstaOcupado(
-  ocupados: readonly string[],
-  hora: string,
-): boolean {
-  const slot = normalizarSlotHora(hora);
-  if (!slot) return false;
-  return ocupados.includes(slot);
-}
-
-function indicePrimeiroSlotAposHm(hm: string): number {
-  const ref = normalizarSlotHora(hm);
-  if (ref) {
-    return VISITA_SLOTS_HORARIOS.indexOf(ref) + 1;
-  }
-  const idx = VISITA_SLOTS_HORARIOS.findIndex(
-    (slot) => compararHm(slot, hm) > 0,
-  );
-  return idx < 0 ? VISITA_SLOTS_HORARIOS.length : idx;
-}
-
-/** Próximos slots livres após `aposHora` (mesma regra do agendamento de visitas). */
-export function proximosSlotsDisponiveis(
-  ocupados: readonly string[],
-  aposHora: string,
-  limite = 3,
-): VisitaSlotHora[] {
-  const startAt = indicePrimeiroSlotAposHm(aposHora);
-  const out: VisitaSlotHora[] = [];
-
-  for (
-    let i = startAt;
-    i < VISITA_SLOTS_HORARIOS.length && out.length < limite;
-    i++
-  ) {
-    const slot = VISITA_SLOTS_HORARIOS[i];
-    if (!slotEstaOcupado(ocupados, slot)) out.push(slot);
+    const inicio = parseVisitaDateTime(startIso).hora.slice(0, 5);
+    const fim = parseVisitaDateTime(endIso).hora.slice(0, 5);
+    const inicioNorm = normalizarSlotHora(inicio);
+    const fimNorm = normalizarSlotHora(fim) ?? horaFimPadraoParaInicio(inicio);
+    if (!inicioNorm || !fimNorm || compararHm(fimNorm, inicioNorm) <= 0) continue;
+    out.push({ inicio: inicioNorm, fim: fimNorm });
   }
 
   return out;
 }
 
+/** @deprecated Use intervalosOcupadosFromEventos — mantido para compatibilidade interna. */
+export function slotsOcupadosFromEventos(
+  eventos: Parameters<typeof intervalosOcupadosFromEventos>[0],
+): VisitaSlotHora[] {
+  return intervalosOcupadosFromEventos(eventos).map((i) => i.inicio);
+}
+
+export function inicioIndisponivel(
+  inicio: string,
+  ocupados: readonly AgendaIntervaloOcupado[],
+): boolean {
+  const opcoes = horariosFimParaInicio(inicio);
+  return !opcoes.some((fim) => !intervaloTemConflito(inicio, fim, ocupados));
+}
+
+export function slotEstaOcupado(
+  ocupados: readonly AgendaIntervaloOcupado[] | readonly string[],
+  hora: string,
+): boolean {
+  if (ocupados.length === 0) return false;
+  const first = ocupados[0];
+  if (typeof first === "string") {
+    const intervalos = (ocupados as readonly string[]).map((inicio) => ({
+      inicio,
+      fim: horaFimPadraoParaInicio(inicio) ?? inicio,
+    }));
+    return inicioIndisponivel(hora, intervalos);
+  }
+  return inicioIndisponivel(hora, ocupados as readonly AgendaIntervaloOcupado[]);
+}
+
+export function validarIntervaloAgenda(
+  inicio: string,
+  fim: string,
+): { ok: true; inicio: VisitaSlotHora; fim: VisitaSlotHora } | { ok: false; message: string } {
+  const inicioNorm = normalizarSlotHora(inicio);
+  const fimNorm = normalizarSlotHora(fim);
+  if (!inicioNorm) {
+    return { ok: false, message: "Invalid start time" };
+  }
+  if (!fimNorm) {
+    return { ok: false, message: "Invalid end time" };
+  }
+  if (compararHm(fimNorm, inicioNorm) <= 0) {
+    return { ok: false, message: "End time must be after start time" };
+  }
+  const fimValido = horariosFimParaInicio(inicioNorm);
+  if (!fimValido.includes(fimNorm)) {
+    return {
+      ok: false,
+      message: "Select an end time in 30-minute steps within operating hours",
+    };
+  }
+  return { ok: true, inicio: inicioNorm, fim: fimNorm };
+}
+
+function indicePrimeiroInicioAposHm(hm: string): number {
+  const ref = normalizarSlotHora(hm);
+  if (ref) {
+    const idx = VISITA_SLOTS_HORARIOS.indexOf(ref);
+    return idx < 0 ? VISITA_SLOTS_HORARIOS.length : idx + 1;
+  }
+  const idx = VISITA_SLOTS_HORARIOS.findIndex((slot) => compararHm(slot, hm) > 0);
+  return idx < 0 ? VISITA_SLOTS_HORARIOS.length : idx;
+}
+
+function sugestaoPadraoNoDia(
+  dataYmd: string,
+  inicio: VisitaSlotHora,
+): AgendaSlotSugestao | null {
+  const fim = horaFimPadraoParaInicio(inicio);
+  if (!fim) return null;
+  return { dataYmd, hora: inicio, horaFim: fim };
+}
+
 function sugestoesNoDia(
   dataYmd: string,
-  ocupados: readonly string[],
+  ocupados: readonly AgendaIntervaloOcupado[],
   startAt: number,
   limite: number,
 ): AgendaSlotSugestao[] {
@@ -118,18 +236,32 @@ function sugestoesNoDia(
     i < VISITA_SLOTS_HORARIOS.length && out.length < limite;
     i++
   ) {
-    const slot = VISITA_SLOTS_HORARIOS[i];
-    if (!slotEstaOcupado(ocupados, slot)) {
-      out.push({ dataYmd, hora: slot });
-    }
+    const inicio = VISITA_SLOTS_HORARIOS[i]!;
+    if (inicioIndisponivel(inicio, ocupados)) continue;
+    const sugestao = sugestaoPadraoNoDia(dataYmd, inicio);
+    if (!sugestao) continue;
+    if (intervaloTemConflito(sugestao.hora, sugestao.horaFim, ocupados)) continue;
+    out.push(sugestao);
   }
   return out;
 }
 
-/** Todos os slots livres do dia, do primeiro horário oficial. */
+/** Próximos intervalos livres após `aposHora`. */
+export function proximosSlotsDisponiveis(
+  ocupados: readonly AgendaIntervaloOcupado[],
+  aposHora: string,
+  limite = 3,
+): AgendaSlotSugestao[] {
+  const startAt = indicePrimeiroInicioAposHm(aposHora);
+  return sugestoesNoDia("", ocupados, startAt, limite).map((s) => ({
+    ...s,
+    dataYmd: s.dataYmd,
+  }));
+}
+
 export function proximosSlotsDisponiveisNoDia(
   dataYmd: string,
-  ocupados: readonly string[],
+  ocupados: readonly AgendaIntervaloOcupado[],
   limite = 3,
 ): AgendaSlotSugestao[] {
   return sugestoesNoDia(dataYmd, ocupados, 0, limite);
@@ -148,36 +280,26 @@ export function horaOperacionalAgora(): string {
   return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
 }
 
-export function compararHm(a: string, b: string): number {
-  const parse = (hm: string) => {
-    const m = hm.trim().match(/^(\d{1,2}):(\d{2})/);
-    if (!m) return 0;
-    return Number(m[1]) * 60 + Number(m[2]);
-  };
-  return parse(a) - parse(b);
-}
-
 /** Horário já passou no dia operacional de hoje. */
 export function horarioOperacionalJaPassou(dataVisita: string, hm: string): boolean {
   if (dataVisita !== hojeOperacionalYmd()) return false;
   return compararHm(hm, horaOperacionalAgora()) <= 0;
 }
 
-/** Próximos slots livres a partir de agora (somente para hoje). */
+/** Próximos intervalos livres a partir de agora (somente para hoje). */
 export function proximosSlotsDisponiveisHoje(
   dataYmd: string,
-  ocupados: readonly string[],
+  ocupados: readonly AgendaIntervaloOcupado[],
   limite = 3,
 ): AgendaSlotSugestao[] {
   const agora = horaOperacionalAgora();
-  const agoraMin = compararHm(agora, "00:00");
-  const startAt = VISITA_SLOTS_HORARIOS.findIndex((slot) => {
-    const slotMin = compararHm(slot, "00:00");
-    return slotMin >= agoraMin;
-  });
+  const startAt = VISITA_SLOTS_HORARIOS.findIndex((slot) => compararHm(slot, agora) >= 0);
   if (startAt < 0) return [];
-
   return sugestoesNoDia(dataYmd, ocupados, startAt, limite);
+}
+
+export function formatIntervaloAgenda(inicio: string, fim: string): string {
+  return `${inicio} – ${fim}`;
 }
 
 export function formatDataVisitaCurta(ymd: string): string {

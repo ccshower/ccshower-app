@@ -58,6 +58,8 @@ type Props = {
 
   onAtualizado: () => void;
 
+  onConcluido: () => void;
+
   viewerCanSeeFinancial?: boolean;
 
 };
@@ -99,6 +101,8 @@ export function OsWorkspaceFinancial({
   fluxoBloqueado = false,
 
   onAtualizado,
+
+  onConcluido,
 
   viewerCanSeeFinancial = false,
 
@@ -288,7 +292,7 @@ function OsWorkspaceFinancialForm({
 
       }
 
-      onAtualizado();
+      onConcluido();
 
     });
 
@@ -314,7 +318,7 @@ function OsWorkspaceFinancialForm({
 
       setShowReject(false);
 
-      onAtualizado();
+      onConcluido();
 
     });
 

@@ -14,7 +14,10 @@ import {
   type CalendarWorkspaceState,
 } from "@/lib/calendar/resolve-calendar-workspace";
 import { mondayOfOperationalWeek } from "@/lib/calendar/operational-calendar";
-import { spreadAgendaEventoDatetime } from "@/lib/ordens-servico/agenda-evento-query";
+import {
+  spreadAgendaEventoDatetime,
+  spreadAgendaEventoRange,
+} from "@/lib/ordens-servico/agenda-evento-query";
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import { hojeOperacionalYmd, type AgendaSlotSugestao } from "@/lib/ordens-servico/visita-slots";
 import { createClient } from "@/lib/supabase/server";
@@ -85,6 +88,7 @@ export async function validarReagendamentoCalendario(params: {
   equipeId: string | null;
   targetYmd: string;
   newStartIso: string;
+  newEndIso?: string | null;
   excluirEventoId: string;
 }): Promise<ValidarReagendamentoCalendarioResult> {
   if (!params.equipeId?.trim()) {
@@ -99,6 +103,7 @@ export async function validarReagendamentoCalendario(params: {
     params.equipeId,
     params.targetYmd,
     params.newStartIso,
+    params.newEndIso ?? null,
     params.excluirEventoId,
   );
 
@@ -109,6 +114,7 @@ export async function validarReagendamentoCalendario(params: {
 export async function salvarReagendamentoCalendario(params: {
   eventoId: string;
   newStartIso: string;
+  newEndIso?: string | null;
 }): Promise<SalvarReagendamentoCalendarioResult> {
   const { usuario } = await getCurrentUsuario();
   if (!usuario?.ativo) {
@@ -164,6 +170,7 @@ export async function salvarReagendamentoCalendario(params: {
     ev.equipe_id,
     targetYmd,
     params.newStartIso,
+    params.newEndIso ?? null,
     ev.id,
   );
 
@@ -181,10 +188,14 @@ export async function salvarReagendamentoCalendario(params: {
     return { ok: false, conflito: false, message: validation.message };
   }
 
+  const datetimeFields = params.newEndIso
+    ? spreadAgendaEventoRange(params.newStartIso, params.newEndIso)
+    : spreadAgendaEventoDatetime(params.newStartIso);
+
   const { data: updated, error: updErr } = await supabase
     .from("agenda_eventos")
     .update({
-      ...spreadAgendaEventoDatetime(params.newStartIso),
+      ...datetimeFields,
       equipe_id: ev.equipe_id,
     })
     .eq("id", ev.id)

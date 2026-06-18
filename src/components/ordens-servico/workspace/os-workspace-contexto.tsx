@@ -107,7 +107,12 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
 
   const itensSeparacao = ordem.lista_separacao ?? [];
   const clienteNome = ordem.cliente?.nome ?? ordem.titulo;
-  const cnc = ordem.anexo_cnc ?? null;
+  const anexosCnc =
+    ordem.anexos_cnc?.length
+      ? ordem.anexos_cnc
+      : ordem.anexo_cnc
+        ? [ordem.anexo_cnc]
+        : [];
   const installationNotesRaw = (ordem.installation_notes ?? "").trim();
   const installationExecutionNotesRaw = (
     ordem.installation_execution_notes ?? ""
@@ -159,7 +164,7 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
     imagesDisplay.length > 0 ||
     filesDisplay.length > 0 ||
     itensSeparacao.length > 0 ||
-    Boolean(cnc) ||
+    anexosCnc.length > 0 ||
     Boolean(installationNotesRaw) ||
     Boolean(installationExecutionNotesRaw);
 
@@ -241,26 +246,30 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
           </div>
         ) : null}
 
-        {cnc ? (
+        {anexosCnc.length > 0 ? (
           <div className="mt-3 rounded-ds-lg border border-cc-border bg-white px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
               {t("os.workspace.contextCnc")}
             </p>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-light text-cc-ink">
-                {cnc.nome_arquivo}
-              </p>
-              {cnc.url ? (
-                <a
-                  href={cnc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
-                >
-                  {t("os.workspace.project.cncOpen")}
-                </a>
-              ) : null}
-            </div>
+            <ul className="mt-2 space-y-2">
+              {anexosCnc.map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-light text-cc-ink">
+                    {item.nome_arquivo}
+                  </p>
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
+                    >
+                      {t("os.workspace.project.cncOpen")}
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
 

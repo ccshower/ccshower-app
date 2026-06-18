@@ -45,7 +45,9 @@ async function requireAuth() {
 
 function revalidateOs(osId: string) {
   revalidatePath("/ordens-servico");
+  revalidatePath("/admin/centro-operacional");
   revalidatePath("/operacao");
+  revalidatePath("/financeiro");
   revalidatePath("/os", "layout");
   revalidatePath(`/os/${osId}`);
 }

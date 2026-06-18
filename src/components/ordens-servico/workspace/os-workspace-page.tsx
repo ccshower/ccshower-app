@@ -20,6 +20,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   equipes: Equipe[];
   viewerCanSeeFinancial?: boolean;
+  backHref: string;
 };
 
 /**
@@ -29,6 +30,7 @@ export function OsWorkspacePage({
   ordem: initial,
   equipes,
   viewerCanSeeFinancial = false,
+  backHref,
 }: Props) {
   const router = useRouter();
   const [ordem, setOrdem] = useState(initial);
@@ -42,6 +44,11 @@ export function OsWorkspacePage({
     });
   }, [ordem.id, router]);
 
+  const voltarAoPainel = useCallback(() => {
+    router.push(backHref);
+    router.refresh();
+  }, [backHref, router]);
+
   const etapaLabel = tOsStage(parseOsStage(ordem.etapa_atual));
   const agendamento = isOsAgendamentoVisita(ordem);
   const painelTitulo = agendamento
@@ -51,7 +58,7 @@ export function OsWorkspacePage({
   return (
     <div className="space-y-2.5 pb-6">
       <Link
-        href="/ordens-servico"
+        href={backHref}
         className="inline-block text-[10px] font-medium uppercase tracking-[0.08em] text-cc-muted hover:text-cc-ink"
       >
         ← {t("os.workspace.back")}
@@ -84,6 +91,7 @@ export function OsWorkspacePage({
             ordem={ordem}
             equipes={equipes}
             onAtualizado={recarregar}
+            onConcluido={voltarAoPainel}
             viewerCanSeeFinancial={viewerCanSeeFinancial}
           />
         </section>

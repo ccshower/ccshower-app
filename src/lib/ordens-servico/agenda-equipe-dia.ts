@@ -1,4 +1,5 @@
 import {
+  agendaEventoEndIso,
   agendaEventoStartIso,
   compareAgendaEventoStartAsc,
   type AgendaEventoDatetimeFields,
@@ -22,6 +23,7 @@ export type RotaParadaAgenda = {
 export type CompromissoEquipeDia = {
   id: string;
   hora: string;
+  horaFim: string | null;
   clienteNome: string;
   parada: RotaParadaAgenda;
 };
@@ -77,6 +79,18 @@ function resolverClienteNome(
   return "Cliente";
 }
 
+function resolverHoraFimOperacional(
+  evento: AgendaEventoDatetimeFields,
+): string | null {
+  const endIso = agendaEventoEndIso(evento);
+  if (!endIso) return null;
+  return (
+    operationalWallClockHm(endIso) ??
+    parseVisitaDateTime(endIso).hora.slice(0, 5) ??
+    null
+  );
+}
+
 /** Normaliza linhas de agenda_eventos para UI e estrutura de rotas. */
 export function mapAgendaEquipeDiaResumo(
   eventos: AgendaEventoEquipeDiaRow[],
@@ -88,6 +102,7 @@ export function mapAgendaEquipeDiaResumo(
   for (const ev of sorted) {
     const hora = resolverHoraOperacional(ev);
     if (!hora) continue;
+    const horaFim = resolverHoraFimOperacional(ev);
 
     const cliente = resolverCliente(ev);
     const clienteNome = resolverClienteNome(ev, cliente);
@@ -105,6 +120,7 @@ export function mapAgendaEquipeDiaResumo(
     compromissos.push({
       id: ev.id,
       hora,
+      horaFim,
       clienteNome,
       parada,
     });

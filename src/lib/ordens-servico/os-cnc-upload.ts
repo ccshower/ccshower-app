@@ -35,40 +35,37 @@ export function resolveCncMimeType(file: File): string {
   return CNC_MIME_BY_EXT[ext] ?? "application/octet-stream";
 }
 
-export async function uploadCncFileFromFormData(
+function cncFilesFromFormData(formData: FormData): File[] {
+  const fromList = formData
+    .getAll("file")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  if (fromList.length) return fromList;
+
+  const single = formData.get("file");
+  if (single instanceof File && single.size) return [single];
+  return [];
+}
+
+async function uploadSingleCncFile(
   supabase: SupabaseClient,
   userId: string,
   os: OsAnexoUploadContext,
-  formData: FormData,
+  file: File,
+  index: number,
 ): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
-  if (!canUploadCncProject(os)) {
-    return { ok: false, message: "Upload de Desenho Técnico permitido apenas na etapa Projeto" };
-  }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || !file.size) {
-    return { ok: false, message: "Selecione um arquivo de Desenho Técnico" };
-  }
-
   if (file.size > MAX_ANEXO_BYTES) {
-    return { ok: false, message: "Arquivo excede 8 MB" };
+    return { ok: false, message: `${file.name}: file exceeds 8 MB` };
   }
 
   const mime = resolveCncMimeType(file);
   const safeName = file.name.replace(/[^\w.\-()+ ]/g, "_").slice(0, 180);
-  const storagePath = `${os.empresa_id}/${os.id}/cnc/${Date.now()}-${safeName}`;
+  const storagePath = `${os.empresa_id}/${os.id}/cnc/${Date.now()}-${index}-${safeName}`;
 
   const { error: upErr } = await supabase.storage
     .from(OS_ANEXOS_BUCKET)
     .upload(storagePath, file, { contentType: mime, upsert: false });
 
   if (upErr) return { ok: false, message: upErr.message };
-
-  await supabase
-    .from("os_anexos")
-    .delete()
-    .eq("ordem_servico_id", os.id)
-    .eq("tipo", OS_ANEXO_TIPO_CNC);
 
   const { error: insErr } = await supabase.from("os_anexos").insert({
     ordem_servico_id: os.id,
@@ -87,6 +84,39 @@ export async function uploadCncFileFromFormData(
   }
 
   return { ok: true, id: os.id };
+}
+
+export async function uploadCncFileFromFormData(
+  supabase: SupabaseClient,
+  userId: string,
+  os: OsAnexoUploadContext,
+  formData: FormData,
+): Promise<{ ok: true; id: string; count: number } | { ok: false; message: string }> {
+  if (!canUploadCncProject(os)) {
+    return { ok: false, message: "Upload de Desenho Técnico permitido apenas na etapa Projeto" };
+  }
+
+  const files = cncFilesFromFormData(formData);
+  if (!files.length) {
+    return { ok: false, message: "Selecione um arquivo de Desenho Técnico" };
+  }
+
+  let uploaded = 0;
+  for (let i = 0; i < files.length; i++) {
+    const result = await uploadSingleCncFile(supabase, userId, os, files[i]!, i);
+    if (!result.ok) {
+      return {
+        ok: false,
+        message:
+          uploaded > 0
+            ? `${result.message} (${uploaded} of ${files.length} uploaded)`
+            : result.message,
+      };
+    }
+    uploaded += 1;
+  }
+
+  return { ok: true, id: os.id, count: uploaded };
 }
 
 export async function loadCncUploadContext(

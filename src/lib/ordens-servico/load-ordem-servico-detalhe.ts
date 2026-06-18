@@ -33,7 +33,7 @@ export async function loadOrdemServicoDetalhe(
     { data: criador },
     { data: eventos },
     { data: listaSeparacao },
-    { data: cncRow },
+    { data: cncRows },
     { data: bloqueioAtivo },
   ] = await Promise.all([
       supabase
@@ -80,9 +80,7 @@ export async function loadOrdemServicoDetalhe(
         .select("*")
         .eq("ordem_servico_id", id)
         .eq("tipo", OS_ANEXO_TIPO_CNC)
-        .order("criado_em", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .order("criado_em", { ascending: false }),
       supabase
         .from("os_crashes")
         .select("*")
@@ -126,16 +124,17 @@ export async function loadOrdemServicoDetalhe(
     }
   }
 
-  let anexo_cnc: OrdemServicoWithRelations["anexo_cnc"] = null;
-  if (cncRow) {
+  const anexos_cnc: OrdemServicoWithRelations["anexos_cnc"] = [];
+  for (const row of cncRows ?? []) {
     const { data: signed } = await supabase.storage
       .from(OS_ANEXOS_BUCKET)
-      .createSignedUrl(cncRow.storage_path as string, 3600);
-    anexo_cnc = {
-      ...(cncRow as OsAnexo),
+      .createSignedUrl(row.storage_path as string, 3600);
+    anexos_cnc.push({
+      ...(row as OsAnexo),
       url: signed?.signedUrl ?? "",
-    };
+    });
   }
+  const anexo_cnc = anexos_cnc[0] ?? null;
 
   return {
     data: {
@@ -167,6 +166,7 @@ export async function loadOrdemServicoDetalhe(
         catalogo_item: catalogo_itens ?? null,
       })),
       anexo_cnc,
+      anexos_cnc,
       bloqueio_ativo: bloqueioAtivo ?? null,
     },
   };

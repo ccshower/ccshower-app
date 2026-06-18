@@ -3,6 +3,7 @@
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import type { CalendarEvento } from "@/lib/calendar/operational-calendar";
 import type { AgendaSlotSugestao } from "@/lib/ordens-servico/visita-slots";
+import { formatIntervaloAgenda } from "@/lib/ordens-servico/visita-slots";
 import { t } from "@/lib/i18n";
 
 function formatConflictDateYmd(ymd: string): string {
@@ -15,8 +16,9 @@ function formatSugestaoLabel(
   sugestao: AgendaSlotSugestao,
   targetYmd: string,
 ): string {
-  if (sugestao.dataYmd === targetYmd) return sugestao.hora;
-  return `${formatConflictDateYmd(sugestao.dataYmd)} ${sugestao.hora}`;
+  const intervalo = formatIntervaloAgenda(sugestao.hora, sugestao.horaFim);
+  if (sugestao.dataYmd === targetYmd) return intervalo;
+  return `${formatConflictDateYmd(sugestao.dataYmd)} ${intervalo}`;
 }
 
 export type CalendarConflictDraft = {
@@ -128,10 +130,18 @@ export function CalendarConflictModal({
                   {isPicking
                     ? t("calendar.reschedule.saving")
                     : sugestao.dataYmd === draft.targetYmd
-                      ? t("calendar.conflict.scheduleAt", { time: sugestao.hora })
+                      ? t("calendar.conflict.scheduleAt", {
+                          time: formatIntervaloAgenda(
+                            sugestao.hora,
+                            sugestao.horaFim,
+                          ),
+                        })
                       : t("calendar.conflict.scheduleAtDate", {
                           date: formatConflictDateYmd(sugestao.dataYmd),
-                          time: sugestao.hora,
+                          time: formatIntervaloAgenda(
+                            sugestao.hora,
+                            sugestao.horaFim,
+                          ),
                         })}
                 </button>
               );

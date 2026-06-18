@@ -81,6 +81,7 @@ export function AgendarVisitaForm({
   );
   const [dataVisita, setDataVisita] = useState("");
   const [horaVisita, setHoraVisita] = useState("");
+  const [horaFimVisita, setHoraFimVisita] = useState("");
 
   useEffect(() => {
     setEquipeId((current) => {
@@ -189,8 +190,10 @@ export function AgendarVisitaForm({
             equipeId={equipeId}
             dataVisita={dataVisita}
             horaVisita={horaVisita}
+            horaFimVisita={horaFimVisita}
             onDataChange={setDataVisita}
             onHoraChange={setHoraVisita}
+            onHoraFimChange={setHoraFimVisita}
           />
         </div>
       </div>
@@ -231,6 +234,7 @@ export function AgendarVisitaForm({
             !equipeId ||
             !dataVisita ||
             !horaVisita ||
+            !horaFimVisita ||
             equipesEtapa.length === 0
           }
           className="w-full rounded-sm bg-cc-ink px-4 py-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-white shadow-lift hover:bg-cc-deep disabled:opacity-40 sm:w-auto"

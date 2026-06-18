@@ -46,6 +46,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   fluxoBloqueado?: boolean;
   onAtualizado: () => void;
+  onConcluido: () => void;
 };
 
 /** Execução etapa Instalação — checklist, fotos, saldo, observações. */
@@ -53,6 +54,7 @@ export function OsWorkspaceInstallation({
   ordem,
   fluxoBloqueado = false,
   onAtualizado,
+  onConcluido,
 }: Props) {
   const financial = buildInstallationFinancialStatus(ordem);
 
@@ -75,7 +77,6 @@ export function OsWorkspaceInstallation({
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const receiptRef = useRef<HTMLInputElement>(null);
   const savedNotesRef = useRef(ordem.installation_execution_notes ?? "");
   const saveNotesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savePaymentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -199,7 +200,6 @@ export function OsWorkspaceInstallation({
         setMsg(r.message);
         return;
       }
-      if (receiptRef.current) receiptRef.current.value = "";
       await carregarComprovante();
     });
   }
@@ -257,7 +257,7 @@ export function OsWorkspaceInstallation({
         setMsg(r.message);
         return;
       }
-      onAtualizado();
+      onConcluido();
     });
   }
 
@@ -339,36 +339,40 @@ export function OsWorkspaceInstallation({
 
                 <div>
                   <p className={sectionLabel}>{t("os.visitPayment.receipt")}</p>
-                  <input
-                    ref={receiptRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="sr-only"
-                    onChange={(e) => onReceiptSelected(e.target.files)}
-                  />
                   {savedReceipt?.url ? (
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="truncate text-sm text-cc-ink">
-                        {savedReceipt.nome_arquivo}
-                      </span>
-                      <button
-                        type="button"
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm text-cc-ink">
+                          {savedReceipt.nome_arquivo}
+                        </span>
+                        <a
+                          href={savedReceipt.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-xs text-cc-muted hover:underline"
+                        >
+                          {t("os.visitPayment.receiptOpen")}
+                        </a>
+                      </div>
+                      <OsPhotoUploadActions
                         disabled={busy}
-                        onClick={() => receiptRef.current?.click()}
-                        className="text-xs text-cc-muted hover:underline"
-                      >
-                        {t("os.visitPayment.receiptReplace")}
-                      </button>
+                        takePhotoLabel={t("os.visitPayment.receiptTakePhoto")}
+                        choosePhotosLabel={t("os.visitPayment.receiptChooseFile")}
+                        galleryAccept="image/*,application/pdf"
+                        galleryMultiple={false}
+                        className="flex flex-col gap-2 sm:flex-row"
+                        onFilesSelected={onReceiptSelected}
+                      />
                     </div>
                   ) : (
-                    <button
-                      type="button"
+                    <OsPhotoUploadActions
                       disabled={busy}
-                      onClick={() => receiptRef.current?.click()}
-                      className="mt-2 w-full rounded-sm border border-dashed border-cc-border px-3 py-2.5 text-sm text-cc-muted hover:border-cc-blue-soft hover:bg-cc-blue-soft/15 disabled:opacity-40"
-                    >
-                      {t("os.visitPayment.receiptUpload")}
-                    </button>
+                      takePhotoLabel={t("os.visitPayment.receiptTakePhoto")}
+                      choosePhotosLabel={t("os.visitPayment.receiptChooseFile")}
+                      galleryAccept="image/*,application/pdf"
+                      galleryMultiple={false}
+                      onFilesSelected={onReceiptSelected}
+                    />
                   )}
                 </div>
               </div>

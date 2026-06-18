@@ -13,8 +13,13 @@ import {
   compararYmd,
   diasDoMesCalendario,
   formatDataVisitaCurta,
+  formatIntervaloAgenda,
+  horaFimPadraoParaInicio,
+  horariosFimParaInicio,
   hojeOperacionalYmd,
-  slotEstaOcupado,
+  inicioIndisponivel,
+  intervaloTemConflito,
+  type AgendaIntervaloOcupado,
   VISITA_SLOTS_HORARIOS,
 } from "@/lib/ordens-servico/visita-slots";
 import type { Equipe } from "@/lib/types/database";
@@ -24,8 +29,10 @@ type Props = {
   equipeId: string;
   dataVisita: string;
   horaVisita: string;
+  horaFimVisita: string;
   onDataChange: (data: string) => void;
   onHoraChange: (hora: string) => void;
+  onHoraFimChange: (hora: string) => void;
   excluirEventoId?: string | null;
   /** Rótulo do campo — padrão: visita técnica. */
   fieldLabel?: string;
@@ -40,15 +47,17 @@ export function OsVisitaAgendaPicker({
   equipeId,
   dataVisita,
   horaVisita,
+  horaFimVisita,
   onDataChange,
   onHoraChange,
+  onHoraFimChange,
   excluirEventoId,
   fieldLabel = "Visit date and time",
   dataMinimaYmd = null,
 }: Props) {
   const defaults = useMemo(() => defaultVisitaDateTime(), []);
   const [open, setOpen] = useState(false);
-  const [ocupados, setOcupados] = useState<string[]>([]);
+  const [intervalos, setIntervalos] = useState<AgendaIntervaloOcupado[]>([]);
   const [compromissos, setCompromissos] = useState<CompromissoEquipeDia[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
@@ -71,9 +80,14 @@ export function OsVisitaAgendaPicker({
     setCalendarMonth(viewMonth);
   }, [viewYear, viewMonth, open]);
 
+  const horariosFim = useMemo(() => {
+    if (!horaVisita) return [];
+    return horariosFimParaInicio(horaVisita);
+  }, [horaVisita]);
+
   const carregarAgendaDia = useCallback(async () => {
     if (!equipeId || !dataVisita) {
-      setOcupados([]);
+      setIntervalos([]);
       setCompromissos([]);
       return;
     }
@@ -87,20 +101,36 @@ export function OsVisitaAgendaPicker({
     setLoadingSlots(false);
     if (r.error) {
       setSlotsError(r.error);
-      setOcupados([]);
+      setIntervalos([]);
       setCompromissos([]);
       return;
     }
-    setOcupados(r.ocupados);
+    setIntervalos(r.intervalos);
     setCompromissos(r.compromissos);
-    if (horaVisita && slotEstaOcupado(r.ocupados, horaVisita)) {
+
+    if (horaVisita && inicioIndisponivel(horaVisita, r.intervalos)) {
       onHoraChange("");
+      onHoraFimChange("");
+    } else if (
+      horaVisita &&
+      horaFimVisita &&
+      intervaloTemConflito(horaVisita, horaFimVisita, r.intervalos)
+    ) {
+      onHoraFimChange("");
     }
-  }, [equipeId, dataVisita, excluirEventoId, horaVisita, onHoraChange]);
+  }, [
+    equipeId,
+    dataVisita,
+    excluirEventoId,
+    horaVisita,
+    horaFimVisita,
+    onHoraChange,
+    onHoraFimChange,
+  ]);
 
   useEffect(() => {
     if (!equipeId || !dataVisita) {
-      setOcupados([]);
+      setIntervalos([]);
       setCompromissos([]);
       return;
     }
@@ -110,8 +140,9 @@ export function OsVisitaAgendaPicker({
   useEffect(() => {
     if (!equipeId) {
       onHoraChange("");
+      onHoraFimChange("");
     }
-  }, [equipeId, onHoraChange]);
+  }, [equipeId, onHoraChange, onHoraFimChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -140,16 +171,41 @@ export function OsVisitaAgendaPicker({
   const cells = diasDoMesCalendario(calendarYear, calendarMonth);
 
   const triggerLabel =
-    dataVisita && horaVisita
-      ? `${formatDataVisitaCurta(dataVisita)} · ${horaVisita}`
-      : dataVisita
-        ? `${formatDataVisitaCurta(dataVisita)} — choose a time`
-        : "Choose date and time";
+    dataVisita && horaVisita && horaFimVisita
+      ? `${formatDataVisitaCurta(dataVisita)} · ${formatIntervaloAgenda(horaVisita, horaFimVisita)}`
+      : dataVisita && horaVisita
+        ? `${formatDataVisitaCurta(dataVisita)} · ${horaVisita} — choose end time`
+        : dataVisita
+          ? `${formatDataVisitaCurta(dataVisita)} — choose start time`
+          : "Choose date and time";
+
+  function selecionarInicio(slot: string) {
+    onHoraChange(slot);
+    const fimPadrao = horaFimPadraoParaInicio(slot);
+    if (fimPadrao && !intervaloTemConflito(slot, fimPadrao, intervalos)) {
+      onHoraFimChange(fimPadrao);
+    } else {
+      onHoraFimChange("");
+    }
+  }
+
+  function selecionarFim(slot: string) {
+    onHoraFimChange(slot);
+    if (horaVisita && !intervaloTemConflito(horaVisita, slot, intervalos)) {
+      setOpen(false);
+    }
+  }
+
+  function fimIndisponivel(fim: string): boolean {
+    if (!horaVisita) return true;
+    return intervaloTemConflito(horaVisita, fim, intervalos);
+  }
 
   return (
     <div className="space-y-2" ref={panelRef}>
       <input type="hidden" name="data_visita" value={dataVisita} required />
       <input type="hidden" name="hora_visita" value={horaVisita} required />
+      <input type="hidden" name="hora_fim_visita" value={horaFimVisita} required />
 
       <Field label={fieldLabel}>
         <button
@@ -167,9 +223,7 @@ export function OsVisitaAgendaPicker({
               />
             ) : null}
             <span className="truncate">
-              {!equipeId
-                ? "Select a team first"
-                : triggerLabel}
+              {!equipeId ? "Select a team first" : triggerLabel}
             </span>
           </span>
           <span className="shrink-0 text-xs text-cc-muted" aria-hidden>
@@ -252,6 +306,7 @@ export function OsVisitaAgendaPicker({
                   onClick={() => {
                     onDataChange(ymd);
                     onHoraChange("");
+                    onHoraFimChange("");
                   }}
                   className={`h-8 rounded-sm text-xs font-medium transition ${
                     disabled
@@ -273,57 +328,109 @@ export function OsVisitaAgendaPicker({
           </div>
 
           {dataVisita ? (
-            <div className="mt-4 border-t border-cc-border-light pt-3">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
-                Times — {equipe?.nome ?? "Team"}
-              </p>
-              {loadingSlots ? (
-                <p className="text-xs text-cc-muted">Loading schedule…</p>
-              ) : null}
-              {slotsError ? (
-                <p className="text-xs text-cc-red">{slotsError}</p>
-              ) : null}
-              <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4">
-                {VISITA_SLOTS_HORARIOS.map((slot) => {
-                  const busy = ocupados.includes(slot);
-                  const selected = horaVisita === slot;
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => {
-                        onHoraChange(slot);
-                        setOpen(false);
-                      }}
-                      className={`rounded-sm border px-1 py-2 text-xs font-medium transition ${
-                        busy
-                          ? "cursor-not-allowed border-cc-border bg-cc-border-light text-cc-subtle opacity-40"
-                          : selected
-                            ? "border-transparent text-white shadow-sheet"
-                            : "border-cc-border bg-white text-cc-deep hover:shadow-sheet"
-                      }`}
-                      style={
-                        busy
-                          ? undefined
-                          : selected
-                            ? { backgroundColor: cor, borderColor: cor }
-                            : {
-                                borderColor: hexToRgba(cor, 0.45),
-                                backgroundColor: hexToRgba(cor, 0.1),
-                                color: cor,
-                              }
-                      }
-                      title={busy ? "Time slot taken" : `Available ${slot}`}
-                    >
-                      {slot}
-                    </button>
-                  );
-                })}
+            <div className="mt-4 space-y-4 border-t border-cc-border-light pt-3">
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+                  Start — {equipe?.nome ?? "Team"}
+                </p>
+                {loadingSlots ? (
+                  <p className="text-xs text-cc-muted">Loading schedule…</p>
+                ) : null}
+                {slotsError ? (
+                  <p className="text-xs text-cc-red">{slotsError}</p>
+                ) : null}
+                <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
+                  {VISITA_SLOTS_HORARIOS.map((slot) => {
+                    const busy = inicioIndisponivel(slot, intervalos);
+                    const selected = horaVisita === slot;
+                    return (
+                      <button
+                        key={`start-${slot}`}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => selecionarInicio(slot)}
+                        className={`rounded-sm border px-1 py-2 text-xs font-medium transition ${
+                          busy
+                            ? "cursor-not-allowed border-cc-border bg-cc-border-light text-cc-subtle opacity-40"
+                            : selected
+                              ? "border-transparent text-white shadow-sheet"
+                              : "border-cc-border bg-white text-cc-deep hover:shadow-sheet"
+                        }`}
+                        style={
+                          busy
+                            ? undefined
+                            : selected
+                              ? { backgroundColor: cor, borderColor: cor }
+                              : {
+                                  borderColor: hexToRgba(cor, 0.45),
+                                  backgroundColor: hexToRgba(cor, 0.1),
+                                  color: cor,
+                                }
+                        }
+                        title={busy ? "Start time unavailable" : `Start ${slot}`}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {horaVisita ? (
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+                    End
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
+                    {horariosFim.map((slot) => {
+                      const busy = fimIndisponivel(slot);
+                      const selected = horaFimVisita === slot;
+                      return (
+                        <button
+                          key={`end-${slot}`}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => selecionarFim(slot)}
+                          className={`rounded-sm border px-1 py-2 text-xs font-medium transition ${
+                            busy
+                              ? "cursor-not-allowed border-cc-border bg-cc-border-light text-cc-subtle opacity-40"
+                              : selected
+                                ? "border-transparent text-white shadow-sheet"
+                                : "border-cc-border bg-white text-cc-deep hover:shadow-sheet"
+                          }`}
+                          style={
+                            busy
+                              ? undefined
+                              : selected
+                                ? { backgroundColor: cor, borderColor: cor }
+                                : {
+                                    borderColor: hexToRgba(cor, 0.45),
+                                    backgroundColor: hexToRgba(cor, 0.1),
+                                    color: cor,
+                                  }
+                          }
+                          title={
+                            busy
+                              ? "Interval conflicts with another appointment"
+                              : `End ${slot}`
+                          }
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               {!horaVisita && !loadingSlots ? (
-                <p className="mt-2 text-xs font-light text-cc-muted">
-                  Tap an available time slot.
+                <p className="text-xs font-light text-cc-muted">
+                  Tap an available start time, then choose the end time.
+                </p>
+              ) : null}
+              {horaVisita && !horaFimVisita && !loadingSlots ? (
+                <p className="text-xs font-light text-cc-muted">
+                  Choose an end time to complete the appointment.
                 </p>
               ) : null}
             </div>

@@ -30,7 +30,9 @@ import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import {
   compararYmd,
+  formatIntervaloAgenda,
   hojeOperacionalYmd,
+  horaFimPadraoParaInicio,
 } from "@/lib/ordens-servico/visita-slots";
 import { filterEquipesForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { t } from "@/lib/i18n";
@@ -60,6 +62,7 @@ type Props = {
   equipes: Equipe[];
   fluxoBloqueado?: boolean;
   onAtualizado: () => void;
+  onConcluido: () => void;
 };
 
 function resolveInitialInstalacao(
@@ -70,6 +73,13 @@ function resolveInitialInstalacao(
   const parsed = agendada?.data_inicio
     ? parseVisitaDateTime(agendada.data_inicio)
     : { data: "", hora: "" };
+  const parsedFim = agendada?.data_fim
+    ? parseVisitaDateTime(agendada.data_fim)
+    : null;
+  const horaFim =
+    parsedFim?.hora.slice(0, 5) ??
+    (parsed.hora ? horaFimPadraoParaInicio(parsed.hora) : "") ??
+    "";
   const equipeId =
     agendada?.equipe_id &&
     installationEquipes.some((e) => e.id === agendada.equipe_id)
@@ -80,7 +90,8 @@ function resolveInitialInstalacao(
     equipeId,
     data: parsed.data,
     hora: parsed.hora,
-    agendada: Boolean(agendada?.id && parsed.data && parsed.hora),
+    horaFim,
+    agendada: Boolean(agendada?.id && parsed.data && parsed.hora && horaFim),
   };
 }
 
@@ -90,6 +101,7 @@ export function OsWorkspaceProject({
   equipes,
   fluxoBloqueado = false,
   onAtualizado,
+  onConcluido,
 }: Props) {
   const [valorProjeto, setValorProjeto] = useState(initialValorProjetoInput(ordem));
   const [installationEquipes, setInstallationEquipes] = useState<Equipe[]>(() =>
@@ -124,6 +136,9 @@ export function OsWorkspaceProject({
   const [horaInstalacao, setHoraInstalacao] = useState(
     () => initialInstalacao.hora,
   );
+  const [horaFimInstalacao, setHoraFimInstalacao] = useState(
+    () => initialInstalacao.horaFim,
+  );
   const [instalacaoAgendada, setInstalacaoAgendada] = useState(
     () => initialInstalacao.agendada,
   );
@@ -153,7 +168,12 @@ export function OsWorkspaceProject({
   }, [onAtualizado]);
 
   const itens = ordem.lista_separacao ?? [];
-  const cnc = ordem.anexo_cnc ?? null;
+  const anexosCnc =
+    ordem.anexos_cnc?.length
+      ? ordem.anexos_cnc
+      : ordem.anexo_cnc
+        ? [ordem.anexo_cnc]
+        : [];
   const clienteNome = ordem.cliente?.nome ?? ordem.titulo;
 
   useEffect(() => {
@@ -164,6 +184,7 @@ export function OsWorkspaceProject({
     setEquipeInstalacaoId(nextInst.equipeId);
     setDataInstalacao(nextInst.data);
     setHoraInstalacao(nextInst.hora);
+    setHoraFimInstalacao(nextInst.horaFim);
     setInstalacaoAgendada(nextInst.agendada);
     const next = ordem.installation_notes ?? "";
     setInstallationNotes((prev) => {
@@ -356,12 +377,13 @@ export function OsWorkspaceProject({
         }
       }
 
-      if (equipeInstalacaoId && dataInstalacao && horaInstalacao) {
+      if (equipeInstalacaoId && dataInstalacao && horaInstalacao && horaFimInstalacao) {
         const saveInstalacao = await agendarInstalacaoProjeto(
           ordem.id,
           equipeInstalacaoId,
           dataInstalacao,
           horaInstalacao,
+          horaFimInstalacao,
         );
         if (!saveInstalacao.ok) {
           setMsg(saveInstalacao.message);
@@ -374,7 +396,7 @@ export function OsWorkspaceProject({
         setMsg(r.message);
         return;
       }
-      onAtualizado();
+      onConcluido();
     });
   }
 
@@ -407,12 +429,14 @@ export function OsWorkspaceProject({
   async function persistirAgendamentoInstalacao(
     data: string,
     hora: string,
+    horaFim: string,
   ): Promise<boolean> {
     const r = await agendarInstalacaoProjeto(
       ordem.id,
       equipeInstalacaoId,
       data,
       hora,
+      horaFim,
     );
     if (!r.ok) {
       setMsg(r.message);
@@ -423,8 +447,12 @@ export function OsWorkspaceProject({
     return true;
   }
 
-  function salvarAgendamentoInstalacao(horaOverride?: string) {
+  function salvarAgendamentoInstalacao(
+    horaOverride?: string,
+    horaFimOverride?: string,
+  ) {
     const hora = horaOverride ?? horaInstalacao;
+    const horaFim = horaFimOverride ?? horaFimInstalacao;
     startInstalacaoTransition(async () => {
       setMsg(null);
       setConflictDraft(null);
@@ -441,6 +469,7 @@ export function OsWorkspaceProject({
         equipeInstalacaoId,
         dataInstalacao,
         hora,
+        horaFim,
         ordem.instalacao_agendada?.id ?? null,
       );
 
@@ -452,8 +481,13 @@ export function OsWorkspaceProject({
           setConflictDraft({
             equipeNome,
             dataYmd: dataInstalacao,
-            horaSolicitada: slotOk.horaSolicitada,
-            sugestoes: slotOk.sugestoes.map((s) => s.hora),
+            horaSolicitada: formatIntervaloAgenda(
+              slotOk.horaSolicitada,
+              slotOk.horaFimSolicitada,
+            ),
+            sugestoes: slotOk.sugestoes.map((s) =>
+              formatIntervaloAgenda(s.hora, s.horaFim),
+            ),
             alreadyBookedMessage: t(
               "os.workspace.project.installationConflictAlreadyBooked",
             ),
@@ -467,13 +501,21 @@ export function OsWorkspaceProject({
       if (horaOverride) {
         setHoraInstalacao(horaOverride);
       }
+      if (horaFimOverride) {
+        setHoraFimInstalacao(horaFimOverride);
+      }
 
-      await persistirAgendamentoInstalacao(dataInstalacao, hora);
+      await persistirAgendamentoInstalacao(dataInstalacao, hora, horaFim);
     });
   }
 
   function onInstalacaoConflictPickSlot(slot: string) {
     setConflictDraft(null);
+    const parts = slot.split("–").map((part) => part.trim());
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      salvarAgendamentoInstalacao(parts[0], parts[1]);
+      return;
+    }
     salvarAgendamentoInstalacao(slot);
   }
 
@@ -487,11 +529,11 @@ export function OsWorkspaceProject({
     instalacaoPending;
 
   function onCncSelected(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
+    if (!files?.length) return;
+    const toUpload = Array.from(files);
     startCncTransition(async () => {
       setMsg(null);
-      const r = await uploadCncViaApi(ordem.id, file);
+      const r = await uploadCncViaApi(ordem.id, toUpload);
       if (!r.ok) {
         setMsg(r.message);
         return;
@@ -612,8 +654,10 @@ export function OsWorkspaceProject({
             equipeId={equipeInstalacaoId}
             dataVisita={dataInstalacao}
             horaVisita={horaInstalacao}
+            horaFimVisita={horaFimInstalacao}
             onDataChange={setDataInstalacao}
             onHoraChange={setHoraInstalacao}
+            onHoraFimChange={setHoraFimInstalacao}
             excluirEventoId={ordem.instalacao_agendada?.id ?? null}
             fieldLabel={t("os.workspace.project.installationDateTimeLabel")}
             dataMinimaYmd={dataPrevistaMaterial || null}
@@ -633,6 +677,7 @@ export function OsWorkspaceProject({
               !equipeInstalacaoId ||
               !dataInstalacao ||
               !horaInstalacao ||
+              !horaFimInstalacao ||
               installationEquipes.length === 0
             }
             onClick={() => salvarAgendamentoInstalacao()}
@@ -651,22 +696,26 @@ export function OsWorkspaceProject({
           {t("os.workspace.project.cncHint")}
         </p>
 
-        {cnc ? (
-          <div className="mt-2 space-y-2">
-            <p className="truncate text-sm font-medium text-cc-ink">
-              {cnc.nome_arquivo}
-            </p>
-            {cnc.url ? (
-              <a
-                href={cnc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block text-xs font-medium text-cc-deep underline"
-              >
-                {t("os.workspace.project.cncOpen")}
-              </a>
-            ) : null}
-          </div>
+        {anexosCnc.length > 0 ? (
+          <ul className="mt-2 space-y-2">
+            {anexosCnc.map((item) => (
+              <li key={item.id} className="space-y-1">
+                <p className="truncate text-sm font-medium text-cc-ink">
+                  {item.nome_arquivo}
+                </p>
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs font-medium text-cc-deep underline"
+                  >
+                    {t("os.workspace.project.cncOpen")}
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="mt-2 text-sm text-cc-muted">
             {t("os.workspace.project.cncNone")}
@@ -676,6 +725,7 @@ export function OsWorkspaceProject({
         <input
           ref={cncRef}
           type="file"
+          multiple
           accept=".nc,.txt,.tap,.gcode,.pdf,.dxf,.dwg,application/pdf,text/plain"
           className="hidden"
           disabled={busy}
@@ -687,8 +737,8 @@ export function OsWorkspaceProject({
           onClick={() => cncRef.current?.click()}
           className="mt-3 w-full rounded-sm border border-cc-border bg-white py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light disabled:opacity-40"
         >
-          {cnc
-            ? t("os.workspace.project.cncReplace")
+          {anexosCnc.length > 0
+            ? t("os.workspace.project.cncAdd")
             : t("os.workspace.project.cncUpload")}
         </button>
       </section>

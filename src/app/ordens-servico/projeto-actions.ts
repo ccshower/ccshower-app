@@ -7,15 +7,15 @@ import { validarSlotVisitaDisponivel } from "@/app/ordens-servico/agenda-disponi
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
 import {
   parseSeparationListItemInput,
-  OS_ANEXO_TIPO_CNC,
   type SeparationListItemInput,
 } from "@/lib/ordens-servico/separation-list";
 import {
   AGENDA_EVENTO_DATETIME_COLUMNS,
   hasAgendaEventoStart,
   spreadAgendaEventoDatetime,
+  spreadAgendaEventoRange,
 } from "@/lib/ordens-servico/agenda-evento-query";
-import { buildDataEventoIso, parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import { buildAgendaIntervalIso, parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import { compararYmd, hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
 import { parseValorEtapaInput } from "@/lib/ordens-servico/os-valores-etapa";
 import {
@@ -48,7 +48,10 @@ function mapSeparationListRow(row: SeparationListRow): OsSeparationListItem {
 
 function revalidateOs(osId: string) {
   revalidatePath("/ordens-servico");
+  revalidatePath("/admin/centro-operacional");
   revalidatePath("/operacao");
+  revalidatePath("/financeiro");
+  revalidatePath("/calendar");
   revalidatePath("/os", "layout");
   revalidatePath(`/os/${osId}`);
 }
@@ -303,6 +306,7 @@ export async function agendarInstalacaoProjeto(
   equipeId: string,
   dataInstalacao: string,
   horaInstalacao: string,
+  horaFimInstalacao: string,
 ): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireAuth();
@@ -321,8 +325,12 @@ export async function agendarInstalacaoProjeto(
     );
     if (!eqOk.ok) return { ok: false, message: eqOk.message };
 
-    const data_evento = buildDataEventoIso(dataInstalacao, horaInstalacao);
-    if (!data_evento) {
+    const intervalo = buildAgendaIntervalIso(
+      dataInstalacao,
+      horaInstalacao,
+      horaFimInstalacao,
+    );
+    if (!intervalo) {
       return { ok: false, message: "Invalid installation date and time" };
     }
 
@@ -361,6 +369,7 @@ export async function agendarInstalacaoProjeto(
       equipe_id,
       dataInstalacao,
       horaInstalacao,
+      horaFimInstalacao,
       existente?.id ?? null,
     );
     if (!slotOk.ok) {
@@ -385,7 +394,7 @@ export async function agendarInstalacaoProjeto(
       status: "scheduled",
       titulo,
       descricao: null,
-      ...spreadAgendaEventoDatetime(data_evento),
+      ...spreadAgendaEventoRange(intervalo.isoInicio, intervalo.isoFim),
     };
 
     if (existente?.id) {
@@ -759,21 +768,6 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
     if ("error" in loaded) return { ok: false, message: loaded.error };
 
     const { os } = loaded;
-
-    const { count: cncCount, error: cncErr } = await supabase
-      .from("os_anexos")
-      .select("id", { count: "exact", head: true })
-      .eq("ordem_servico_id", osId)
-      .eq("tipo", OS_ANEXO_TIPO_CNC);
-
-    if (cncErr) return { ok: false, message: cncErr.message };
-    if (!cncCount) {
-      return {
-        ok: false,
-        message:
-          "Upload the technical drawing before completing the project.",
-      };
-    }
 
     const { count: listCount, error: listErr } = await supabase
       .from("os_separation_list_items")

@@ -70,6 +70,19 @@ export function buildDataEventoIso(
   return zonedWallClockToUtcIso(dataVisita, horaVisita);
 }
 
+/** Intervalo data/hora início → fim no fuso operacional. */
+export function buildAgendaIntervalIso(
+  dataYmd: string,
+  horaInicio: string,
+  horaFim: string,
+): { isoInicio: string; isoFim: string } | null {
+  const isoInicio = buildDataEventoIso(dataYmd, horaInicio);
+  const isoFim = buildDataEventoIso(dataYmd, horaFim);
+  if (!isoInicio || !isoFim) return null;
+  if (new Date(isoFim).getTime() <= new Date(isoInicio).getTime()) return null;
+  return { isoInicio, isoFim };
+}
+
 export function defaultVisitaDateTime(): { data: string; hora: string } {
   const now = new Date();
   const tomorrow = new Date(now);

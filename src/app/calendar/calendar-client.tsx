@@ -25,14 +25,14 @@ import {
   groupEventsByDay,
   mondayOfOperationalWeek,
   parseCalendarDragPayload,
-  rescheduleEventToDay,
+  rescheduleEventIntervalToDay,
   weekDayYmds,
   type CalendarEvento,
   type CalendarRescheduleDraft,
   type CalendarViewMode,
 } from "@/lib/calendar/operational-calendar";
 import { t } from "@/lib/i18n";
-import { buildDataEventoIso } from "@/lib/ordens-servico/datetime";
+import { buildAgendaIntervalIso, buildDataEventoIso } from "@/lib/ordens-servico/datetime";
 import type { AgendaSlotSugestao } from "@/lib/ordens-servico/visita-slots";
 import { hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
 
@@ -116,10 +116,12 @@ export function CalendarClient({
     evento: CalendarEvento,
     sourceYmd: string,
     newStartIso: string,
+    newEndIso?: string | null,
   ) {
     const result = await salvarReagendamentoCalendario({
       eventoId: evento.id,
       newStartIso,
+      newEndIso,
     });
 
     if (result.ok) {
@@ -196,8 +198,14 @@ export function CalendarClient({
     const evento = eventos.find((ev) => ev.id === payload.eventId);
     if (!evento) return;
 
-    const newStartIso = rescheduleEventToDay(evento.startIso, targetYmd);
-    if (!newStartIso) return;
+    const rescheduled = rescheduleEventIntervalToDay(
+      evento.startIso,
+      evento.endIso,
+      targetYmd,
+    );
+    if (!rescheduled) return;
+
+    const { newStartIso, newEndIso } = rescheduled;
 
     setErrorMessage(null);
     setValidatingDrop(true);
@@ -207,6 +215,7 @@ export function CalendarClient({
         equipeId: evento.equipe_id,
         targetYmd,
         newStartIso,
+        newEndIso,
         excluirEventoId: evento.id,
       });
 
@@ -217,6 +226,7 @@ export function CalendarClient({
           targetYmd,
           currentStartIso: evento.startIso,
           newStartIso,
+          newEndIso,
         });
         return;
       }
@@ -246,8 +256,12 @@ export function CalendarClient({
   async function pickAlternativeSlot(sugestao: AgendaSlotSugestao) {
     if (!conflictDraft || savingReschedule) return;
 
-    const newStartIso = buildDataEventoIso(sugestao.dataYmd, sugestao.hora);
-    if (!newStartIso) return;
+    const built = buildAgendaIntervalIso(
+      sugestao.dataYmd,
+      sugestao.hora,
+      sugestao.horaFim,
+    );
+    if (!built) return;
 
     const draft = conflictDraft;
     const slotKey = `${sugestao.dataYmd}-${sugestao.hora}`;
@@ -257,7 +271,12 @@ export function CalendarClient({
     setPickingConflictSlotKey(slotKey);
 
     try {
-      await applyRescheduleResult(draft.evento, draft.sourceYmd, newStartIso);
+      await applyRescheduleResult(
+        draft.evento,
+        draft.sourceYmd,
+        built.isoInicio,
+        built.isoFim,
+      );
     } finally {
       setSavingReschedule(false);
       setPickingConflictSlotKey(null);
@@ -275,6 +294,7 @@ export function CalendarClient({
         rescheduleDraft.evento,
         rescheduleDraft.sourceYmd,
         rescheduleDraft.newStartIso,
+        rescheduleDraft.newEndIso,
       );
     } finally {
       setSavingReschedule(false);

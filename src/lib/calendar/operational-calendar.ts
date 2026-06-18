@@ -1,5 +1,8 @@
 import { DISPLAY_LOCALE } from "@/lib/i18n";
-import { agendaEventoStartIso } from "@/lib/ordens-servico/agenda-evento-query";
+import {
+  agendaEventoEndIso,
+  agendaEventoStartIso,
+} from "@/lib/ordens-servico/agenda-evento-query";
 import {
   OPERATIONAL_TZ,
   zonedWallClockToUtcIso,
@@ -46,6 +49,7 @@ export type CalendarEvento = {
   ordem_servico_id: string;
   equipe_id: string | null;
   startIso: string;
+  endIso: string | null;
   tipo_evento: string;
   status: string;
   cliente_nome: string;
@@ -177,6 +181,28 @@ export function rescheduleEventToDay(
   return zonedWallClockToUtcIso(targetYmd, hm);
 }
 
+/** Reagenda início e fim no novo dia, preservando horários de parede. */
+export function rescheduleEventIntervalToDay(
+  startIso: string,
+  endIso: string | null | undefined,
+  targetYmd: string,
+): { newStartIso: string; newEndIso: string | null } | null {
+  const newStartIso = rescheduleEventToDay(startIso, targetYmd);
+  if (!newStartIso) return null;
+
+  if (!endIso) {
+    return { newStartIso, newEndIso: null };
+  }
+
+  const hmFim = operationalWallClockHm(endIso);
+  if (!hmFim) {
+    return { newStartIso, newEndIso: null };
+  }
+
+  const newEndIso = zonedWallClockToUtcIso(targetYmd, hmFim);
+  return { newStartIso, newEndIso: newEndIso ?? null };
+}
+
 export const CALENDAR_DRAG_MIME = "application/x-ccshower-calendar-event";
 
 export type CalendarDragPayload = {
@@ -200,6 +226,7 @@ export type CalendarRescheduleDraft = {
   targetYmd: string;
   currentStartIso: string;
   newStartIso: string;
+  newEndIso: string | null;
 };
 
 export function eventDayYmd(iso: string): string | null {
@@ -253,6 +280,7 @@ export function mapRowToCalendarEvento(row: {
   status: string;
   data_evento?: string | null;
   data_inicio?: string | null;
+  data_fim?: string | null;
   hora_evento?: string | null;
   clientes: { nome: string } | null;
   equipes: { nome: string; cor_primaria: string; cor_secundaria?: string } | null;
@@ -264,11 +292,14 @@ export function mapRowToCalendarEvento(row: {
   const startIso = agendaEventoStartIso(row);
   if (!startIso || Number.isNaN(new Date(startIso).getTime())) return null;
 
+  const endIso = agendaEventoEndIso(row);
+
   return {
     id: row.id,
     ordem_servico_id: row.ordem_servico_id,
     equipe_id: row.equipe_id ?? null,
     startIso,
+    endIso,
     tipo_evento: row.tipo_evento,
     status: row.status,
     cliente_nome: row.clientes?.nome?.trim() || "—",

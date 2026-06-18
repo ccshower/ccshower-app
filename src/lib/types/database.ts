@@ -246,6 +246,8 @@ export type OrdemServicoWithRelations = OrdemServico & {
   anexos_visita?: OsAnexoComUrl[];
   lista_separacao?: OsSeparationListItem[];
   anexo_cnc?: OsAnexoComUrl | null;
+  /** All technical drawing uploads for the project stage. */
+  anexos_cnc?: OsAnexoComUrl[];
   bloqueio_ativo?: OsCrash | null;
   /** Preenchido na listagem quando há `os_crashes` ativo (sem carregar o registro completo). */
   tem_bloqueio_ativo?: boolean;

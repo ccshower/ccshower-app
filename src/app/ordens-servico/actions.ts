@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { buildDataEventoIso } from "@/lib/ordens-servico/datetime";
+import { buildAgendaIntervalIso } from "@/lib/ordens-servico/datetime";
 import {
   OS_STATUS,
   parseOrdemServicoStatus,
   type OrdemServicoStatus,
 } from "@/lib/ordens-servico/constants";
 import { formatStatusTransition, tOsStage } from "@/lib/i18n";
+import { validarIntervaloAgenda } from "@/lib/ordens-servico/visita-slots";
 import { validarSlotVisitaDisponivel } from "@/app/ordens-servico/agenda-disponibilidade";
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
 import {
@@ -16,6 +17,7 @@ import {
   AGENDA_EVENTO_DATETIME_COLUMNS,
   compareAgendaEventoStartAsc,
   spreadAgendaEventoDatetime,
+  spreadAgendaEventoRange,
 } from "@/lib/ordens-servico/agenda-evento-query";
 import { parsePossuiInstalacaoFromForm } from "@/lib/clientes/tipo-cliente";
 import {
@@ -77,6 +79,43 @@ async function requireActiveSupabase() {
 function emptyToNull(v: FormDataEntryValue | null) {
   const trimmed = String(v ?? "").trim();
   return trimmed.length ? trimmed : null;
+}
+
+type HorariosVisitaParsed =
+  | {
+      ok: true;
+      data_visita: string;
+      hora_visita: string;
+      hora_fim_visita: string;
+      isoInicio: string;
+      isoFim: string;
+    }
+  | { ok: false; message: string };
+
+function parseHorariosVisitaForm(formData: FormData): HorariosVisitaParsed {
+  const data_visita = String(formData.get("data_visita") ?? "");
+  const hora_visita = String(formData.get("hora_visita") ?? "");
+  const hora_fim_visita = String(formData.get("hora_fim_visita") ?? "");
+  const intervalo = validarIntervaloAgenda(hora_visita, hora_fim_visita);
+  if (!intervalo.ok) {
+    return { ok: false, message: intervalo.message };
+  }
+  const built = buildAgendaIntervalIso(
+    data_visita,
+    intervalo.inicio,
+    intervalo.fim,
+  );
+  if (!built) {
+    return { ok: false, message: "Invalid visit date and time" };
+  }
+  return {
+    ok: true,
+    data_visita,
+    hora_visita: intervalo.inicio,
+    hora_fim_visita: intervalo.fim,
+    isoInicio: built.isoInicio,
+    isoFim: built.isoFim,
+  };
 }
 
 function canChooseEquipe(usuario: ActiveUsuario) {
@@ -289,8 +328,8 @@ export async function criarOrdemServicoComVisita(
     const tituloRaw = String(formData.get("titulo") ?? "").trim();
     const descricao = emptyToNull(formData.get("descricao"));
     const observacoes = emptyToNull(formData.get("observacoes"));
-    const data_visita = String(formData.get("data_visita") ?? "");
-    const hora_visita = String(formData.get("hora_visita") ?? "");
+    const horarios = parseHorariosVisitaForm(formData);
+    if (!horarios.ok) return { ok: false, message: horarios.message };
     const equipe_id = getEquipeId(formData, usuario);
     const possui_instalacao = parsePossuiInstalacaoFromForm(
       formData.get("possui_instalacao"),
@@ -306,15 +345,11 @@ export async function criarOrdemServicoComVisita(
     const eqOk = await validateEquipeIdForStage(supabase, equipe_id, "commercial");
     if (!eqOk.ok) return { ok: false, message: eqOk.message };
 
-    const data_evento = buildDataEventoIso(data_visita, hora_visita);
-    if (!data_evento) {
-      return { ok: false, message: "Invalid visit date and time" };
-    }
-
     const slotOk = await validarSlotVisitaDisponivel(
       equipe_id,
-      data_visita,
-      hora_visita,
+      horarios.data_visita,
+      horarios.hora_visita,
+      horarios.hora_fim_visita,
     );
     if (!slotOk.ok) return slotOk;
 
@@ -401,7 +436,7 @@ export async function criarOrdemServicoComVisita(
       status: "scheduled",
       titulo,
       descricao: observacoes ?? descricao,
-      ...spreadAgendaEventoDatetime(data_evento),
+      ...spreadAgendaEventoRange(horarios.isoInicio, horarios.isoFim),
     });
 
     if (evErr) {
@@ -430,8 +465,8 @@ export async function agendarVisitaExistente(
     const cliente_id = String(formData.get("cliente_id") ?? "").trim();
     const tituloRaw = String(formData.get("titulo") ?? "").trim();
     const descricao = emptyToNull(formData.get("descricao"));
-    const data_visita = String(formData.get("data_visita") ?? "");
-    const hora_visita = String(formData.get("hora_visita") ?? "");
+    const horarios = parseHorariosVisitaForm(formData);
+    if (!horarios.ok) return { ok: false, message: horarios.message };
     const equipe_id = getEquipeId(formData, usuario);
     const possui_instalacao = parsePossuiInstalacaoFromForm(
       formData.get("possui_instalacao"),
@@ -495,15 +530,11 @@ export async function agendarVisitaExistente(
       };
     }
 
-    const data_evento = buildDataEventoIso(data_visita, hora_visita);
-    if (!data_evento) {
-      return { ok: false, message: "Invalid visit date and time" };
-    }
-
     const slotOk = await validarSlotVisitaDisponivel(
       equipe_id,
-      data_visita,
-      hora_visita,
+      horarios.data_visita,
+      horarios.hora_visita,
+      horarios.hora_fim_visita,
     );
     if (!slotOk.ok) return slotOk;
 
@@ -543,7 +574,7 @@ export async function agendarVisitaExistente(
       status: "scheduled",
       titulo,
       descricao,
-      ...spreadAgendaEventoDatetime(data_evento),
+      ...spreadAgendaEventoRange(horarios.isoInicio, horarios.isoFim),
     });
 
     if (evErr) {
@@ -821,8 +852,8 @@ export async function atualizarOrdemServicoOperacional(
     const observacoes = emptyToNull(formData.get("observacoes"));
     const statusRaw = String(formData.get("status") ?? "");
     const status = parseStatus(statusRaw);
-    const data_visita = String(formData.get("data_visita") ?? "");
-    const hora_visita = String(formData.get("hora_visita") ?? "");
+    const horarios = parseHorariosVisitaForm(formData);
+    if (!horarios.ok) return { ok: false, message: horarios.message };
     const equipe_id = getEquipeId(formData, usuario);
     const responsavel_id = parseResponsavelIdFromForm(
       formData.get("responsavel_id"),
@@ -849,15 +880,11 @@ export async function atualizarOrdemServicoOperacional(
     );
     if (respErr) return respErr;
 
-    const data_evento = buildDataEventoIso(data_visita, hora_visita);
-    if (!data_evento) {
-      return { ok: false, message: "Invalid visit date and time" };
-    }
-
     const slotOk = await validarSlotVisitaDisponivel(
       equipe_id,
-      data_visita,
-      hora_visita,
+      horarios.data_visita,
+      horarios.hora_visita,
+      horarios.hora_fim_visita,
       visita_id,
     );
     if (!slotOk.ok) return slotOk;
@@ -949,7 +976,7 @@ export async function atualizarOrdemServicoOperacional(
         .update({
           titulo,
           descricao: observacoes ?? descricao,
-          ...spreadAgendaEventoDatetime(data_evento),
+          ...spreadAgendaEventoRange(horarios.isoInicio, horarios.isoFim),
           equipe_id,
           responsavel_id: userId,
           etapa: etapa_atual,
