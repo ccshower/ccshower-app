@@ -28,6 +28,14 @@ export function groupVisitPhotosByAmbiente(
   anexos: OsAnexoComUrl[],
   ambientes: OsAmbiente[],
 ): { groups: AmbientePhotoGroup[]; orphans: OsAnexoComUrl[] } {
+  return groupAnexosByAmbiente(anexos, ambientes);
+}
+
+/** Agrupa anexos (fotos, CNC, etc.) por ambiente. */
+export function groupAnexosByAmbiente(
+  anexos: OsAnexoComUrl[],
+  ambientes: OsAmbiente[],
+): { groups: AmbientePhotoGroup[]; orphans: OsAnexoComUrl[] } {
   const map = new Map<string, OsAnexoComUrl[]>();
   const orphans: OsAnexoComUrl[] = [];
 

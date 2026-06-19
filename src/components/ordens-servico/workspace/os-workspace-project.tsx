@@ -25,6 +25,7 @@ import {
 import { OsVisitaAgendaPicker } from "@/components/ordens-servico/os-visita-agenda-picker";
 import { Field } from "@/components/ui/field";
 import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa";
+import { OsAmbientesCncProjectPanel } from "@/components/ordens-servico/workspace/os-ambientes-cnc-project-panel";
 import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
 import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
@@ -37,7 +38,6 @@ import {
 } from "@/lib/ordens-servico/visita-slots";
 import { filterEquipesForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { t } from "@/lib/i18n";
-import { uploadCncViaApi } from "@/lib/ordens-servico/upload-cnc-client";
 import type {
   CatalogoItem,
   Equipe,
@@ -151,14 +151,12 @@ export function OsWorkspaceProject({
   const [catalogo, setCatalogo] = useState<CatalogoItem[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [valorPending, startValorTransition] = useTransition();
-  const [cncPending, startCncTransition] = useTransition();
   const [finalizePending, startFinalizeTransition] = useTransition();
   const [fornecedorPending, startFornecedorTransition] = useTransition();
   const [materialPending, startMaterialTransition] = useTransition();
   const [instalacaoPending, startInstalacaoTransition] = useTransition();
   const [conflictDraft, setConflictDraft] =
     useState<OsAgendaSlotConflictDraft | null>(null);
-  const cncRef = useRef<HTMLInputElement>(null);
   const savedNotesRef = useRef(ordem.installation_notes ?? "");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,12 +167,6 @@ export function OsWorkspaceProject({
   }, [onAtualizado]);
 
   const itens = ordem.lista_separacao ?? [];
-  const anexosCnc =
-    ordem.anexos_cnc?.length
-      ? ordem.anexos_cnc
-      : ordem.anexo_cnc
-        ? [ordem.anexo_cnc]
-        : [];
   const clienteNome = ordem.cliente?.nome ?? ordem.titulo;
 
   useEffect(() => {
@@ -522,27 +514,11 @@ export function OsWorkspaceProject({
 
   const busy =
     valorPending ||
-    cncPending ||
     finalizePending ||
     notesStatus === "saving" ||
     fornecedorPending ||
     materialPending ||
     instalacaoPending;
-
-  function onCncSelected(files: FileList | null) {
-    if (!files?.length) return;
-    const toUpload = Array.from(files);
-    startCncTransition(async () => {
-      setMsg(null);
-      const r = await uploadCncViaApi(ordem.id, toUpload);
-      if (!r.ok) {
-        setMsg(r.message);
-        return;
-      }
-      if (cncRef.current) cncRef.current.value = "";
-      onAtualizado();
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -693,58 +669,12 @@ export function OsWorkspaceProject({
         </div>
       </section>
 
-      <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
-        <p className={sectionLabel}>{t("os.workspace.project.cncTitle")}</p>
-        <p className="mt-1 text-xs font-light text-cc-muted">
-          {t("os.workspace.project.cncHint")}
-        </p>
-
-        {anexosCnc.length > 0 ? (
-          <ul className="mt-2 space-y-2">
-            {anexosCnc.map((item) => (
-              <li key={item.id} className="space-y-1">
-                <p className="truncate text-sm font-medium text-cc-ink">
-                  {item.nome_arquivo}
-                </p>
-                {item.url ? (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-xs font-medium text-cc-deep underline"
-                  >
-                    {t("os.workspace.project.cncOpen")}
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-cc-muted">
-            {t("os.workspace.project.cncNone")}
-          </p>
-        )}
-
-        <input
-          ref={cncRef}
-          type="file"
-          multiple
-          accept=".nc,.txt,.tap,.gcode,.pdf,.dxf,.dwg,application/pdf,text/plain"
-          className="hidden"
-          disabled={busy}
-          onChange={(e) => onCncSelected(e.target.files)}
-        />
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => cncRef.current?.click()}
-          className="mt-3 w-full rounded-sm border border-cc-border bg-white py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light disabled:opacity-40"
-        >
-          {anexosCnc.length > 0
-            ? t("os.workspace.project.cncAdd")
-            : t("os.workspace.project.cncUpload")}
-        </button>
-      </section>
+      <OsAmbientesCncProjectPanel
+        ordem={ordem}
+        disabled={busy}
+        onAtualizado={onAtualizado}
+        onMessage={setMsg}
+      />
 
       <OsSeparationListCard
         count={itens.length}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { listarAnexosVisitaComUrls } from "@/app/ordens-servico/visita-comercial-actions";
+import { OsAmbientesAnexosFileGrouped } from "@/components/ordens-servico/os-ambientes-anexos-file-grouped";
 import {
   OsAmbientesPhotosGrouped,
   useVisitPhotosGrouped,
@@ -176,25 +177,17 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
               {t("os.workspace.contextCnc")}
             </p>
-            <ul className="mt-2 space-y-2">
-              {anexosCnc.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-2">
-                  <p className="min-w-0 truncate text-sm font-light text-cc-ink">
-                    {item.nome_arquivo}
-                  </p>
-                  {item.url ? (
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
-                    >
-                      {t("os.workspace.project.cncOpen")}
-                    </a>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            {(ordem.ambientes ?? []).length > 0 ? (
+              <p className="mt-0.5 text-[11px] font-light text-cc-subtle">
+                {t("os.workspace.project.cncPerAmbienteHint")}
+              </p>
+            ) : null}
+            <div className="mt-2">
+              <OsAmbientesAnexosFileGrouped
+                ambientes={ordem.ambientes ?? []}
+                anexos={anexosCnc}
+              />
+            </div>
           </div>
         ) : null}
 

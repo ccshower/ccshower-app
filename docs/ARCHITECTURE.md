@@ -311,3 +311,42 @@ A prioridade do projeto é:
 - rastreabilidade
 - mobile
 - logística
+
+---
+
+# ROADMAP — AMBIENTES POR OS (MULTI-BANHEIRO)
+
+## Fase 1 — Comercial (concluída)
+- Tabela `os_ambientes` + `os_anexos.os_ambiente_id`
+- Specs em texto livre, fotos por ambiente, valor parcial com soma editável
+- Fotos agrupadas no contexto operacional e na etapa Projeto
+
+## Fase 2 — Financeiro (pendente)
+- Validação / breakdown financeiro por ambiente (se necessário)
+
+## Fase 3 — Projeto: CNC por ambiente (em andamento)
+- Upload de Desenho Técnico (`tipo = cnc_file`) com `os_ambiente_id`
+- UI na etapa Projeto: um card por banheiro, lista de arquivos + botão de upload
+- Contexto operacional: CNC agrupado por ambiente (somente leitura)
+- **Sem migration nova** — reutiliza coluna `os_anexos.os_ambiente_id` da Fase 1
+
+## Fase 4 — Instalação parcial (pendente)
+- Status por ambiente, conclusão parcial da OS
+
+## Futuro — Ficha técnica via IA (N8N, não implementar agora)
+
+**Objetivo:** ao subir CNC em PDF, extrair automaticamente a ficha técnica embutida no arquivo e persistir em `os_ambientes.especificacoes` (ou campo dedicado).
+
+**Fluxo proposto:**
+1. App faz upload do PDF → `os_anexos` (com `os_ambiente_id`) + Storage
+2. Webhook Supabase (insert em `os_anexos` where `tipo = cnc_file` e `mime = pdf`) → N8N
+3. Agente IA no N8N: OCR / leitura estruturada do PDF → JSON (medidas, vidro, ferragens, recortes…)
+4. N8N chama API/Edge Function ou `PATCH` direto em `os_ambientes` com texto normalizado
+5. Auditoria: evento `cnc_ficha_importada` na timeline da OS
+
+**Pré-requisitos técnicos:**
+- `os_ambiente_id` no anexo (Fase 3) — saber **qual banheiro** recebe a ficha
+- Idempotência por `os_anexos.id` (reprocessamento seguro)
+- Fallback manual: specs continuam editáveis na visita comercial / projeto
+
+**Fora de escopo imediato:** validação humana obrigatória antes de gravar, lista de separação por ambiente, estoque.

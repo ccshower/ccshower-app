@@ -43,11 +43,18 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const formData = await request.formData();
+    const osAmbienteIdRaw = formData.get("os_ambiente_id");
+    const osAmbienteId =
+      typeof osAmbienteIdRaw === "string" && osAmbienteIdRaw.trim()
+        ? osAmbienteIdRaw.trim()
+        : null;
+
     const result = await uploadCncFileFromFormData(
       supabase,
       user.id,
       loaded.os,
       formData,
+      osAmbienteId,
     );
 
     if (!result.ok) {
