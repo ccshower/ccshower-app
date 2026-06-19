@@ -6,13 +6,24 @@ import { transicionarEtapaOrdemServico } from "@/app/ordens-servico/actions";
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
 import { spreadAgendaEventoDatetime } from "@/lib/ordens-servico/agenda-evento-query";
 import {
+  type AmbienteInstalacaoCapture,
+  parseOsAmbienteInstalacaoStatus,
+  validarCapturaBloqueioAmbiente,
+  validarFinalizacaoInstalacaoAmbientes,
+} from "@/lib/ordens-servico/os-ambiente-instalacao";
+import {
+  buildOperationalSnapshot,
+  parseOsStage,
+} from "@/lib/ordens-servico/operacional-snapshot";
+import {
   buildInstallationFinancialStatus,
   installationPaymentFromOrdem,
   isSeparationItemChecked,
   parseInstallationPaymentAmount,
   type InstallationPaymentCapture,
 } from "@/lib/ordens-servico/installation-workspace";
-import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
+import { orderStatusOnEnterStage } from "@/lib/ordens-servico/workflow";
+import { resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import {
   OS_ANEXO_TIPO_INSTALLATION,
   OS_ANEXO_TIPO_INSTALLATION_PAYMENT_RECEIPT,
@@ -20,10 +31,11 @@ import {
 } from "@/lib/ordens-servico/visita-comercial";
 import { parseVisitPaymentMethod } from "@/lib/ordens-servico/visit-payment";
 import { createClient } from "@/lib/supabase/server";
-import type { OsAnexo, OsAnexoComUrl, OsSeparationListItem } from "@/lib/types/database";
+import type { OsAmbiente, OsAnexo, OsAnexoComUrl, OsSeparationListItem } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ActionResult =
-  | { ok: true; id?: string }
+  | { ok: true; id?: string; modo?: "completa" | "parcial_projeto" }
   | { ok: false; message: string };
 
 type SeparationListRow = OsSeparationListItem & {
@@ -436,6 +448,142 @@ async function registrarEventoInstalacaoConcluida(
   return { ok: true, id: params.ordem_servico_id };
 }
 
+async function retornarOsAoProjetoInstalacaoParcial(
+  supabase: SupabaseClient,
+  osId: string,
+  userId: string,
+  ambientes: OsAmbiente[],
+): Promise<ActionResult> {
+  const blocked = ambientes.filter(
+    (a) => parseOsAmbienteInstalacaoStatus(a.instalacao_status) === "blocked",
+  );
+  const blockedNames = blocked.map((a) => a.nome?.trim() || "Environment").join(", ");
+  const descricao = `Partial installation — blocked environments: ${blockedNames}. Work order returned to Project.`;
+
+  const { data: os, error: osErr } = await supabase
+    .from("ordens_servico")
+    .select(
+      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, status",
+    )
+    .eq("id", osId)
+    .single();
+
+  if (osErr || !os) {
+    return { ok: false, message: osErr?.message ?? "Work order not found" };
+  }
+
+  const equipeFallback =
+    (os.equipe_atual_id as string | null) ?? (os.equipe_id as string | null);
+
+  const { equipeId, error: eqErr } = await resolveDefaultTeamForStage(
+    supabase,
+    "project",
+    equipeFallback,
+  );
+
+  if (eqErr || !equipeId) {
+    return {
+      ok: false,
+      message: eqErr ?? "Project stage team not configured",
+    };
+  }
+
+  const statusOrdem = orderStatusOnEnterStage("project");
+  const snapshot = buildOperationalSnapshot(equipeId, "project", statusOrdem);
+
+  const { error: updErr } = await supabase
+    .from("ordens_servico")
+    .update({
+      etapa_atual: snapshot.etapa_atual,
+      status_atual: snapshot.status_atual,
+      equipe_atual_id: snapshot.equipe_atual_id,
+      equipe_id: equipeId,
+      status: statusOrdem,
+    })
+    .eq("id", osId);
+
+  if (updErr) return { ok: false, message: updErr.message };
+
+  const when = new Date().toISOString();
+  const { error: evErr } = await supabase.from("agenda_eventos").insert({
+    ordem_servico_id: osId,
+    cliente_id: os.cliente_id as string,
+    equipe_id: equipeFallback ?? equipeId,
+    responsavel_id: userId,
+    tipo_evento: "stage_changed",
+    etapa: "project",
+    status: "completed",
+    titulo: "stage_changed",
+    descricao,
+    ...spreadAgendaEventoDatetime(when),
+  });
+
+  if (evErr) return { ok: false, message: evErr.message };
+
+  return { ok: true, id: osId };
+}
+
+export async function salvarStatusAmbienteInstalacao(
+  osId: string,
+  ambienteId: string,
+  capture: AmbienteInstalacaoCapture,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAuth();
+    const bloqueioFluxo = await verificarOsFluxoLiberado(supabase, osId);
+    if (bloqueioFluxo) return bloqueioFluxo;
+
+    const loaded = await loadOsInstalacao(supabase, osId);
+    if ("error" in loaded) return { ok: false, message: loaded.error };
+
+    const status = parseOsAmbienteInstalacaoStatus(capture.status);
+
+    if (status === "blocked") {
+      const blockErr = validarCapturaBloqueioAmbiente(
+        capture.bloqueio_categoria,
+        capture.bloqueio_motivo,
+      );
+      if (blockErr) return { ok: false, message: blockErr };
+    }
+
+    const updateRow: Record<string, unknown> = {
+      instalacao_status: status,
+      instalacao_bloqueio_categoria: null,
+      instalacao_bloqueio_motivo: null,
+      instalacao_bloqueio_observacao: null,
+      instalacao_concluida_em: null,
+    };
+
+    if (status === "completed") {
+      updateRow.instalacao_concluida_em = new Date().toISOString();
+    } else if (status === "blocked") {
+      updateRow.instalacao_bloqueio_categoria =
+        capture.bloqueio_categoria?.trim() ?? null;
+      updateRow.instalacao_bloqueio_motivo =
+        capture.bloqueio_motivo?.trim() ?? null;
+      updateRow.instalacao_bloqueio_observacao =
+        capture.bloqueio_observacao?.trim() || null;
+    }
+
+    const { error } = await supabase
+      .from("os_ambientes")
+      .update(updateRow)
+      .eq("id", ambienteId)
+      .eq("ordem_servico_id", osId)
+      .eq("ativo", true);
+
+    if (error) return { ok: false, message: error.message };
+
+    revalidateOs(osId);
+    return { ok: true, id: osId };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error saving environment status",
+    };
+  }
+}
+
 export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireAuth();
@@ -447,18 +595,47 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
 
     const { os } = loaded;
 
-    const { count: photoCount, error: photoErr } = await supabase
-      .from("os_anexos")
-      .select("id", { count: "exact", head: true })
-      .eq("ordem_servico_id", osId)
-      .eq("tipo", OS_ANEXO_TIPO_INSTALLATION);
+    const [{ data: ambientes, error: ambErr }, { data: fotosRows, error: fotosErr }] =
+      await Promise.all([
+        supabase
+          .from("os_ambientes")
+          .select("*")
+          .eq("ordem_servico_id", osId)
+          .eq("ativo", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("os_anexos")
+          .select("os_ambiente_id")
+          .eq("ordem_servico_id", osId)
+          .eq("tipo", OS_ANEXO_TIPO_INSTALLATION),
+      ]);
 
-    if (photoErr) return { ok: false, message: photoErr.message };
-    if (!photoCount) {
-      return {
-        ok: false,
-        message: "Upload at least one installation photo.",
-      };
+    if (ambErr) return { ok: false, message: ambErr.message };
+    if (fotosErr) return { ok: false, message: fotosErr.message };
+
+    const ambientesList = (ambientes ?? []) as OsAmbiente[];
+    const fotosList = (fotosRows ?? []) as Pick<OsAnexo, "os_ambiente_id">[];
+
+    let modoFinalizacao: { ok: true; modo: "completa" | "parcial_projeto" } | { ok: false; message: string };
+
+    if (ambientesList.length > 0) {
+      modoFinalizacao = validarFinalizacaoInstalacaoAmbientes(ambientesList, fotosList);
+      if (!modoFinalizacao.ok) return { ok: false, message: modoFinalizacao.message };
+    } else {
+      const { count: photoCount, error: photoErr } = await supabase
+        .from("os_anexos")
+        .select("id", { count: "exact", head: true })
+        .eq("ordem_servico_id", osId)
+        .eq("tipo", OS_ANEXO_TIPO_INSTALLATION);
+
+      if (photoErr) return { ok: false, message: photoErr.message };
+      if (!photoCount) {
+        return {
+          ok: false,
+          message: "Upload at least one installation photo.",
+        };
+      }
+      modoFinalizacao = { ok: true, modo: "completa" };
     }
 
     const { data: checklist, error: listErr } = await supabase
@@ -499,6 +676,18 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
       }
     }
 
+    if (modoFinalizacao.modo === "parcial_projeto") {
+      const ret = await retornarOsAoProjetoInstalacaoParcial(
+        supabase,
+        osId,
+        userId,
+        ambientesList,
+      );
+      if (!ret.ok) return ret;
+      revalidateOs(osId);
+      return { ok: true, id: osId, modo: "parcial_projeto" };
+    }
+
     const ev = await registrarEventoInstalacaoConcluida(supabase, {
       ordem_servico_id: osId,
       cliente_id: os.cliente_id,
@@ -511,7 +700,7 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
     if (!trans.ok) return trans;
 
     revalidateOs(osId);
-    return { ok: true, id: osId };
+    return { ok: true, id: osId, modo: "completa" };
   } catch (e) {
     return {
       ok: false,

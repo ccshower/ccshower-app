@@ -237,9 +237,30 @@ export const ptBR = {
         notesPlaceholder:
           "Cliente aprovou instalação, retorno para ajuste, acesso liberado…",
         finish: "Finalizar instalação",
+        finishPartial: "Finalizar com ambientes pendentes",
         finishing: "Finalizando…",
         confirmFinish:
           "Finalizar instalação e concluir a OS? Esta ação segue o fluxo oficial.",
+        confirmFinishPartial:
+          "Há ambientes bloqueados. Os concluídos serão registrados e a OS volta ao Projeto para os banheiros bloqueados. Continuar?",
+        ambientesTitle: "Ambientes",
+        ambientesHint:
+          "Registre fotos e status por banheiro. É possível concluir alguns e bloquear outros (material faltando, vidro quebrado, etc.).",
+        ambienteStatus: {
+          pending: "Pendente",
+          completed: "Concluído",
+          blocked: "Bloqueado",
+        },
+        ambienteBlockHint:
+          "Bloqueio parcial — só este ambiente. Os outros banheiros podem ser concluídos normalmente.",
+        blockCategory: "Categoria do bloqueio",
+        blockReason: "Motivo",
+        blockSelect: "Selecione…",
+        blockNotes: "Observações",
+        blockNotesPlaceholder: "ex.: vidro temperado quebrou na instalação",
+        saveBlock: "Salvar bloqueio",
+        ambientePhotosRequired: "Pelo menos uma foto ao marcar como concluído.",
+        photosGeneral: "Fotos gerais (sem ambiente vinculado)",
       },
     },
     card: {

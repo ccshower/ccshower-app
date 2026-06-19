@@ -237,9 +237,30 @@ export const enUS = {
         notesPlaceholder:
           "Client approved installation, return for adjustment, access granted…",
         finish: "Finish installation",
+        finishPartial: "Finish with pending environments",
         finishing: "Finishing…",
         confirmFinish:
           "Finish installation and complete the work order? This follows the official workflow.",
+        confirmFinishPartial:
+          "Some environments are blocked. Completed ones will be saved and the work order returns to Project for blocked bathrooms. Continue?",
+        ambientesTitle: "Environments",
+        ambientesHint:
+          "Register photos and status per bathroom. You can complete some and block others (missing material, broken glass, etc.).",
+        ambienteStatus: {
+          pending: "Pending",
+          completed: "Completed",
+          blocked: "Blocked",
+        },
+        ambienteBlockHint:
+          "Partial block — only this environment. Other bathrooms can still be completed.",
+        blockCategory: "Block category",
+        blockReason: "Reason",
+        blockSelect: "Select…",
+        blockNotes: "Notes",
+        blockNotesPlaceholder: "e.g. tempered glass broken during install",
+        saveBlock: "Save block",
+        ambientePhotosRequired: "At least one photo required when marking completed.",
+        photosGeneral: "General photos (no environment linked)",
       },
     },
     card: {

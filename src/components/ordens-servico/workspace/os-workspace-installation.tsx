@@ -11,10 +11,12 @@ import {
   salvarPagamentoInstalacao,
 } from "@/app/ordens-servico/instalacao-actions";
 import { OsInstallationChecklistModal } from "@/components/ordens-servico/workspace/os-installation-checklist-modal";
+import { OsAmbientesInstallationPanel } from "@/components/ordens-servico/workspace/os-ambientes-installation-panel";
 import { OsInstallationSeparationCard } from "@/components/ordens-servico/workspace/os-installation-separation-card";
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
 import { t } from "@/lib/i18n";
+import { parseOsAmbienteInstalacaoStatus } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import {
   buildInstallationFinancialStatus,
   formatInstallationBalance,
@@ -56,6 +58,12 @@ export function OsWorkspaceInstallation({
   onAtualizado,
   onConcluido,
 }: Props) {
+  const ambientes = ordem.ambientes ?? [];
+  const useAmbientes = ambientes.length > 0;
+  const hasBlockedAmbiente = ambientes.some(
+    (a) => parseOsAmbienteInstalacaoStatus(a.instalacao_status) === "blocked",
+  );
+
   const financial = buildInstallationFinancialStatus(ordem);
 
   const [checklistOpen, setChecklistOpen] = useState(false);
@@ -237,7 +245,10 @@ export function OsWorkspaceInstallation({
   }
 
   function finalizar() {
-    if (!confirm(t("os.workspace.installation.confirmFinish"))) return;
+    const confirmMsg = hasBlockedAmbiente
+      ? t("os.workspace.installation.confirmFinishPartial")
+      : t("os.workspace.installation.confirmFinish");
+    if (!confirm(confirmMsg)) return;
     startTransition(async () => {
       setMsg(null);
       if (executionNotes.trim() !== savedNotesRef.current.trim()) {
@@ -255,6 +266,10 @@ export function OsWorkspaceInstallation({
       const r = await finalizarInstalacao(ordem.id);
       if (!r.ok) {
         setMsg(r.message);
+        return;
+      }
+      if (r.modo === "parcial_projeto") {
+        onAtualizado();
         return;
       }
       onConcluido();
@@ -399,36 +414,47 @@ export function OsWorkspaceInstallation({
         onConferir={() => setChecklistOpen(true)}
       />
 
-      <section className="rounded-sm border border-cc-border/80 bg-white p-3">
-        <p className={sectionLabel}>
-          {t("os.workspace.installation.photosTitle")}
-        </p>
-        <OsPhotoUploadActions
+      {useAmbientes ? (
+        <OsAmbientesInstallationPanel
+          ordem={ordem}
+          fotos={fotos}
           disabled={busy}
-          onFilesSelected={onPhotosSelected}
-          takePhotoLabel={t("os.workspace.installation.takePhoto")}
-          choosePhotosLabel={t("os.workspace.installation.choosePhotos")}
+          onAtualizado={onAtualizado}
+          onReloadFotos={carregarFotos}
+          onMessage={setMsg}
         />
-        {fotos.length > 0 ? (
-          <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {fotos.map((f) => (
-              <li
-                key={f.id}
-                className="relative aspect-square overflow-hidden rounded-sm border border-cc-border"
-              >
-                {f.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={f.url}
-                    alt={f.nome_arquivo}
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+      ) : (
+        <section className="rounded-sm border border-cc-border/80 bg-white p-3">
+          <p className={sectionLabel}>
+            {t("os.workspace.installation.photosTitle")}
+          </p>
+          <OsPhotoUploadActions
+            disabled={busy}
+            onFilesSelected={onPhotosSelected}
+            takePhotoLabel={t("os.workspace.installation.takePhoto")}
+            choosePhotosLabel={t("os.workspace.installation.choosePhotos")}
+          />
+          {fotos.length > 0 ? (
+            <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {fotos.map((f) => (
+                <li
+                  key={f.id}
+                  className="relative aspect-square overflow-hidden rounded-sm border border-cc-border"
+                >
+                  {f.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={f.url}
+                      alt={f.nome_arquivo}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      )}
 
       <section className="rounded-sm border border-cc-border/80 bg-white p-3">
         <div className="flex items-center justify-between gap-2">
@@ -469,7 +495,9 @@ export function OsWorkspaceInstallation({
       >
         {pending
           ? t("os.workspace.installation.finishing")
-          : t("os.workspace.installation.finish")}
+          : hasBlockedAmbiente
+            ? t("os.workspace.installation.finishPartial")
+            : t("os.workspace.installation.finish")}
       </button>
 
       <OsInstallationChecklistModal

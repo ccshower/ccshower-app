@@ -170,6 +170,11 @@ export type OsAmbiente = {
   valor_comercial: number | null;
   sort_order: number;
   ativo: boolean;
+  instalacao_status?: string;
+  instalacao_bloqueio_categoria?: string | null;
+  instalacao_bloqueio_motivo?: string | null;
+  instalacao_bloqueio_observacao?: string | null;
+  instalacao_concluida_em?: string | null;
   criado_em: string;
   atualizado_em: string;
 };
