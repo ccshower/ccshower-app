@@ -13,6 +13,7 @@ type AgendaRow = {
   equipe_id: string | null;
   tipo_evento: string;
   status: string;
+  is_repair?: boolean | null;
   data_evento: string | null;
   data_inicio: string | null;
   data_fim: string | null;
@@ -33,6 +34,7 @@ function normalizeAgendaRow(row: {
   equipe_id: string | null;
   tipo_evento: string;
   status: string;
+  is_repair?: boolean | null;
   data_evento: string | null;
   data_inicio: string | null;
   data_fim: string | null;
@@ -76,6 +78,7 @@ export async function loadCalendarEventos(
       equipe_id,
       tipo_evento,
       status,
+      is_repair,
       data_evento,
       data_inicio,
       data_fim,

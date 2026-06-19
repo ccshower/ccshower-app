@@ -280,6 +280,15 @@ export const enUS = {
           "This environment is already installed. No further action needed here.",
         partialFinishSuccess:
           "Partial installation recorded. The work order returned to Project for blocked environments.",
+        repairBadge: "REPAIR",
+        repairBanner:
+          "Maintenance flow (REPAIR) — same installation execution, recorded in history.",
+        repairValorLabel: "Repair amount",
+        repairValorHint: "Optional at opening; can be adjusted here.",
+        repairValorObsLabel: "Notes (required if amount changes)",
+        repairValorObsPlaceholder: "Reason for amount change…",
+        repairValorSave: "Save repair amount",
+        repairValorSaving: "Saving…",
       },
     },
     card: {
@@ -453,6 +462,8 @@ export const enUS = {
       measurementDone: "Measurement recorded",
       installationScheduled: "Installation scheduled",
       installationCompleted: "Installation completed",
+      repairOpened: "Repair opened",
+      repairCompleted: "Repair completed",
       visitDate: "Visit date",
       registeredAt: "Registered on",
       teamPrefix: "Team {name}",
@@ -623,6 +634,7 @@ export const enUS = {
     fieldTeam: "Team",
     fieldType: "Type",
     fieldStatus: "Status",
+    repairBadge: "REPAIR",
   },
   centro: {
     projectQueue: {
@@ -630,6 +642,27 @@ export const enUS = {
       partialInstallSummary:
         "Installed: {installed} · Blocked: {blocked}",
       partialInstallStillMissing: "Still missing in project: {items}",
+    },
+    repair: {
+      queueTitle: "Repairs",
+      addRepair: "Add repair",
+      modalTitle: "Open repair",
+      modalSubtitle:
+        "Post-installation maintenance — completed work order goes straight to Install team.",
+      searchClient: "Search client",
+      searchPlaceholder: "Name, address, phone or email…",
+      noClients: "No clients found.",
+      noEligibleOs: "No fully completed work order eligible for repair.",
+      backToOs: "Back to work orders",
+      ambienteLabel: "Environment",
+      ambienteAll: "All environments",
+      valorLabel: "Suggested amount (optional)",
+      valorHint: "Install team may adjust; notes required if changed.",
+      opening: "Opening repair…",
+      openRepair: "Open repair and schedule",
+      notScheduled: "Not scheduled",
+      allAmbientes: "All",
+      noActiveRepairs: "No repairs in progress.",
     },
   },
 } as const;

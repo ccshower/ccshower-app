@@ -123,6 +123,8 @@ export type OrdemServico = {
   installation_payment_notes: string | null;
   installation_balance_pending_acknowledged: boolean;
   possui_instalacao: boolean;
+  repair_ativo?: boolean;
+  repair_episode_id?: string | null;
   equipe_atual_id: string | null;
   etapa_atual: string;
   status_atual: string;
@@ -233,6 +235,21 @@ export type OsSeparationListItem = {
   catalogo_item?: Pick<CatalogoItem, "id" | "nome" | "categoria" | "unidade"> | null;
 };
 
+export type OsRepairEpisode = {
+  id: string;
+  ordem_servico_id: string;
+  os_ambiente_id: string | null;
+  empresa_id: string | null;
+  valor_sugerido: number | null;
+  valor_final: number | null;
+  valor_alteracao_observacao: string | null;
+  aberto_por: string | null;
+  aberto_em: string;
+  concluido_em: string | null;
+  agenda_evento_id: string | null;
+  status: "open" | "completed" | "cancelled";
+};
+
 export type OrdemServicoWithRelations = OrdemServico & {
   cliente: Pick<
     Cliente,
@@ -268,6 +285,8 @@ export type OrdemServicoWithRelations = OrdemServico & {
   anexo_cnc?: OsAnexoComUrl | null;
   /** All technical drawing uploads for the project stage. */
   anexos_cnc?: OsAnexoComUrl[];
+  /** Fluxo REPAIR ativo — instalação de manutenção pós-conclusão. */
+  repair_episode?: OsRepairEpisode | null;
   bloqueio_ativo?: OsCrash | null;
   /** Preenchido na listagem quando há `os_crashes` ativo (sem carregar o registro completo). */
   tem_bloqueio_ativo?: boolean;
@@ -304,6 +323,7 @@ export type AgendaEvento = {
   data_inicio?: string | null;
   data_fim?: string | null;
   hora_evento?: string | null;
+  is_repair?: boolean;
   criado_em: string;
   atualizado_em: string;
 };

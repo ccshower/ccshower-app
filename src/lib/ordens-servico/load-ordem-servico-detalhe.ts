@@ -37,6 +37,7 @@ export async function loadOrdemServicoDetalhe(
     { data: bloqueioAtivo },
     { data: ambientesRows },
     { data: anexosVisitaRows },
+    { data: repairEpisode },
   ] = await Promise.all([
       supabase
         .from("clientes")
@@ -102,7 +103,14 @@ export async function loadOrdemServicoDetalhe(
         .eq("ordem_servico_id", id)
         .eq("tipo", "technical_visit")
         .order("criado_em", { ascending: false }),
-    ]);
+    (os as { repair_episode_id?: string | null }).repair_episode_id
+      ? supabase
+          .from("os_repair_episodes")
+          .select("*")
+          .eq("id", (os as { repair_episode_id: string }).repair_episode_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const lista = ((eventos ?? []) as unknown as AgendaEvento[]).sort(
     compareAgendaEventoStartDesc,
@@ -195,6 +203,7 @@ export async function loadOrdemServicoDetalhe(
       anexos_cnc,
       anexos_visita,
       ambientes: (ambientesRows ?? []) as OrdemServicoWithRelations["ambientes"],
+      repair_episode: (repairEpisode as OrdemServicoWithRelations["repair_episode"]) ?? null,
       bloqueio_ativo: bloqueioAtivo ?? null,
     },
   };

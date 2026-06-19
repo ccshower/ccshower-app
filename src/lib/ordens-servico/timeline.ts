@@ -243,6 +243,14 @@ function mapEvento(
       titulo = t("os.timeline.installationCompleted");
       contexto = contextoFromDescricao(ev.descricao);
       break;
+    case "repair_opened":
+      titulo = t("os.timeline.repairOpened");
+      contexto = contextoFromDescricao(ev.descricao);
+      break;
+    case "repair_completed":
+      titulo = t("os.timeline.repairCompleted");
+      contexto = contextoFromDescricao(ev.descricao);
+      break;
     case "measurement":
       titulo = t("os.timeline.measurementDone");
       contexto = contextoFromDescricao(ev.descricao);

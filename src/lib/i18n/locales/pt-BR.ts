@@ -279,6 +279,15 @@ export const ptBR = {
         ambienteJaInstaladoHint: "Este ambiente já foi instalado. Não é necessário nova ação aqui.",
         partialFinishSuccess:
           "Instalação parcial registrada. A OS voltou ao Projeto para tratar os ambientes bloqueados.",
+        repairBadge: "REPARO",
+        repairBanner:
+          "Fluxo de manutenção (REPAIR) — mesma execução da instalação, com registro no histórico.",
+        repairValorLabel: "Valor do reparo",
+        repairValorHint: "Opcional na abertura; pode ser ajustado aqui.",
+        repairValorObsLabel: "Observações (obrigatório se alterar o valor)",
+        repairValorObsPlaceholder: "Motivo da alteração de valor…",
+        repairValorSave: "Salvar valor do reparo",
+        repairValorSaving: "Salvando…",
       },
     },
     card: {
@@ -452,6 +461,8 @@ export const ptBR = {
       measurementDone: "Medição registrada",
       installationScheduled: "Instalação agendada",
       installationCompleted: "Instalação concluída",
+      repairOpened: "Reparo aberto",
+      repairCompleted: "Reparo concluído",
       visitDate: "Data da visita",
       registeredAt: "Registrado em",
       teamPrefix: "Equipe {name}",
@@ -557,6 +568,7 @@ export const ptBR = {
     fieldTeam: "Equipe",
     fieldType: "Tipo",
     fieldStatus: "Status",
+    repairBadge: "REPARO",
   },
   centro: {
     projectQueue: {
@@ -564,6 +576,27 @@ export const ptBR = {
       partialInstallSummary:
         "Instalados: {installed} · Bloqueados: {blocked}",
       partialInstallStillMissing: "Ainda falta no projeto: {items}",
+    },
+    repair: {
+      queueTitle: "Reparos",
+      addRepair: "Adicionar reparo",
+      modalTitle: "Abrir reparo",
+      modalSubtitle:
+        "Manutenção pós-instalação — OS concluída volta direto para a equipe Install.",
+      searchClient: "Buscar cliente",
+      searchPlaceholder: "Nome, endereço, telefone ou e-mail…",
+      noClients: "Nenhum cliente encontrado.",
+      noEligibleOs: "Nenhuma OS 100% concluída elegível para reparo.",
+      backToOs: "Voltar às OS",
+      ambienteLabel: "Ambiente",
+      ambienteAll: "Todos os ambientes",
+      valorLabel: "Valor sugerido (opcional)",
+      valorHint: "A equipe de instalação pode ajustar; observação obrigatória se mudar.",
+      opening: "Abrindo reparo…",
+      openRepair: "Abrir reparo e agendar",
+      notScheduled: "Sem agendamento",
+      allAmbientes: "Todos",
+      noActiveRepairs: "Nenhum reparo em andamento.",
     },
   },
 } as const;

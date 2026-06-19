@@ -10,6 +10,7 @@ import {
   salvarObservacoesExecucaoInstalacao,
   salvarPagamentoInstalacao,
 } from "@/app/ordens-servico/instalacao-actions";
+import { salvarValorRepairInstalacao } from "@/app/ordens-servico/repair-actions";
 import { OsInstallationChecklistModal } from "@/components/ordens-servico/workspace/os-installation-checklist-modal";
 import { OsAmbientesInstallationPanel } from "@/components/ordens-servico/workspace/os-ambientes-installation-panel";
 import { OsInstallationSeparationCard } from "@/components/ordens-servico/workspace/os-installation-separation-card";
@@ -17,6 +18,7 @@ import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-uploa
 import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
 import { t } from "@/lib/i18n";
 import { parseOsAmbienteInstalacaoStatus, validarCapturaBloqueioAmbiente, validarFinalizacaoInstalacaoAmbientes } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import { formatOsValorUsd } from "@/lib/ordens-servico/os-valores-etapa";
 import {
   buildInstallationFinancialStatus,
   formatInstallationBalance,
@@ -85,6 +87,12 @@ export function OsWorkspaceInstallation({
   const [savedReceipt, setSavedReceipt] = useState<OsAnexoComUrl | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [repairValorPending, startRepairValor] = useTransition();
+
+  const repairEpisode = ordem.repair_episode;
+  const isRepair = Boolean(ordem.repair_ativo && repairEpisode);
+  const [repairValor, setRepairValor] = useState("");
+  const [repairObs, setRepairObs] = useState("");
 
   const validacaoAmbientes = useMemo(
     () =>
@@ -194,6 +202,18 @@ export function OsWorkspaceInstallation({
   }, [carregarFotos, carregarComprovante]);
 
   useEffect(() => {
+    if (!repairEpisode) return;
+    const v = repairEpisode.valor_final ?? repairEpisode.valor_sugerido;
+    setRepairValor(v != null ? formatOsValorUsd(v) : "");
+    setRepairObs(repairEpisode.valor_alteracao_observacao ?? "");
+  }, [
+    repairEpisode?.id,
+    repairEpisode?.valor_final,
+    repairEpisode?.valor_sugerido,
+    repairEpisode?.valor_alteracao_observacao,
+  ]);
+
+  useEffect(() => {
     const current = executionNotes.trim();
     const saved = savedNotesRef.current.trim();
     if (current === saved) return;
@@ -301,6 +321,18 @@ export function OsWorkspaceInstallation({
     });
   }
 
+  function salvarRepairValor() {
+    startRepairValor(async () => {
+      setMsg(null);
+      const r = await salvarValorRepairInstalacao(ordem.id, repairValor, repairObs);
+      if (!r.ok) {
+        setMsg(r.message);
+        return;
+      }
+      onAtualizado();
+    });
+  }
+
   function finalizar() {
     const confirmMsg = hasBlockedAmbiente
       ? t("os.workspace.installation.confirmFinishPartial")
@@ -358,10 +390,57 @@ export function OsWorkspaceInstallation({
     });
   }
 
-  const busy = pending || notesStatus === "saving";
+  const busy = pending || notesStatus === "saving" || repairValorPending;
 
   return (
     <div className="space-y-4">
+      {isRepair ? (
+        <div className="rounded-sm border border-violet-200 bg-violet-50/80 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-ds bg-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              {t("os.workspace.installation.repairBadge")}
+            </span>
+            <p className="text-sm font-light text-violet-950">
+              {t("os.workspace.installation.repairBanner")}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {isRepair ? (
+        <section className="rounded-sm border border-violet-200/80 bg-white p-3">
+          <p className={sectionLabel}>{t("os.workspace.installation.repairValorLabel")}</p>
+          <p className="mt-1 text-xs text-cc-muted">
+            {t("os.workspace.installation.repairValorHint")}
+          </p>
+          <div className="mt-3 space-y-3">
+            <OsMoneyInput value={repairValor} disabled={busy} onChange={setRepairValor} />
+            <div>
+              <label className={sectionLabel}>
+                {t("os.workspace.installation.repairValorObsLabel")}
+              </label>
+              <textarea
+                disabled={busy}
+                className={textareaClass}
+                value={repairObs}
+                onChange={(e) => setRepairObs(e.target.value)}
+                placeholder={t("os.workspace.installation.repairValorObsPlaceholder")}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={busy || !repairValor.trim()}
+              onClick={salvarRepairValor}
+              className="rounded-sm border border-violet-300 bg-violet-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-violet-900 disabled:opacity-40"
+            >
+              {repairValorPending
+                ? t("os.workspace.installation.repairValorSaving")
+                : t("os.workspace.installation.repairValorSave")}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-sm border border-cc-border/80 bg-white p-3">
         <p className={sectionLabel}>
           {t("os.workspace.installation.financialTitle")}

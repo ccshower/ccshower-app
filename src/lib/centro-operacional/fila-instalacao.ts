@@ -11,6 +11,7 @@ export type FilaInstalacaoItem = {
   instalacaoAgendada: boolean;
   /** Texto formatado da data/hora da instalação, se agendada. */
   instalacaoQuando: string | null;
+  isRepair: boolean;
   atualizadoEm: string;
 };
 

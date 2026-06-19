@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { concluirRepairEpisode, validarRepairProntoParaFinalizar } from "@/app/ordens-servico/repair-actions";
 import { transicionarEtapaOrdemServico } from "@/app/ordens-servico/actions";
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
 import { spreadAgendaEventoDatetime } from "@/lib/ordens-servico/agenda-evento-query";
@@ -82,6 +83,7 @@ type LoadOsInstalacaoResult =
         installation_payment_notes: string | null;
         installation_balance_pending_acknowledged: boolean;
         installation_execution_notes: string | null;
+        repair_ativo: boolean;
       };
     };
 
@@ -92,7 +94,7 @@ async function loadOsInstalacao(
   const { data, error } = await supabase
     .from("ordens_servico")
     .select(
-      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, valor_previsto, visit_payment_received, visit_payment_amount, visit_payment_method, installation_payment_received, installation_payment_amount, installation_payment_method, installation_payment_notes, installation_balance_pending_acknowledged, installation_execution_notes",
+      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, valor_previsto, visit_payment_received, visit_payment_amount, visit_payment_method, installation_payment_received, installation_payment_amount, installation_payment_method, installation_payment_notes, installation_balance_pending_acknowledged, installation_execution_notes, repair_ativo",
     )
     .eq("id", osId)
     .single();
@@ -130,6 +132,7 @@ async function loadOsInstalacao(
       installation_balance_pending_acknowledged:
         data.installation_balance_pending_acknowledged as boolean,
       installation_execution_notes: data.installation_execution_notes as string | null,
+      repair_ativo: Boolean(data.repair_ativo),
     },
   };
 }
@@ -633,6 +636,12 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
     }
 
     if (modoFinalizacao.modo === "parcial_projeto") {
+      if (os.repair_ativo) {
+        return {
+          ok: false,
+          message: "Repair flow cannot return to Project with blocked environments.",
+        };
+      }
       const ret = await retornarOsAoProjetoInstalacaoParcial(
         supabase,
         osId,
@@ -644,6 +653,11 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
       return { ok: true, id: osId, modo: "parcial_projeto" };
     }
 
+    if (os.repair_ativo) {
+      const repairVal = await validarRepairProntoParaFinalizar(supabase, osId);
+      if (!repairVal.ok) return repairVal;
+    }
+
     const ev = await registrarEventoInstalacaoConcluida(supabase, {
       ordem_servico_id: osId,
       cliente_id: os.cliente_id,
@@ -651,6 +665,11 @@ export async function finalizarInstalacao(osId: string): Promise<ActionResult> {
       responsavel_id: userId,
     });
     if (!ev.ok) return ev;
+
+    if (os.repair_ativo) {
+      const repairClose = await concluirRepairEpisode(supabase, osId, userId);
+      if (!repairClose.ok) return repairClose;
+    }
 
     const trans = await transicionarEtapaOrdemServico(osId, "completed");
     if (!trans.ok) return trans;

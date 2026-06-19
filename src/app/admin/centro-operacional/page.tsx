@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import { CentroOperacionalClient } from "@/components/admin/centro-operacional/centro-operacional-client";
 import { getCurrentUsuario, isAdmin, isAdminOrManager } from "@/lib/auth/get-current-usuario";
+import { canAbrirRepair } from "@/lib/auth/can-abrir-repair";
 import { loadAgendaGlobal } from "@/lib/centro-operacional/load-agenda-global";
 import { loadAtencaoAgora } from "@/lib/centro-operacional/load-atencao-agora";
 import { loadBloqueiosOperacionais } from "@/lib/centro-operacional/load-bloqueios-operacionais";
@@ -12,6 +13,7 @@ import { loadFilaComercial } from "@/lib/centro-operacional/load-fila-comercial"
 import { loadFilaFinanceiro } from "@/lib/centro-operacional/load-fila-financeiro";
 import { loadFilaInstalacao } from "@/lib/centro-operacional/load-fila-instalacao";
 import { loadFilaProjeto } from "@/lib/centro-operacional/load-fila-projeto";
+import { loadFilaRepair } from "@/lib/centro-operacional/load-fila-repair";
 import { loadGargalosOperacionais } from "@/lib/centro-operacional/load-gargalos-operacionais";
 import { loadProducaoMensal } from "@/lib/centro-operacional/load-producao-mensal";
 import { loadSaudeOperacional } from "@/lib/centro-operacional/load-saude-operacional";
@@ -60,6 +62,7 @@ export default async function CentroOperacionalPage({
     { fila: filaFinanceiro, error: filaFinanceiroError },
     { fila: filaProjeto, error: filaProjetoError },
     { fila: filaInstalacao, error: filaInstalacaoError },
+    { fila: filaRepair, error: filaRepairError },
     agendaGlobal,
     saudeOperacional,
     atencaoAgora,
@@ -74,6 +77,7 @@ export default async function CentroOperacionalPage({
     loadFilaFinanceiro(unidadeId),
     loadFilaProjeto(unidadeId),
     loadFilaInstalacao(unidadeId),
+    loadFilaRepair(unidadeId),
     loadAgendaGlobal(unidadeId),
     loadSaudeOperacional(unidadeId),
     loadAtencaoAgora(unidadeId),
@@ -98,6 +102,23 @@ export default async function CentroOperacionalPage({
 
   const eqList = (equipes ?? []) as Equipe[];
 
+  let viewerEquipe: Equipe | null = null;
+  if (usuario?.equipe_id) {
+    viewerEquipe = eqList.find((e) => e.id === usuario.equipe_id) ?? null;
+    if (!viewerEquipe) {
+      const { data } = await supabase
+        .from("equipes")
+        .select(
+          "id, nome, codigo_operacional, cor_primaria, cor_secundaria, ativo, criado_em, atualizado_em",
+        )
+        .eq("id", usuario.equipe_id)
+        .maybeSingle();
+      viewerEquipe = (data as Equipe | null) ?? null;
+    }
+  }
+
+  const podeAbrirRepair = canAbrirRepair(usuario, viewerEquipe);
+
   return (
     <CentroOperacionalClient
       filaComercial={filaComercial}
@@ -108,6 +129,9 @@ export default async function CentroOperacionalPage({
       filaProjetoError={filaProjetoError}
       filaInstalacao={filaInstalacao}
       filaInstalacaoError={filaInstalacaoError}
+      filaRepair={filaRepair}
+      filaRepairError={filaRepairError}
+      podeAbrirRepair={podeAbrirRepair}
       agendaGlobal={agendaGlobal}
       saudeOperacional={saudeOperacional}
       atencaoAgora={atencaoAgora}

@@ -22,6 +22,8 @@ export const AGENDA_AUDIT_EVENT_TYPES = new Set([
   "financial_rejected",
   "project_completed",
   "installation_completed",
+  "repair_opened",
+  "repair_completed",
 ]);
 
 /** Compromissos encerrados — permanecem no histórico, não no calendário ativo. */
@@ -56,6 +58,7 @@ export type CalendarEvento = {
   equipe_nome: string;
   equipe_cor: string;
   equipe_cor_secundaria: string | null;
+  is_repair: boolean;
 };
 
 const WEEKDAY_INDEX: Record<string, number> = {
@@ -278,6 +281,7 @@ export function mapRowToCalendarEvento(row: {
   equipe_id?: string | null;
   tipo_evento: string;
   status: string;
+  is_repair?: boolean | null;
   data_evento?: string | null;
   data_inicio?: string | null;
   data_fim?: string | null;
@@ -306,6 +310,7 @@ export function mapRowToCalendarEvento(row: {
     equipe_nome: row.equipes?.nome?.trim() || "—",
     equipe_cor: row.equipes?.cor_primaria?.trim() || "#7189a8",
     equipe_cor_secundaria: row.equipes?.cor_secundaria?.trim() || null,
+    is_repair: Boolean(row.is_repair),
   };
 }
 

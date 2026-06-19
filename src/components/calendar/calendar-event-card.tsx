@@ -116,9 +116,16 @@ export function CalendarEventCard({
           <p className="text-xl font-semibold tabular-nums text-cc-ink sm:text-2xl">
             {formatCalendarEventTime(ev.startIso)}
           </p>
-          <span className="rounded-sm border border-cc-border/60 bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep">
-            {tEventStatus(ev.status)}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {ev.is_repair ? (
+              <span className="rounded-sm bg-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                {t("calendar.repairBadge")}
+              </span>
+            ) : null}
+            <span className="rounded-sm border border-cc-border/60 bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep">
+              {tEventStatus(ev.status)}
+            </span>
+          </div>
         </div>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -153,6 +160,11 @@ export function CalendarEventCard({
       <p className="mt-0.5 truncate text-sm font-medium text-cc-ink">
         {ev.cliente_nome}
       </p>
+      {ev.is_repair ? (
+        <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800">
+          {t("calendar.repairBadge")}
+        </p>
+      ) : null}
       <p className="mt-1 truncate text-[11px] text-cc-muted">{ev.equipe_nome}</p>
       <p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.06em] text-cc-subtle">
         {tEventType(ev.tipo_evento)}

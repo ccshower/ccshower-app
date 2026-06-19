@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { CentroRepairModal } from "@/components/admin/centro-operacional/centro-repair-modal";
 import { CentroAdminMenu } from "@/components/admin/centro-operacional/centro-admin-menu";
 import {
   CentroAdminCadastrosModal,
@@ -75,6 +76,7 @@ import {
   filaInstalacaoStatusBadge,
   type FilaInstalacaoItem,
 } from "@/lib/centro-operacional/fila-instalacao";
+import type { FilaRepairItem } from "@/lib/centro-operacional/fila-repair";
 import {
   filaProjetoStatusBadge,
   type FilaProjetoItem,
@@ -93,6 +95,9 @@ type CentroOperacionalClientProps = {
   filaProjetoError: string | null;
   filaInstalacao: FilaInstalacaoItem[];
   filaInstalacaoError: string | null;
+  filaRepair: FilaRepairItem[];
+  filaRepairError: string | null;
+  podeAbrirRepair: boolean;
   agendaGlobal: AgendaGlobalData;
   saudeOperacional: SaudeOperacionalData;
   atencaoAgora: AtencaoAgoraData;
@@ -121,6 +126,9 @@ export function CentroOperacionalClient({
   filaProjetoError,
   filaInstalacao,
   filaInstalacaoError,
+  filaRepair,
+  filaRepairError,
+  podeAbrirRepair,
   agendaGlobal,
   saudeOperacional,
   atencaoAgora,
@@ -143,6 +151,7 @@ export function CentroOperacionalClient({
   const [attentionFilter, setAttentionFilter] = useState<AttentionType | "todos">("todos");
   const [bloqueioFilter, setBloqueioFilter] = useState<BloqueioCategoria | "todos">("todos");
   const [agendaTab, setAgendaTab] = useState<"hoje" | "amanha" | "semana">("hoje");
+  const [repairModalOpen, setRepairModalOpen] = useState(false);
 
   const filteredAttention =
     attentionFilter === "todos"
@@ -236,6 +245,14 @@ export function CentroOperacionalClient({
           fila={filaInstalacao}
           loadError={filaInstalacaoError}
           unidadeId={unidadeSelecionadaId}
+        />
+
+        <FilaRepairSection
+          fila={filaRepair}
+          loadError={filaRepairError}
+          unidadeId={unidadeSelecionadaId}
+          podeAbrirRepair={podeAbrirRepair}
+          onAddRepair={() => setRepairModalOpen(true)}
         />
 
         <section className="mt-10">
@@ -436,6 +453,12 @@ export function CentroOperacionalClient({
           </div>
         </section>
       </div>
+
+      <CentroRepairModal
+        open={repairModalOpen}
+        onClose={() => setRepairModalOpen(false)}
+        unidadeId={unidadeSelecionadaId}
+      />
     </div>
   );
 }
@@ -1403,6 +1426,100 @@ function FilaProjetoRow({
   );
 }
 
+function FilaRepairSection({
+  fila,
+  loadError,
+  unidadeId,
+  podeAbrirRepair,
+  onAddRepair,
+}: {
+  fila: FilaRepairItem[];
+  loadError: string | null;
+  unidadeId: string | null;
+  podeAbrirRepair: boolean;
+  onAddRepair: () => void;
+}) {
+  const router = useRouter();
+
+  return (
+    <section className="mt-3 sm:mt-4">
+      <div className="overflow-hidden rounded-ds-xl border border-cc-border bg-cc-surface shadow-sheet">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cc-border bg-cc-canvas/80 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cc-muted">
+            <CentroIcon id="wrench" className="h-3.5 w-3.5 text-violet-700" />
+            {t("centro.repair.queueTitle")}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-900">
+              {fila.length} OS
+            </span>
+            {podeAbrirRepair ? (
+              <button
+                type="button"
+                onClick={onAddRepair}
+                className="inline-flex items-center gap-1 rounded-sm bg-violet-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-violet-800"
+              >
+                <IconPlus className="h-3 w-3" />
+                {t("centro.repair.addRepair")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {loadError ? (
+          <p className="border-b border-cc-border px-4 py-3 text-sm text-cc-red sm:px-5">
+            {loadError}
+          </p>
+        ) : null}
+        <ul>
+          {fila.length === 0 ? (
+            <li className="px-4 py-6 text-center text-sm text-cc-muted sm:px-5">
+              {t("centro.repair.noActiveRepairs")}
+            </li>
+          ) : (
+            fila.map((item, i) => (
+              <li key={item.osId} className={i === fila.length - 1 ? "" : "border-b border-cc-border"}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(osWorkspacePathWithUnidade(item.osId, unidadeId))
+                  }
+                  className="group flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cc-canvas/80 sm:gap-4 sm:px-5 sm:py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-cc-ink">
+                      {item.clienteNome}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                      <span className="rounded-ds bg-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        {t("os.workspace.installation.repairBadge")}
+                      </span>
+                      {item.ambienteNome ? (
+                        <span className="text-xs text-cc-muted">{item.ambienteNome}</span>
+                      ) : (
+                        <span className="text-xs text-cc-muted">
+                          {t("centro.repair.allAmbientes")}
+                        </span>
+                      )}
+                      {item.quando ? (
+                        <span className="text-xs text-cc-muted">{item.quando}</span>
+                      ) : (
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                          {t("centro.repair.notScheduled")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <IconChevronRight className="h-4 w-4 shrink-0 text-cc-border-strong group-hover:text-cc-muted" />
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 function FilaInstalacaoSection({
   fila,
   loadError,
@@ -1493,6 +1610,11 @@ function FilaInstalacaoRow({
               <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} aria-hidden />
               {status.label}
             </span>
+            {item.isRepair ? (
+              <span className="rounded-ds bg-violet-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                {t("os.workspace.installation.repairBadge")}
+              </span>
+            ) : null}
             {item.instalacaoQuando ? (
               <span className="text-xs text-cc-muted">{item.instalacaoQuando}</span>
             ) : (
