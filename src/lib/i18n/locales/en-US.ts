@@ -111,6 +111,7 @@ export const enUS = {
       contextNotes: "Technical notes",
       contextMeasurements: "Measurements",
       contextPhotos: "Photos",
+      contextPhotosGroupedHint: "Grouped by environment from the commercial visit.",
       contextFiles: "Technical files",
       contextOpenPhoto: "Open photo",
       contextOpenFile: "Open file",

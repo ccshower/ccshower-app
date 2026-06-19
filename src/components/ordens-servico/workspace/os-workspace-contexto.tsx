@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { listarAnexosVisitaComUrls } from "@/app/ordens-servico/visita-comercial-actions";
+import {
+  OsAmbientesPhotosGrouped,
+  useVisitPhotosGrouped,
+} from "@/components/ordens-servico/os-ambientes-photos-grouped";
 import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
 import { formatWorkspaceDateTime } from "@/components/ordens-servico/workspace/os-workspace-utils";
 import { t } from "@/lib/i18n";
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import type { OrdemServicoWithRelations, OsAnexoComUrl } from "@/lib/types/database";
+import type { VisitPhotoPreviewItem } from "@/lib/ordens-servico/os-ambientes";
 
 type Props = {
   ordem: OrdemServicoWithRelations;
@@ -23,7 +28,7 @@ function PreviewDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  itens: OsAnexoComUrl[];
+  itens: VisitPhotoPreviewItem[];
   index: number;
   onIndex: (next: number) => void;
 }) {
@@ -45,6 +50,11 @@ function PreviewDialog({
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-2 px-3 py-2 text-white">
           <div className="min-w-0">
+            {current.ambienteNome ? (
+              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-white/85">
+                {current.ambienteNome}
+              </p>
+            ) : null}
             <p className="truncate text-sm font-medium">{current.nome_arquivo}</p>
             <p className="text-[11px] text-white/70">
               {formatWorkspaceDateTime(current.criado_em)}
@@ -150,18 +160,20 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
     return { images: imgs, files: others };
   }, [anexos]);
 
+  const ambientes = ordem.ambientes ?? [];
+  const { flat: previewPhotos } = useVisitPhotosGrouped(images, ambientes);
+
   const notesRaw = (ordem.anotacoes_tecnicas ?? "").trim();
   const notes =
     etapa === "financial_review" && notesRaw.length > 260
       ? `${notesRaw.slice(0, 259)}…`
       : notesRaw;
 
-  const imagesDisplay = etapa === "financial_review" ? images.slice(0, 3) : images;
   const filesDisplay = etapa === "financial_review" ? files.slice(0, 3) : files;
 
   const hasAny =
     Boolean(notesRaw) ||
-    imagesDisplay.length > 0 ||
+    previewPhotos.length > 0 ||
     filesDisplay.length > 0 ||
     itensSeparacao.length > 0 ||
     anexosCnc.length > 0 ||
@@ -210,29 +222,27 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
           </div>
         ) : null}
 
-        {imagesDisplay.length > 0 ? (
+        {previewPhotos.length > 0 ? (
           <div className="mt-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
               {t("os.workspace.contextPhotos")}
             </p>
-            <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {imagesDisplay.map((a, idx) => (
-                <li key={a.id} className="relative aspect-square overflow-hidden rounded-sm border border-cc-border bg-white">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewIndex(idx);
-                      setPreviewOpen(true);
-                    }}
-                    className="h-full w-full"
-                    aria-label={t("os.workspace.contextOpenPhoto")}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.url} alt={a.nome_arquivo} className="h-full w-full object-cover" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {ambientes.length > 0 ? (
+              <p className="mt-0.5 text-[11px] font-light text-cc-subtle">
+                {t("os.workspace.contextPhotosGroupedHint")}
+              </p>
+            ) : null}
+            <div className="mt-2">
+              <OsAmbientesPhotosGrouped
+                ambientes={ambientes}
+                anexos={images}
+                variant="buttons"
+                onPhotoClick={(_item, flatIndex) => {
+                  setPreviewIndex(flatIndex);
+                  setPreviewOpen(true);
+                }}
+              />
+            </div>
           </div>
         ) : null}
 
@@ -329,7 +339,7 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
       <PreviewDialog
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        itens={imagesDisplay}
+        itens={previewPhotos}
         index={previewIndex}
         onIndex={setPreviewIndex}
       />

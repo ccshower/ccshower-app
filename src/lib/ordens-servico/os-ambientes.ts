@@ -1,5 +1,5 @@
 import { parseValorEtapaInput } from "@/lib/ordens-servico/os-valores-etapa";
-import type { OsAmbiente } from "@/lib/types/database";
+import type { OsAmbiente, OsAnexoComUrl } from "@/lib/types/database";
 
 export const OS_AMBIENTES_MAX = 10;
 
@@ -9,6 +9,73 @@ export type OsAmbienteFormRow = {
   especificacoes: string;
   valor_comercial: string;
 };
+
+export type AmbientePhotoGroup = {
+  ambienteId: string;
+  nome: string;
+  especificacoes: string | null;
+  valor_comercial: number | null;
+  fotos: OsAnexoComUrl[];
+};
+
+export type VisitPhotoPreviewItem = OsAnexoComUrl & {
+  ambienteId: string | null;
+  ambienteNome: string | null;
+};
+
+/** Agrupa fotos da visita por ambiente; fotos sem vínculo ficam em orphans. */
+export function groupVisitPhotosByAmbiente(
+  anexos: OsAnexoComUrl[],
+  ambientes: OsAmbiente[],
+): { groups: AmbientePhotoGroup[]; orphans: OsAnexoComUrl[] } {
+  const map = new Map<string, OsAnexoComUrl[]>();
+  const orphans: OsAnexoComUrl[] = [];
+
+  for (const a of anexos) {
+    if (a.os_ambiente_id) {
+      const list = map.get(a.os_ambiente_id) ?? [];
+      list.push(a);
+      map.set(a.os_ambiente_id, list);
+    } else {
+      orphans.push(a);
+    }
+  }
+
+  const groups = ambientes.map((amb) => ({
+    ambienteId: amb.id,
+    nome: amb.nome,
+    especificacoes: amb.especificacoes,
+    valor_comercial: amb.valor_comercial,
+    fotos: map.get(amb.id) ?? [],
+  }));
+
+  return { groups, orphans };
+}
+
+export function flattenVisitPhotosForPreview(
+  groups: AmbientePhotoGroup[],
+  orphans: OsAnexoComUrl[],
+  generalLabel: string,
+): VisitPhotoPreviewItem[] {
+  const flat: VisitPhotoPreviewItem[] = [];
+  for (const group of groups) {
+    for (const foto of group.fotos) {
+      flat.push({
+        ...foto,
+        ambienteId: group.ambienteId,
+        ambienteNome: group.nome,
+      });
+    }
+  }
+  for (const foto of orphans) {
+    flat.push({
+      ...foto,
+      ambienteId: null,
+      ambienteNome: generalLabel,
+    });
+  }
+  return flat;
+}
 
 export function createEmptyAmbienteRow(): OsAmbienteFormRow {
   return {

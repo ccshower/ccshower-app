@@ -111,6 +111,7 @@ export const ptBR = {
       contextNotes: "Observações técnicas",
       contextMeasurements: "Medições",
       contextPhotos: "Fotos",
+      contextPhotosGroupedHint: "Agrupadas por ambiente da visita comercial.",
       contextFiles: "Arquivos técnicos",
       contextOpenPhoto: "Abrir foto",
       contextOpenFile: "Abrir arquivo",
