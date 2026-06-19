@@ -38,9 +38,17 @@ export function OsWorkspacePage({
 
   const recarregar = useCallback(() => {
     startTransition(async () => {
-      const { data } = await buscarDetalheOrdemServico(ordem.id);
-      if (data) setOrdem(data);
-      router.refresh();
+      try {
+        const { data, error } = await buscarDetalheOrdemServico(ordem.id);
+        if (error) {
+          console.error("buscarDetalheOrdemServico:", error);
+          return;
+        }
+        if (data) setOrdem(data);
+        router.refresh();
+      } catch (e) {
+        console.error("recarregar OS:", e);
+      }
     });
   }, [ordem.id, router]);
 

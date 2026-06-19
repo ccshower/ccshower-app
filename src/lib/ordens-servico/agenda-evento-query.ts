@@ -25,9 +25,9 @@ export function agendaEventoStartIso(
     if (!Number.isNaN(d.getTime())) return evento.data_inicio;
   }
 
-  if (evento.data_evento && evento.hora_evento) {
+  if (evento.data_evento && evento.hora_evento != null && evento.hora_evento !== "") {
     const datePart = evento.data_evento.slice(0, 10);
-    const hm = evento.hora_evento.trim().slice(0, 5);
+    const hm = String(evento.hora_evento).trim().slice(0, 5);
     const combined = zonedWallClockToUtcIso(datePart, hm);
     if (combined) return combined;
   }

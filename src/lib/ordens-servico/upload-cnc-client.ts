@@ -16,14 +16,27 @@ export async function uploadCncViaApi(
     formData.append("os_ambiente_id", osAmbienteId);
   }
 
-  const res = await fetch(`/api/os/${osId}/cnc`, {
-    method: "POST",
-    body: formData,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api/os/${osId}/cnc`, {
+      method: "POST",
+      body: formData,
+    });
+  } catch {
+    return { ok: false, message: "Erro de rede no upload do Desenho Técnico" };
+  }
 
-  const data = (await res.json()) as
-    | { ok: true; id: string; count?: number }
-    | { ok: false; message: string };
+  let data: { ok: true; id: string; count?: number } | { ok: false; message: string };
+  try {
+    data = (await res.json()) as typeof data;
+  } catch {
+    return {
+      ok: false,
+      message: res.ok
+        ? "Resposta inválida do servidor no upload do Desenho Técnico"
+        : `Erro no upload do Desenho Técnico (${res.status})`,
+    };
+  }
 
   if (!res.ok || !data.ok) {
     return {

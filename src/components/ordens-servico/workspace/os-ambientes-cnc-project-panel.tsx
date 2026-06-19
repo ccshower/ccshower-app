@@ -47,13 +47,14 @@ export function OsAmbientesCncProjectPanel({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const pendingAmbienteIdRef = useRef<string | null>(null);
 
   const useMultiAmbiente = ambientes.length > 0;
   const retornoParcial = osTemRetornoInstalacaoParcial(ambientes);
   const { groups, orphans } = groupAnexosByAmbiente(anexosCnc, ambientes);
 
   function openPicker(ambienteId: string | null) {
-    setPendingAmbienteId(ambienteId);
+    pendingAmbienteIdRef.current = ambienteId;
     fileRef.current?.click();
   }
 
@@ -62,21 +63,32 @@ export function OsAmbientesCncProjectPanel({
     if (fileRef.current) fileRef.current.value = "";
     if (list.length === 0) return;
 
+    const ambienteId = pendingAmbienteIdRef.current;
+    setPendingAmbienteId(ambienteId);
+
     startTransition(async () => {
-      onMessage?.(null);
-      setFeedback(null);
-      const r = await uploadCncViaApi(ordem.id, list, pendingAmbienteId);
-      setPendingAmbienteId(null);
-      if (!r.ok) {
-        onMessage?.(r.message);
-        return;
+      try {
+        onMessage?.(null);
+        setFeedback(null);
+        const r = await uploadCncViaApi(ordem.id, list, ambienteId);
+        if (!r.ok) {
+          onMessage?.(r.message);
+          return;
+        }
+        setFeedback(
+          t("os.workspace.project.cncUploaded", {
+            count: String(r.count ?? list.length),
+          }),
+        );
+        onAtualizado();
+      } catch (e) {
+        onMessage?.(
+          e instanceof Error ? e.message : "Erro inesperado no upload do Desenho Técnico",
+        );
+      } finally {
+        pendingAmbienteIdRef.current = null;
+        setPendingAmbienteId(null);
       }
-      setFeedback(
-        t("os.workspace.project.cncUploaded", {
-          count: String(r.count ?? list.length),
-        }),
-      );
-      onAtualizado();
     });
   }
 

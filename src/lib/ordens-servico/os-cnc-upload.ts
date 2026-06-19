@@ -1,3 +1,6 @@
+import {
+  isAmbienteProjetoEditavel,
+} from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
 import {
   loadOsAnexoUploadContext,
@@ -7,6 +10,7 @@ import {
 } from "@/lib/ordens-servico/os-anexo-upload";
 import { OS_ANEXOS_BUCKET } from "@/lib/ordens-servico/visita-comercial";
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
+import type { OsAmbiente } from "@/lib/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export { OS_ANEXO_TIPO_CNC };
@@ -50,19 +54,38 @@ async function resolveCncAmbienteId(
 ): Promise<{ ok: true; id: string | null } | { ok: false; message: string }> {
   if (!osAmbienteId) return { ok: true, id: null };
 
-  const { data, error } = await supabase
-    .from("os_ambientes")
-    .select("id")
-    .eq("id", osAmbienteId)
-    .eq("ordem_servico_id", os.id)
-    .eq("ativo", true)
-    .maybeSingle();
+  const [{ data, error }, { data: ambientes, error: ambErr }] = await Promise.all([
+    supabase
+      .from("os_ambientes")
+      .select("*")
+      .eq("id", osAmbienteId)
+      .eq("ordem_servico_id", os.id)
+      .eq("ativo", true)
+      .maybeSingle(),
+    supabase
+      .from("os_ambientes")
+      .select("*")
+      .eq("ordem_servico_id", os.id)
+      .eq("ativo", true),
+  ]);
 
-  if (error) return { ok: false, message: error.message };
+  if (error || ambErr) {
+    return { ok: false, message: error?.message ?? ambErr?.message ?? "Erro ao validar ambiente" };
+  }
   if (!data?.id) {
     return { ok: false, message: "Ambiente invalido para esta OS" };
   }
-  return { ok: true, id: data.id as string };
+
+  const ambiente = data as OsAmbiente;
+  const ambientesList = (ambientes ?? []) as OsAmbiente[];
+  if (!isAmbienteProjetoEditavel(ambiente, ambientesList)) {
+    return {
+      ok: false,
+      message: "Este ambiente ja foi instalado — CNC bloqueado para edicao.",
+    };
+  }
+
+  return { ok: true, id: ambiente.id };
 }
 
 async function uploadSingleCncFile(
