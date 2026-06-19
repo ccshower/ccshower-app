@@ -105,6 +105,8 @@ export function OsAmbientesComercialPanel({
   );
   const [anexos, setAnexos] = useState<OsAnexoComUrl[]>(ordem.anexos_visita ?? []);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const useMultiAmbiente = rows.some((r) => r.nome.trim().length > 0);
@@ -224,52 +226,70 @@ export function OsAmbientesComercialPanel({
     });
   }
 
-  function resolveAmbienteId(
-    clientId: string,
-    nome: string,
-    ambientes: OsAmbiente[],
-  ): string {
-    return (
-      ambientes.find((a) => a.id === clientId)?.id ??
-      ambientes.find((a) => a.nome.trim() === nome.trim())?.id ??
-      clientId
-    );
-  }
-
-  async function onFilesForAmbiente(
+  function onFilesForAmbiente(
     ambienteId: string,
     nome: string,
+    especificacoes: string,
+    valorComercial: string,
+    sortOrder: number,
     files: File[],
   ) {
-    if (files.length === 0) return;
+    const fileSnapshot = [...files];
+    if (fileSnapshot.length === 0) return;
     if (!nome.trim()) {
+      setUploadError(t("os.ambientes.nameRequiredForPhotos"));
       onMessage?.(t("os.ambientes.nameRequiredForPhotos"));
       return;
     }
-    startTransition(async () => {
-      onMessage?.(null);
-      setFeedback(null);
-      const saved = await doSalvarAmbientes(false);
-      if (!saved.ok) return;
 
-      const resolvedId = resolveAmbienteId(ambienteId, nome, saved.ambientes);
-      const r = await uploadAnexosVisitaViaApi(ordem.id, files, resolvedId);
-      if (!r.ok) {
-        onMessage?.(r.message);
-        return;
+    setUploadError(null);
+    onMessage?.(null);
+    setFeedback(null);
+    setUploading(true);
+
+    void (async () => {
+      try {
+        const r = await uploadAnexosVisitaViaApi(
+          ordem.id,
+          fileSnapshot,
+          ambienteId,
+          {
+            id: ambienteId,
+            nome: nome.trim(),
+            especificacoes,
+            valor_comercial: valorComercial,
+            sort_order: sortOrder,
+          },
+        );
+        if (!r.ok) {
+          setUploadError(r.message);
+          onMessage?.(r.message);
+          return;
+        }
+
+        const loaded = await carregarAnexos();
+        if (!loaded) return;
+
+        const linkedCount = loaded.filter((a) => a.os_ambiente_id === ambienteId).length;
+        if (r.uploaded > 0 && linkedCount === 0) {
+          const msg = t("os.ambientes.photosLinkPending");
+          setUploadError(msg);
+          onMessage?.(msg);
+          return;
+        }
+
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === ambienteId
+              ? { ...row, nome: nome.trim(), especificacoes, valor_comercial: valorComercial }
+              : row,
+          ),
+        );
+        setFeedback(t("os.ambientes.photosUploaded", { count: String(r.uploaded) }));
+      } finally {
+        setUploading(false);
       }
-
-      const loaded = await carregarAnexos();
-      if (!loaded) return;
-
-      const linkedCount = loaded.filter((a) => a.os_ambiente_id === resolvedId).length;
-      if (r.uploaded > 0 && linkedCount === 0) {
-        onMessage?.(t("os.ambientes.photosLinkPending"));
-        return;
-      }
-
-      setFeedback(t("os.ambientes.photosUploaded", { count: String(r.uploaded) }));
-    });
+    })();
   }
 
   function onFilesLegacy(files: File[]) {
@@ -294,6 +314,11 @@ export function OsAmbientesComercialPanel({
 
   return (
     <div className="space-y-4">
+      {uploadError ? (
+        <p className="rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2 text-sm text-cc-red">
+          {uploadError}
+        </p>
+      ) : null}
       {feedback ? (
         <p className="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {feedback}
@@ -311,7 +336,7 @@ export function OsAmbientesComercialPanel({
           </div>
           <button
             type="button"
-            disabled={disabled || pending || rows.length >= 10}
+            disabled={disabled || pending || uploading || rows.length >= 10}
             onClick={addRow}
             className="rounded-sm border border-cc-border bg-white px-3 py-1.5 text-xs font-medium text-cc-deep hover:bg-cc-border-light disabled:opacity-40"
           >
@@ -393,7 +418,7 @@ export function OsAmbientesComercialPanel({
                       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
                         {t("os.visit.photos")}
                       </p>
-                      {(anexosForRow(row).length > 0 ? (
+                      {anexosForRow(row).length > 0 ? (
                         <span className="text-[10px] font-medium text-cc-deep">
                           {t("os.ambientes.photoCount", {
                             count: String(anexosForRow(row).length),
@@ -402,9 +427,16 @@ export function OsAmbientesComercialPanel({
                       ) : null}
                     </div>
                     <OsPhotoUploadActions
-                      disabled={disabled || pending}
+                      disabled={disabled || pending || uploading}
                       onFilesSelected={(files) =>
-                        void onFilesForAmbiente(row.id, row.nome, files)
+                        onFilesForAmbiente(
+                          row.id,
+                          row.nome,
+                          row.especificacoes,
+                          row.valor_comercial,
+                          index,
+                          files,
+                        )
                       }
                     />
                     <VisitPhotoGrid

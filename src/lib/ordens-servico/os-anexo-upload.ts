@@ -1,8 +1,9 @@
+import { parseAmbienteValorInput } from "@/lib/ordens-servico/os-ambientes";
+import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import {
   OS_ANEXOS_BUCKET,
   OS_ANEXO_TIPO_VISITA,
 } from "@/lib/ordens-servico/visita-comercial";
-import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const MAX_ANEXO_BYTES = 8 * 1024 * 1024;
@@ -70,11 +71,104 @@ export function canUploadAnexosVisitaComercial(os: {
   return true;
 }
 
-export function resolveImageMimeType(file: File): string {
+type UploadBlob = File | Blob;
+
+/** Next/Node FormData pode entregar Blob em vez de File — nao usar instanceof File. */
+export function readMultipartFiles(formData: FormData, field = "files"): UploadBlob[] {
+  const out: UploadBlob[] = [];
+  for (const entry of formData.getAll(field)) {
+    if (typeof entry === "string") continue;
+    if (!entry || typeof entry !== "object") continue;
+    if (!("arrayBuffer" in entry) || typeof entry.arrayBuffer !== "function") continue;
+    if (!("size" in entry) || typeof entry.size !== "number" || entry.size <= 0) continue;
+    out.push(entry as UploadBlob);
+  }
+  return out;
+}
+
+function uploadName(file: UploadBlob): string {
+  if (file instanceof File && file.name.trim()) return file.name;
+  return "photo.jpg";
+}
+
+export function resolveImageMimeType(file: UploadBlob): string {
   const t = file.type?.trim().toLowerCase();
   if (t && t.startsWith("image/")) return t;
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const ext = uploadName(file).split(".").pop()?.toLowerCase() ?? "";
   return MIME_BY_EXT[ext] ?? "image/jpeg";
+}
+
+async function resolveAmbienteIdForUpload(
+  supabase: SupabaseClient,
+  os: OsAnexoUploadContext,
+  formData: FormData,
+  osAmbienteId: string | null,
+): Promise<{ ok: true; id: string | null } | { ok: false; message: string }> {
+  if (!osAmbienteId) return { ok: true, id: null };
+
+  const { data: existing, error: findErr } = await supabase
+    .from("os_ambientes")
+    .select("id")
+    .eq("id", osAmbienteId)
+    .eq("ordem_servico_id", os.id)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (findErr) return { ok: false, message: findErr.message };
+  if (existing?.id) return { ok: true, id: existing.id as string };
+
+  const nomeRaw = formData.get("ambiente_nome");
+  const nome = typeof nomeRaw === "string" ? nomeRaw.trim() : "";
+  if (!nome) {
+    return {
+      ok: false,
+      message: "Informe o nome do ambiente antes de adicionar fotos",
+    };
+  }
+
+  const especificacoesRaw = formData.get("ambiente_especificacoes");
+  const especificacoes =
+    typeof especificacoesRaw === "string" ? especificacoesRaw.trim() : "";
+  const valorRaw = formData.get("ambiente_valor_comercial");
+  const valorParsed =
+    typeof valorRaw === "string" ? parseAmbienteValorInput(valorRaw) : null;
+  const sortRaw = formData.get("ambiente_sort_order");
+  const sortOrder =
+    typeof sortRaw === "string" && Number.isFinite(Number(sortRaw))
+      ? Number(sortRaw)
+      : 0;
+
+  const payload = {
+    ordem_servico_id: os.id,
+    empresa_id: os.empresa_id,
+    nome,
+    especificacoes: especificacoes || null,
+    valor_comercial: valorParsed,
+    sort_order: sortOrder,
+    ativo: true,
+  };
+
+  const { data: found } = await supabase
+    .from("os_ambientes")
+    .select("id")
+    .eq("id", osAmbienteId)
+    .maybeSingle();
+
+  if (found?.id) {
+    const { error: updErr } = await supabase
+      .from("os_ambientes")
+      .update(payload)
+      .eq("id", osAmbienteId);
+    if (updErr) return { ok: false, message: updErr.message };
+  } else {
+    const { error: insErr } = await supabase.from("os_ambientes").insert({
+      id: osAmbienteId,
+      ...payload,
+    });
+    if (insErr) return { ok: false, message: insErr.message };
+  }
+
+  return { ok: true, id: osAmbienteId };
 }
 
 export async function uploadAnexosVisitaComercialFromFormData(
@@ -90,23 +184,16 @@ export async function uploadAnexosVisitaComercialFromFormData(
     return { ok: false, message: "OS nao esta na etapa comercial para anexos" };
   }
 
-  let ambienteId: string | null = null;
-  if (osAmbienteId) {
-    const { data: amb, error: ambErr } = await supabase
-      .from("os_ambientes")
-      .select("id")
-      .eq("id", osAmbienteId)
-      .eq("ordem_servico_id", osId)
-      .eq("ativo", true)
-      .maybeSingle();
+  const ambienteResolved = await resolveAmbienteIdForUpload(
+    supabase,
+    os,
+    formData,
+    osAmbienteId ?? null,
+  );
+  if (!ambienteResolved.ok) return ambienteResolved;
+  const ambienteId = ambienteResolved.id;
 
-    if (ambErr || !amb?.id) {
-      return { ok: false, message: "Invalid environment for this work order" };
-    }
-    ambienteId = amb.id as string;
-  }
-
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File);
+  const files = readMultipartFiles(formData);
   if (files.length === 0) {
     return { ok: false, message: "Nenhum arquivo selecionado" };
   }
@@ -121,10 +208,10 @@ export async function uploadAnexosVisitaComercialFromFormData(
       return { ok: false, message: "Apenas imagens sao permitidas" };
     }
     if (file.size > MAX_ANEXO_BYTES) {
-      return { ok: false, message: `Arquivo ${file.name} excede 8 MB` };
+      return { ok: false, message: `Arquivo ${uploadName(file)} excede 8 MB` };
     }
 
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const ext = uploadName(file).split(".").pop()?.toLowerCase() || "jpg";
     const path = `${osId}/technical_visit/${crypto.randomUUID()}.${ext}`;
     const body = Buffer.from(await file.arrayBuffer());
 
@@ -146,7 +233,7 @@ export async function uploadAnexosVisitaComercialFromFormData(
       os_ambiente_id: ambienteId,
       tipo: OS_ANEXO_TIPO_VISITA,
       storage_path: path,
-      nome_arquivo: file.name,
+      nome_arquivo: uploadName(file),
       mime_type: contentType,
       tamanho_bytes: file.size,
       criado_por: userId,

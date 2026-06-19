@@ -6,11 +6,20 @@ export type UploadReceiptClientResult =
   | { ok: true; id: string }
   | { ok: false; message: string };
 
+export type UploadAmbienteMeta = {
+  id: string;
+  nome: string;
+  especificacoes?: string;
+  valor_comercial?: string;
+  sort_order?: number;
+};
+
 /** Upload via Route Handler (multipart) — evita Failed to fetch em Server Actions. */
 export async function uploadAnexosVisitaViaApi(
   osId: string,
   files: FileList | File[],
   osAmbienteId?: string | null,
+  ambiente?: UploadAmbienteMeta | null,
 ): Promise<UploadAnexosClientResult> {
   const list = Array.from(files);
   if (list.length === 0) {
@@ -23,6 +32,14 @@ export async function uploadAnexosVisitaViaApi(
   }
   if (osAmbienteId) {
     formData.append("os_ambiente_id", osAmbienteId);
+  }
+  if (ambiente) {
+    formData.append("ambiente_nome", ambiente.nome);
+    formData.append("ambiente_especificacoes", ambiente.especificacoes ?? "");
+    formData.append("ambiente_valor_comercial", ambiente.valor_comercial ?? "");
+    if (ambiente.sort_order != null) {
+      formData.append("ambiente_sort_order", String(ambiente.sort_order));
+    }
   }
 
   let response: Response;
