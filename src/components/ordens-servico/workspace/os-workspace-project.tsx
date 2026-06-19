@@ -562,6 +562,8 @@ export function OsWorkspaceProject({
         </div>
       </section>
 
+      <OsAmbientesVisitPhotosProject ordem={ordem} />
+
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <p className={sectionLabel}>{t("os.workspace.project.supplierTitle")}</p>
         <div className="mt-3 space-y-3">
@@ -690,8 +692,6 @@ export function OsWorkspaceProject({
           </button>
         </div>
       </section>
-
-      <OsAmbientesVisitPhotosProject ordem={ordem} />
 
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <p className={sectionLabel}>{t("os.workspace.project.cncTitle")}</p>
