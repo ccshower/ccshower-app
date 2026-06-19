@@ -1,4 +1,5 @@
 import { t } from "@/lib/i18n";
+import { descontoOrdemValor, valorLiquidoComDesconto } from "@/lib/ordens-servico/os-desconto";
 import { valorContratadoEfetivo } from "@/lib/ordens-servico/os-valores-etapa";
 import {
   formatVisitPaymentAmountUsd,
@@ -19,6 +20,8 @@ export function parseFinancialDecision(
 }
 
 export type FinancialWorkspaceSummary = {
+  grossTotal: number;
+  discount: number;
   total: number;
   received: number;
   balance: number;
@@ -32,6 +35,7 @@ export function buildFinancialWorkspaceSummary(
     valor_projeto?: number | string | null;
     valor_comercial?: number | string | null;
     valor_previsto?: number | string | null;
+    desconto_valor?: number | string | null;
     visit_payment_received?: boolean | null;
     visit_payment_amount?: number | string | null;
     visit_payment_method?: string | null;
@@ -39,21 +43,25 @@ export function buildFinancialWorkspaceSummary(
   },
   options?: { totalInput?: string },
 ): FinancialWorkspaceSummary {
-  let total = valorContratadoEfetivo(os);
+  let grossTotal = valorContratadoEfetivo(os);
 
   if (options?.totalInput !== undefined && options.totalInput.trim()) {
     const parsed = parseValorTotalInput(options.totalInput);
     if (parsed.ok && parsed.value != null) {
-      total = parsed.value;
+      grossTotal = parsed.value;
     }
   }
 
+  const discount = descontoOrdemValor(os);
+  const total = valorLiquidoComDesconto(grossTotal, discount);
   const received = os.visit_payment_received
     ? toMoneyNumber(os.visit_payment_amount)
     : 0;
   const balance = Math.max(0, Math.round((total - received) * 100) / 100);
 
   return {
+    grossTotal,
+    discount,
     total,
     received,
     balance,

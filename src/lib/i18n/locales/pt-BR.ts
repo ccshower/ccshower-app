@@ -333,6 +333,23 @@ export const ptBR = {
       currentStage: "Etapa atual",
       nextStage: "Próxima etapa",
     },
+    desconto: {
+      button: "Desconto",
+      badge: "Desconto {amount}",
+      modalTitle: "Lançar desconto",
+      modalHint:
+        "O desconto será subtraído do valor total e acompanha a OS até a instalação. Na instalação, o instalador vê apenas o saldo já reduzido.",
+      valorLabel: "Valor do desconto",
+      justificativaLabel: "Justificativa",
+      justificativaPlaceholder: "Motivo comercial do desconto…",
+      save: "Salvar desconto",
+      saving: "Salvando…",
+      cancel: "Cancelar",
+      resumoTitle: "Desconto administrativo",
+      brutoLabel: "Valor bruto",
+      descontoLabel: "Desconto",
+      liquidoLabel: "Valor líquido",
+    },
     bloqueio: {
       title: "🚨 Bloqueio Operacional",
       activeTitle: "🚨 Bloqueio Ativo",

@@ -84,6 +84,7 @@ type LoadOsInstalacaoResult =
         installation_balance_pending_acknowledged: boolean;
         installation_execution_notes: string | null;
         repair_ativo: boolean;
+        desconto_valor?: number | null;
       };
     };
 
@@ -94,7 +95,7 @@ async function loadOsInstalacao(
   const { data, error } = await supabase
     .from("ordens_servico")
     .select(
-      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, valor_previsto, visit_payment_received, visit_payment_amount, visit_payment_method, installation_payment_received, installation_payment_amount, installation_payment_method, installation_payment_notes, installation_balance_pending_acknowledged, installation_execution_notes, repair_ativo",
+      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, valor_previsto, visit_payment_received, visit_payment_amount, visit_payment_method, installation_payment_received, installation_payment_amount, installation_payment_method, installation_payment_notes, installation_balance_pending_acknowledged, installation_execution_notes, repair_ativo, desconto_valor",
     )
     .eq("id", osId)
     .single();
@@ -133,6 +134,7 @@ async function loadOsInstalacao(
         data.installation_balance_pending_acknowledged as boolean,
       installation_execution_notes: data.installation_execution_notes as string | null,
       repair_ativo: Boolean(data.repair_ativo),
+      desconto_valor: data.desconto_valor as number | null,
     },
   };
 }

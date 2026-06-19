@@ -7,6 +7,7 @@ import {
   salvarFormaPagamentoComercial,
   salvarValorComercial,
 } from "@/app/ordens-servico/visita-comercial-actions";
+import { OsDescontoResumo } from "@/components/ordens-servico/os-desconto-resumo";
 import {
   OsAmbientesComercialPanel,
   persistAmbientesBeforeFinish,
@@ -116,6 +117,8 @@ export function OsWorkspaceCommercial({
 
   return (
     <div className="space-y-4">
+      <OsDescontoResumo ordem={ordem} />
+
       <OsAmbientesComercialPanel
         ordem={ordem}
         disabled={pending}

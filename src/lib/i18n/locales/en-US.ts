@@ -334,6 +334,23 @@ export const enUS = {
       currentStage: "Current stage",
       nextStage: "Next stage",
     },
+    desconto: {
+      button: "Discount",
+      badge: "Discount {amount}",
+      modalTitle: "Apply discount",
+      modalHint:
+        "The discount is subtracted from the total and follows the work order through installation. At installation, the team only sees the reduced balance.",
+      valorLabel: "Discount amount",
+      justificativaLabel: "Justification",
+      justificativaPlaceholder: "Commercial reason for the discount…",
+      save: "Save discount",
+      saving: "Saving…",
+      cancel: "Cancel",
+      resumoTitle: "Administrative discount",
+      brutoLabel: "Gross amount",
+      descontoLabel: "Discount",
+      liquidoLabel: "Net amount",
+    },
     bloqueio: {
       title: "🚨 Operational block",
       activeTitle: "🚨 Active block",

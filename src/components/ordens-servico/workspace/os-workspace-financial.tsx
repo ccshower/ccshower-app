@@ -38,6 +38,8 @@ import {
 
 } from "@/lib/ordens-servico/financial-workspace";
 
+import { OsDescontoResumo } from "@/components/ordens-servico/os-desconto-resumo";
+
 import { initialValorFinalInput } from "@/lib/ordens-servico/os-valores-etapa";
 
 import type { OrdemServicoWithRelations } from "@/lib/types/database";
@@ -335,6 +337,8 @@ function OsWorkspaceFinancialForm({
   return (
 
     <div className="space-y-4">
+
+      <OsDescontoResumo ordem={ordem} valorBrutoOverride={summary.grossTotal} />
 
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
 

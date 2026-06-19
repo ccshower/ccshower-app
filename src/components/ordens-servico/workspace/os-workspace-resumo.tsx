@@ -2,20 +2,34 @@
 
 import { useState } from "react";
 
+import { OsDescontoModal } from "@/components/ordens-servico/os-desconto-modal";
 import { OsWorkspaceDetalhesSheet } from "@/components/ordens-servico/workspace/os-workspace-detalhes-sheet";
 import { resumirEndereco } from "@/components/ordens-servico/workspace/os-workspace-utils";
 import { t, tOsStage } from "@/lib/i18n";
+import { ordemTemDesconto } from "@/lib/ordens-servico/os-desconto";
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
+import { formatOsValorUsd } from "@/lib/ordens-servico/os-valores-etapa";
 import { clienteMapsUrl } from "@/lib/ordens-servico/visita-comercial";
 import type { OrdemServicoWithRelations } from "@/lib/types/database";
 
 type Props = {
   ordem: OrdemServicoWithRelations;
+  isAdmin?: boolean;
+  onAtualizado?: () => void;
 };
 
+function osPodeReceberDesconto(ordem: OrdemServicoWithRelations): boolean {
+  return ordem.status !== "completed" && parseOsStage(ordem.etapa_atual) !== "completed";
+}
+
 /** Resumo compacto — leitura rápida + ações de campo. */
-export function OsWorkspaceResumo({ ordem }: Props) {
+export function OsWorkspaceResumo({
+  ordem,
+  isAdmin = false,
+  onAtualizado,
+}: Props) {
   const [detalhesOpen, setDetalhesOpen] = useState(false);
+  const [descontoOpen, setDescontoOpen] = useState(false);
   const cor = ordem.equipe?.cor_primaria ?? "#7189a8";
   const mapsUrl = clienteMapsUrl(ordem.cliente);
   const etapa = tOsStage(parseOsStage(ordem.etapa_atual));
@@ -46,10 +60,26 @@ export function OsWorkspaceResumo({ ordem }: Props) {
                   {ordem.equipe.nome}
                 </span>
               ) : null}
+              {ordemTemDesconto(ordem) ? (
+                <span className="rounded-ds bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                  {t("os.desconto.badge", {
+                    amount: formatOsValorUsd(ordem.desconto_valor),
+                  })}
+                </span>
+              ) : null}
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {isAdmin && osPodeReceberDesconto(ordem) ? (
+              <button
+                type="button"
+                onClick={() => setDescontoOpen(true)}
+                className="rounded-sm border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-900 hover:bg-amber-100"
+              >
+                {t("os.desconto.button")}
+              </button>
+            ) : null}
             {mapsUrl ? (
               <a
                 href={mapsUrl}
@@ -83,6 +113,15 @@ export function OsWorkspaceResumo({ ordem }: Props) {
         open={detalhesOpen}
         onClose={() => setDetalhesOpen(false)}
       />
+
+      {isAdmin ? (
+        <OsDescontoModal
+          ordem={ordem}
+          open={descontoOpen}
+          onClose={() => setDescontoOpen(false)}
+          onSalvo={() => onAtualizado?.()}
+        />
+      ) : null}
     </>
   );
 }

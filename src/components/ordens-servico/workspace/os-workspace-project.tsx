@@ -14,6 +14,7 @@ import {
   salvarValorProjeto,
 } from "@/app/ordens-servico/projeto-actions";
 import { validarSlotVisitaDisponivel } from "@/app/ordens-servico/agenda-disponibilidade";
+import { OsDescontoResumo } from "@/components/ordens-servico/os-desconto-resumo";
 import {
   OsAgendaSlotConflictModal,
   type OsAgendaSlotConflictDraft,
@@ -526,6 +527,8 @@ export function OsWorkspaceProject({
 
   return (
     <div className="space-y-4">
+      <OsDescontoResumo ordem={ordem} />
+
       {retornoParcialInstalacao && resumoRetornoParcial ? (
         <div className="rounded-sm border-2 border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-red-800">

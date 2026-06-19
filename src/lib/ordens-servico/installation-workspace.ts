@@ -1,3 +1,4 @@
+import { valorContratadoLiquido } from "@/lib/ordens-servico/os-desconto";
 import { moneyInputFromNumber, parseValorTotalInput } from "@/lib/ordens-servico/financial-workspace";
 import {
   parseVisitPaymentMethod,
@@ -47,16 +48,13 @@ export function buildInstallationFinancialStatus(os: {
   valor_projeto?: number | string | null;
   valor_comercial?: number | string | null;
   valor_previsto?: number | string | null;
+  desconto_valor?: number | string | null;
   visit_payment_received?: boolean | null;
   visit_payment_amount?: number | string | null;
   installation_payment_received?: boolean | null;
   installation_payment_amount?: number | string | null;
 }): InstallationFinancialStatus {
-  const total =
-    toMoneyNumber(os.valor_final) ||
-    toMoneyNumber(os.valor_projeto) ||
-    toMoneyNumber(os.valor_comercial) ||
-    toMoneyNumber(os.valor_previsto);
+  const total = valorContratadoLiquido(os);
   const visitReceived = os.visit_payment_received
     ? toMoneyNumber(os.visit_payment_amount)
     : 0;

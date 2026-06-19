@@ -20,6 +20,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   equipes: Equipe[];
   viewerCanSeeFinancial?: boolean;
+  isAdmin?: boolean;
   backHref: string;
 };
 
@@ -30,6 +31,7 @@ export function OsWorkspacePage({
   ordem: initial,
   equipes,
   viewerCanSeeFinancial = false,
+  isAdmin = false,
   backHref,
 }: Props) {
   const router = useRouter();
@@ -74,7 +76,11 @@ export function OsWorkspacePage({
 
       <OsBloqueioOperacionalBanner ordem={ordem} onAtualizado={recarregar} />
 
-      <OsWorkspaceResumo ordem={ordem} />
+      <OsWorkspaceResumo
+        ordem={ordem}
+        isAdmin={isAdmin}
+        onAtualizado={recarregar}
+      />
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:items-start lg:gap-4">
         {/* Coluna esquerda: contexto + histórico (ordem operacional) */}

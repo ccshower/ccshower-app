@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { CampoPageFrame } from "@/components/layout/campo-page-frame";
 import { OsWorkspacePage } from "@/components/ordens-servico/workspace/os-workspace-page";
 import { getUsuarioWithEquipe } from "@/lib/auth/get-usuario-with-equipe";
+import { isAdmin } from "@/lib/auth/is-admin";
 import { canViewFinancialValues } from "@/lib/auth/financial-visibility";
 import {
   resolveCampoNavTabForOs,
@@ -56,6 +57,7 @@ export default async function OsWorkspaceRoutePage({ params, searchParams }: Pro
         ordem={ordem}
         equipes={formData.equipes}
         viewerCanSeeFinancial={viewerCanSeeFinancial}
+        isAdmin={isAdmin(usuario)}
         backHref={backHref}
       />
     </CampoPageFrame>

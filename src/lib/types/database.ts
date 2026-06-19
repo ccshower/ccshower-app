@@ -123,6 +123,10 @@ export type OrdemServico = {
   installation_payment_notes: string | null;
   installation_balance_pending_acknowledged: boolean;
   possui_instalacao: boolean;
+  desconto_valor?: number | null;
+  desconto_justificativa?: string | null;
+  desconto_lancado_por?: string | null;
+  desconto_lancado_em?: string | null;
   repair_ativo?: boolean;
   repair_episode_id?: string | null;
   equipe_atual_id: string | null;
