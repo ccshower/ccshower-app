@@ -485,6 +485,23 @@ export async function salvarStatusAmbienteInstalacao(
       if (blockErr) return { ok: false, message: blockErr };
     }
 
+    if (status === "completed") {
+      const { count, error: photoErr } = await supabase
+        .from("os_anexos")
+        .select("id", { count: "exact", head: true })
+        .eq("ordem_servico_id", osId)
+        .eq("os_ambiente_id", ambienteId)
+        .eq("tipo", OS_ANEXO_TIPO_INSTALLATION);
+
+      if (photoErr) return { ok: false, message: photoErr.message };
+      if (!count) {
+        return {
+          ok: false,
+          message: "Upload at least one installation photo for this environment before marking it completed.",
+        };
+      }
+    }
+
     const updateRow: Record<string, unknown> = {
       instalacao_status: status,
       instalacao_bloqueio_categoria: null,

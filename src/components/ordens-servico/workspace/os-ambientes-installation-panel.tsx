@@ -6,6 +6,7 @@ import { salvarStatusAmbienteInstalacao } from "@/app/ordens-servico/instalacao-
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import {
   ambienteInstalacaoFromRow,
+  ambienteInstalacaoSomenteLeitura,
   categoriasBloqueioAmbienteInstalacao,
   isAmbienteInstalacaoConcluido,
   motivosBloqueioAmbienteInstalacao,
@@ -59,7 +60,6 @@ function AmbienteInstalacaoCard({
   onMessage?: (message: string | null) => void;
 }) {
   const initial = ambienteInstalacaoFromRow(ambiente);
-  const jaInstalado = isAmbienteInstalacaoConcluido(ambiente);
   const [status, setStatus] = useState<OsAmbienteInstalacaoStatus>(initial.status);
   const [categoria, setCategoria] = useState(initial.bloqueio_categoria ?? "");
   const [motivo, setMotivo] = useState(initial.bloqueio_motivo ?? "");
@@ -113,12 +113,17 @@ function AmbienteInstalacaoCard({
       return;
     }
     if (next === "completed") {
-      persistStatus({
-        status: "completed",
-        bloqueio_categoria: null,
-        bloqueio_motivo: null,
-        bloqueio_observacao: null,
-      });
+      if (fotos.length > 0) {
+        persistStatus({
+          status: "completed",
+          bloqueio_categoria: null,
+          bloqueio_motivo: null,
+          bloqueio_observacao: null,
+        });
+      } else {
+        onMessage?.(t("os.workspace.installation.ambientePhotosRequired"));
+      }
+      return;
     }
   }
 
@@ -131,6 +136,20 @@ function AmbienteInstalacaoCard({
     });
   }
 
+  async function confirmarConcluidoAposFoto() {
+    const r = await salvarStatusAmbienteInstalacao(ordemId, ambiente.id, {
+      status: "completed",
+      bloqueio_categoria: null,
+      bloqueio_motivo: null,
+      bloqueio_observacao: null,
+    });
+    if (!r.ok) {
+      onMessage?.(r.message);
+      return;
+    }
+    onAtualizado();
+  }
+
   function onPhotosSelected(files: File[]) {
     if (files.length === 0) return;
     startTransition(async () => {
@@ -141,13 +160,20 @@ function AmbienteInstalacaoCard({
         return;
       }
       await onReloadFotos();
-      onAtualizado();
+      const deveConcluir =
+        status === "completed" || isAmbienteInstalacaoConcluido(ambiente);
+      if (deveConcluir) {
+        await confirmarConcluidoAposFoto();
+      } else {
+        onAtualizado();
+      }
     });
   }
 
-  const busy = disabled || pending || jaInstalado;
+  const somenteLeitura = ambienteInstalacaoSomenteLeitura(ambiente, fotos.length);
+  const busy = disabled || pending || somenteLeitura;
 
-  if (jaInstalado) {
+  if (somenteLeitura) {
     return (
       <li className="rounded-sm border border-emerald-200 bg-emerald-50/40 p-3 shadow-sheet">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -318,6 +344,11 @@ function AmbienteInstalacaoCard({
             {t("os.workspace.installation.ambientePhotosRequired")}
           </p>
         )}
+        {isAmbienteInstalacaoConcluido(ambiente) && fotos.length === 0 ? (
+          <p className="mt-2 text-xs font-medium text-amber-800">
+            {t("os.workspace.installation.ambienteConcluidoSemFoto")}
+          </p>
+        ) : null}
       </div>
     </li>
   );

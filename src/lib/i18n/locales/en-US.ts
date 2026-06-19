@@ -267,6 +267,11 @@ export const enUS = {
         blockNotesPlaceholder: "e.g. tempered glass broken during install",
         saveBlock: "Save block",
         ambientePhotosRequired: "At least one photo required when marking completed.",
+        ambienteConcluidoSemFoto:
+          "Environment marked completed but no photo linked. Upload at least one photo for this bathroom.",
+        photosRequired: "Upload at least one installation photo.",
+        checklistIncomplete: "Check all items on the separation list.",
+        financialIncomplete: "Record balance payment or confirm it remains pending.",
         ambientePendingBeforeFinish:
           "Mark as completed or blocked (and save the block) before finishing.",
         ambienteBlockBeforeFinish: "Save the block with category and reason before finishing.",

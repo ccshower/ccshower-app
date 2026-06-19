@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
   confirmarSaldoPendenteInstalacao,
@@ -16,11 +16,12 @@ import { OsInstallationSeparationCard } from "@/components/ordens-servico/worksp
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
 import { t } from "@/lib/i18n";
-import { parseOsAmbienteInstalacaoStatus, validarCapturaBloqueioAmbiente } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import { parseOsAmbienteInstalacaoStatus, validarCapturaBloqueioAmbiente, validarFinalizacaoInstalacaoAmbientes } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import {
   buildInstallationFinancialStatus,
   formatInstallationBalance,
   installationPaymentFromOrdem,
+  isSeparationItemChecked,
   type InstallationPaymentCapture,
 } from "@/lib/ordens-servico/installation-workspace";
 import {
@@ -84,6 +85,62 @@ export function OsWorkspaceInstallation({
   const [savedReceipt, setSavedReceipt] = useState<OsAnexoComUrl | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const validacaoAmbientes = useMemo(
+    () =>
+      useAmbientes
+        ? validarFinalizacaoInstalacaoAmbientes(ambientes, fotos)
+        : { ok: true as const, modo: "completa" as const },
+    [useAmbientes, ambientes, fotos],
+  );
+
+  const checklistPronto = useMemo(
+    () =>
+      checklist.length === 0 ||
+      checklist.every((item) => isSeparationItemChecked(item)),
+    [checklist],
+  );
+
+  const financeiroPronto = useMemo(() => {
+    if (financial.isPaid || financial.balance <= 0) return true;
+    if (balanceAcknowledged) return true;
+    if (payment.received && payment.amount.trim() && payment.method) {
+      return true;
+    }
+    return false;
+  }, [financial.isPaid, financial.balance, balanceAcknowledged, payment]);
+
+  const fotosProntas = useMemo(() => {
+    if (!useAmbientes) return fotos.length > 0;
+    return validacaoAmbientes.ok;
+  }, [useAmbientes, fotos.length, validacaoAmbientes.ok]);
+
+  const podeFinalizar =
+    fotosProntas && checklistPronto && financeiroPronto && !fluxoBloqueado;
+
+  const hintFinalizarDesabilitado = useMemo(() => {
+    if (podeFinalizar) return null;
+    if (!validacaoAmbientes.ok && "message" in validacaoAmbientes) {
+      return validacaoAmbientes.message;
+    }
+    if (!checklistPronto) {
+      return t("os.workspace.installation.checklistIncomplete");
+    }
+    if (!financeiroPronto) {
+      return t("os.workspace.installation.financialIncomplete");
+    }
+    if (!useAmbientes && fotos.length === 0) {
+      return t("os.workspace.installation.photosRequired");
+    }
+    return null;
+  }, [
+    podeFinalizar,
+    validacaoAmbientes,
+    checklistPronto,
+    financeiroPronto,
+    useAmbientes,
+    fotos.length,
+  ]);
 
   const savedNotesRef = useRef(ordem.installation_execution_notes ?? "");
   const saveNotesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -512,9 +569,15 @@ export function OsWorkspaceInstallation({
         </p>
       ) : null}
 
+      {hintFinalizarDesabilitado && !pending ? (
+        <p className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {hintFinalizarDesabilitado}
+        </p>
+      ) : null}
+
       <button
         type="button"
-        disabled={busy || fluxoBloqueado}
+        disabled={pending || !podeFinalizar}
         onClick={finalizar}
         className="w-full rounded-sm bg-cc-ink py-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-white shadow-lift hover:bg-cc-deep disabled:opacity-40"
       >

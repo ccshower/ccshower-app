@@ -71,6 +71,25 @@ export function ambientesInstalacaoConcluidos(ambientes: OsAmbiente[]): OsAmbien
   return ambientes.filter(isAmbienteInstalacaoConcluido);
 }
 
+/** Ambiente concluído com foto — somente leitura na instalação (ex.: retorno parcial). */
+export function ambienteInstalacaoSomenteLeitura(
+  amb: OsAmbiente,
+  fotosNoAmbiente: number,
+): boolean {
+  return isAmbienteInstalacaoConcluido(amb) && fotosNoAmbiente > 0;
+}
+
+export function contarFotosInstalacaoPorAmbiente(
+  fotos: Pick<OsAnexo, "os_ambiente_id">[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const f of fotos) {
+    if (!f.os_ambiente_id) continue;
+    map.set(f.os_ambiente_id, (map.get(f.os_ambiente_id) ?? 0) + 1);
+  }
+  return map;
+}
+
 export type ResumoRetornoInstalacaoParcial = {
   instalados: string[];
   bloqueados: { nome: string; motivo: string | null }[];

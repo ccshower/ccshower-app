@@ -267,6 +267,11 @@ export const ptBR = {
         blockNotesPlaceholder: "ex.: vidro temperado quebrou na instalação",
         saveBlock: "Salvar bloqueio",
         ambientePhotosRequired: "Pelo menos uma foto ao marcar como concluído.",
+        ambienteConcluidoSemFoto:
+          "Ambiente marcado como concluído, mas sem foto vinculada. Envie pelo menos uma foto deste banheiro.",
+        photosRequired: "Envie pelo menos uma foto da instalação.",
+        checklistIncomplete: "Conferir todos os itens da lista de separação.",
+        financialIncomplete: "Registre o pagamento do saldo ou confirme que permanece pendente.",
         ambientePendingBeforeFinish:
           "Marque como concluído ou bloqueado (e salve o bloqueio) antes de finalizar.",
         ambienteBlockBeforeFinish: "Salve o bloqueio com categoria e motivo antes de finalizar.",
