@@ -131,8 +131,8 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
       update({ received: true });
     }
 
-    function onReceiptSelected(files: FileList | null) {
-      const file = files?.[0];
+    function onReceiptSelected(files: File[]) {
+      const file = files[0];
       if (!file) return;
       const previewUrl = file.type.startsWith("image/")
         ? URL.createObjectURL(file)

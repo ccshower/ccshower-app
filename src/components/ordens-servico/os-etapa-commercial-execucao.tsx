@@ -52,8 +52,8 @@ export function OsEtapaCommercialExecucao({
     setAnotacoes(ordem.anotacoes_tecnicas ?? "");
   }, [ordem.anotacoes_tecnicas, ordem.id]);
 
-  function onFilesSelected(files: FileList | null) {
-    if (!files?.length) return;
+  function onFilesSelected(files: File[]) {
+    if (files.length === 0) return;
     startTransition(async () => {
       setMsg(null);
       const r = await uploadAnexosVisitaViaApi(ordem.id, files);

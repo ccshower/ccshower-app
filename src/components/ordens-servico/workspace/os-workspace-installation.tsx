@@ -176,8 +176,8 @@ export function OsWorkspaceInstallation({
     };
   }, [payment, ordem.id]);
 
-  function onPhotosSelected(files: FileList | null) {
-    if (!files?.length) return;
+  function onPhotosSelected(files: File[]) {
+    if (files.length === 0) return;
     startTransition(async () => {
       setMsg(null);
       const r = await uploadFotosInstalacaoViaApi(ordem.id, files);
@@ -190,8 +190,8 @@ export function OsWorkspaceInstallation({
     });
   }
 
-  function onReceiptSelected(files: FileList | null) {
-    const file = files?.[0];
+  function onReceiptSelected(files: File[]) {
+    const file = files[0];
     if (!file) return;
     startTransition(async () => {
       setMsg(null);

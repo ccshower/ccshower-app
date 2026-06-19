@@ -236,8 +236,12 @@ export function OsAmbientesComercialPanel({
     );
   }
 
-  async function onFilesForAmbiente(ambienteId: string, nome: string, files: FileList | null) {
-    if (!files?.length) return;
+  async function onFilesForAmbiente(
+    ambienteId: string,
+    nome: string,
+    files: File[],
+  ) {
+    if (files.length === 0) return;
     if (!nome.trim()) {
       onMessage?.(t("os.ambientes.nameRequiredForPhotos"));
       return;
@@ -268,8 +272,8 @@ export function OsAmbientesComercialPanel({
     });
   }
 
-  function onFilesLegacy(files: FileList | null) {
-    if (!files?.length) return;
+  function onFilesLegacy(files: File[]) {
+    if (files.length === 0) return;
     startTransition(async () => {
       onMessage?.(null);
       const r = await uploadAnexosVisitaViaApi(ordem.id, files);

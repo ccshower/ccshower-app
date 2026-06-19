@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 
 type Props = {
   disabled?: boolean;
-  onFilesSelected: (files: FileList | null) => void;
+  onFilesSelected: (files: File[]) => void;
   takePhotoLabel?: string;
   choosePhotosLabel?: string;
   /** Gallery/file picker accept attribute (camera always uses image/*). */
@@ -38,8 +38,9 @@ export function OsPhotoUploadActions({
 
   function handleFiles(files: FileList | null) {
     if (!files?.length) return;
-    onFilesSelected(files);
+    const copied = Array.from(files);
     clearInputs();
+    onFilesSelected(copied);
   }
 
   return (
