@@ -8,6 +8,12 @@ import {
   groupVisitPhotosByAmbiente,
   type VisitPhotoPreviewItem,
 } from "@/lib/ordens-servico/os-ambientes";
+import {
+  ambienteInstalacaoFromRow,
+  isAmbienteInstalacaoBloqueado,
+  isAmbienteInstalacaoConcluido,
+  osTemRetornoInstalacaoParcial,
+} from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { t } from "@/lib/i18n";
 import type { OsAmbiente, OsAnexoComUrl } from "@/lib/types/database";
 
@@ -108,6 +114,7 @@ export function OsAmbientesPhotosGrouped({
   }, [flat]);
 
   const hasAmbientes = ambientes.length > 0;
+  const retornoParcial = osTemRetornoInstalacaoParcial(ambientes);
   const visibleGroups = showEmptyAmbientes
     ? groups
     : groups.filter((g) => g.fotos.length > 0);
@@ -138,11 +145,27 @@ export function OsAmbientesPhotosGrouped({
 
   return (
     <div className="space-y-3">
-      {visibleGroups.map((group) => (
+      {visibleGroups.map((group) => {
+        const amb = ambientes.find((a) => a.id === group.ambienteId);
+        const concluido = amb ? isAmbienteInstalacaoConcluido(amb) : false;
+        const bloqueado = amb ? isAmbienteInstalacaoBloqueado(amb) : false;
+        const instalacao = amb ? ambienteInstalacaoFromRow(amb) : null;
+
+        return (
         <div key={group.ambienteId}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm font-medium text-cc-ink">{group.nome}</p>
             <div className="flex flex-wrap items-center gap-2">
+              {retornoParcial && concluido ? (
+                <span className="rounded-ds bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                  {t("os.workspace.project.ambienteInstalado")}
+                </span>
+              ) : null}
+              {retornoParcial && bloqueado ? (
+                <span className="rounded-ds bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                  {t("os.workspace.installation.ambienteStatus.blocked")}
+                </span>
+              ) : null}
               {group.valor_comercial != null && group.valor_comercial > 0 ? (
                 <p className="text-xs tabular-nums text-cc-muted">
                   ${formatAmbienteValorDisplay(group.valor_comercial)}
@@ -155,6 +178,11 @@ export function OsAmbientesPhotosGrouped({
               ) : null}
             </div>
           </div>
+          {bloqueado && instalacao?.bloqueio_motivo ? (
+            <p className="mt-1 text-xs text-amber-800">
+              {instalacao.bloqueio_categoria}: {instalacao.bloqueio_motivo}
+            </p>
+          ) : null}
           {group.especificacoes?.trim() ? (
             <p className="mt-1 whitespace-pre-wrap text-xs font-light text-cc-deep">
               {group.especificacoes}
@@ -187,10 +215,19 @@ export function OsAmbientesPhotosGrouped({
               ))}
             </ul>
           ) : showEmptyAmbientes ? (
-            <p className="mt-2 text-xs text-amber-700">{t("os.ambientes.photosRequired")}</p>
+            <p
+              className={`mt-2 text-xs ${
+                concluido ? "text-cc-muted" : "text-amber-700"
+              }`}
+            >
+              {concluido
+                ? t("os.workspace.project.ambienteInstaladoVisitPhotos")
+                : t("os.ambientes.photosRequired")}
+            </p>
           ) : null}
         </div>
-      ))}
+        );
+      })}
 
       {orphans.length > 0 ? (
         <div className={visibleGroups.length > 0 ? "border-t border-cc-border pt-3" : undefined}>

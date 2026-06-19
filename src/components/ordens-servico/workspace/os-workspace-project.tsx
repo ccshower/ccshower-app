@@ -25,6 +25,7 @@ import {
 import { OsVisitaAgendaPicker } from "@/components/ordens-servico/os-visita-agenda-picker";
 import { Field } from "@/components/ui/field";
 import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa";
+import { osTemRetornoInstalacaoParcial, resumoRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { OsAmbientesCncProjectPanel } from "@/components/ordens-servico/workspace/os-ambientes-cnc-project-panel";
 import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
 import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
@@ -520,8 +521,38 @@ export function OsWorkspaceProject({
     materialPending ||
     instalacaoPending;
 
+  const retornoParcialInstalacao = osTemRetornoInstalacaoParcial(ordem.ambientes ?? []);
+  const resumoRetornoParcial = resumoRetornoInstalacaoParcial(ordem.ambientes ?? []);
+
   return (
     <div className="space-y-4">
+      {retornoParcialInstalacao && resumoRetornoParcial ? (
+        <div className="rounded-sm border-2 border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-red-800">
+            {t("os.workspace.project.partialInstallReturnTitle")}
+          </p>
+          <p className="mt-1">{t("os.workspace.project.partialInstallReturnHint")}</p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {resumoRetornoParcial.instalados.map((nome) => (
+              <li key={nome} className="flex items-center gap-2 text-emerald-900">
+                <span className="font-semibold uppercase tracking-wide">
+                  {t("os.workspace.project.ambienteInstalado")}:
+                </span>
+                {nome}
+              </li>
+            ))}
+            {resumoRetornoParcial.bloqueados.map((b) => (
+              <li key={b.nome} className="text-amber-900">
+                <span className="font-semibold uppercase tracking-wide">
+                  {t("os.workspace.installation.ambienteStatus.blocked")}:
+                </span>{" "}
+                {b.nome}
+                {b.motivo ? ` — ${b.motivo}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <OsValorReadonlyRow
           label={t("os.workspace.valores.commercial")}

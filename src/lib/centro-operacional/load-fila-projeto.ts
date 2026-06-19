@@ -4,6 +4,8 @@ import {
   hasAgendaEventoStart,
 } from "@/lib/ordens-servico/agenda-evento-query";
 import { isOsNaFilaProjeto } from "@/lib/ordens-servico/fila-projeto-query";
+import { resumoRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import type { OsAmbiente } from "@/lib/types/database";
 import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
 import type { Cliente, Equipe } from "@/lib/types/database";
 
@@ -56,6 +58,7 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
     { data: cncRows, error: cncError },
     { data: listRows, error: listError },
     { data: instRows, error: instError },
+    { data: ambRows, error: ambError },
   ] = await Promise.all([
     supabase.from("clientes").select("id, nome").in("id", clienteIds).eq("ativo", true),
     equipeIds.length
@@ -82,6 +85,14 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
       .in("ordem_servico_id", osIds)
       .eq("tipo_evento", "installation")
       .neq("status", "cancelled"),
+    supabase
+      .from("os_ambientes")
+      .select(
+        "ordem_servico_id, nome, instalacao_status, instalacao_bloqueio_motivo",
+      )
+      .in("ordem_servico_id", osIds)
+      .eq("ativo", true)
+      .order("sort_order", { ascending: true }),
   ]);
 
   const error =
@@ -90,6 +101,7 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
     cncError?.message ??
     listError?.message ??
     instError?.message ??
+    ambError?.message ??
     null;
 
   if (error) {
@@ -110,6 +122,14 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
       .map((ev) => ev.ordem_servico_id as string),
   );
 
+  const ambientesPorOs = new Map<string, OsAmbiente[]>();
+  for (const row of ambRows ?? []) {
+    const osId = row.ordem_servico_id as string;
+    const list = ambientesPorOs.get(osId) ?? [];
+    list.push(row as OsAmbiente);
+    ambientesPorOs.set(osId, list);
+  }
+
   const fila: FilaProjetoItem[] = [];
 
   for (const os of rows) {
@@ -117,6 +137,8 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
     const equipeId = (os.equipe_atual_id ?? os.equipe_id) as string | null;
     const equipe = equipeId ? eqMap.get(equipeId) : undefined;
     const osId = os.id as string;
+    const ambientes = ambientesPorOs.get(osId) ?? [];
+    const retornoParcial = resumoRetornoInstalacaoParcial(ambientes);
 
     fila.push({
       osId,
@@ -133,6 +155,9 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
       temCnc: cncOsIds.has(osId),
       temListaSeparacao: listOsIds.has(osId),
       temInstalacaoAgendada: instOsIds.has(osId),
+      retornoInstalacaoParcial: retornoParcial != null,
+      ambientesInstalados: retornoParcial?.instalados ?? [],
+      ambientesBloqueados: retornoParcial?.bloqueados ?? [],
     });
   }
 

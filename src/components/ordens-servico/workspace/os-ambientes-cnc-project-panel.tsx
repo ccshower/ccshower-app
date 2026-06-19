@@ -4,6 +4,13 @@ import { useRef, useState, useTransition } from "react";
 
 import { OsAmbientesAnexosFileGrouped } from "@/components/ordens-servico/os-ambientes-anexos-file-grouped";
 import { groupAnexosByAmbiente } from "@/lib/ordens-servico/os-ambientes";
+import {
+  ambienteInstalacaoFromRow,
+  isAmbienteInstalacaoBloqueado,
+  isAmbienteInstalacaoConcluido,
+  isAmbienteProjetoEditavel,
+  osTemRetornoInstalacaoParcial,
+} from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { uploadCncViaApi } from "@/lib/ordens-servico/upload-cnc-client";
 import { t } from "@/lib/i18n";
 import type { OrdemServicoWithRelations, OsAnexoComUrl } from "@/lib/types/database";
@@ -42,6 +49,7 @@ export function OsAmbientesCncProjectPanel({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const useMultiAmbiente = ambientes.length > 0;
+  const retornoParcial = osTemRetornoInstalacaoParcial(ambientes);
   const { groups, orphans } = groupAnexosByAmbiente(anexosCnc, ambientes);
 
   function openPicker(ambienteId: string | null) {
@@ -81,6 +89,12 @@ export function OsAmbientesCncProjectPanel({
           : t("os.workspace.project.cncHint")}
       </p>
 
+      {retornoParcial ? (
+        <p className="mt-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {t("os.workspace.project.partialInstallReturnHint")}
+        </p>
+      ) : null}
+
       {feedback ? (
         <p className="mt-2 rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {feedback}
@@ -101,21 +115,49 @@ export function OsAmbientesCncProjectPanel({
         <ul className="mt-3 space-y-3">
           {ambientes.map((amb) => {
             const files = groups.find((g) => g.ambienteId === amb.id)?.fotos ?? [];
+            const instalacao = ambienteInstalacaoFromRow(amb);
+            const editavel = isAmbienteProjetoEditavel(amb, ambientes);
+            const concluido = isAmbienteInstalacaoConcluido(amb);
+            const bloqueado = isAmbienteInstalacaoBloqueado(amb);
+            const cardLocked = disabled || pending || !editavel;
+
             return (
               <li
                 key={amb.id}
-                className="rounded-sm border border-cc-border bg-white/80 p-3 shadow-sheet"
+                className={`rounded-sm border bg-white/80 p-3 shadow-sheet ${
+                  !editavel ? "border-cc-border/60 opacity-80" : "border-cc-border"
+                }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-cc-ink">{amb.nome}</p>
-                  {files.length > 0 ? (
-                    <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-cc-muted">
-                      {t("os.workspace.project.cncFileCount", {
-                        count: String(files.length),
-                      })}
-                    </span>
-                  ) : null}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {concluido ? (
+                      <span className="rounded-ds bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                        {t("os.workspace.project.ambienteInstalado")}
+                      </span>
+                    ) : null}
+                    {bloqueado ? (
+                      <span className="rounded-ds bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                        {t("os.workspace.installation.ambienteStatus.blocked")}
+                      </span>
+                    ) : null}
+                    {files.length > 0 ? (
+                      <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-cc-muted">
+                        {t("os.workspace.project.cncFileCount", {
+                          count: String(files.length),
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
+                {bloqueado && instalacao.bloqueio_motivo ? (
+                  <p className="mt-1 text-xs text-amber-800">
+                    {instalacao.bloqueio_categoria}: {instalacao.bloqueio_motivo}
+                    {instalacao.bloqueio_observacao
+                      ? ` — ${instalacao.bloqueio_observacao}`
+                      : ""}
+                  </p>
+                ) : null}
                 {amb.especificacoes?.trim() ? (
                   <p className="mt-1 whitespace-pre-wrap text-xs font-light text-cc-deep">
                     {amb.especificacoes}
@@ -153,13 +195,15 @@ export function OsAmbientesCncProjectPanel({
 
                 <button
                   type="button"
-                  disabled={disabled || pending}
+                  disabled={cardLocked}
                   onClick={() => openPicker(amb.id)}
-                  className="mt-3 w-full rounded-sm border border-dashed border-cc-border px-3 py-2.5 text-xs font-medium uppercase tracking-[0.08em] text-cc-muted hover:border-cc-blue-soft hover:bg-cc-blue-soft/10 disabled:opacity-40"
+                  className="mt-3 w-full rounded-sm border border-dashed border-cc-border px-3 py-2.5 text-xs font-medium uppercase tracking-[0.08em] text-cc-muted hover:border-cc-blue-soft hover:bg-cc-blue-soft/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {pending && pendingAmbienteId === amb.id
-                    ? t("os.workspace.project.cncUploading")
-                    : t("os.workspace.project.cncUploadForAmbiente")}
+                  {!editavel
+                    ? t("os.workspace.project.ambienteInstaladoLocked")
+                    : pending && pendingAmbienteId === amb.id
+                      ? t("os.workspace.project.cncUploading")
+                      : t("os.workspace.project.cncUploadForAmbiente")}
                 </button>
               </li>
             );

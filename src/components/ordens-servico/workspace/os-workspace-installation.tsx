@@ -16,7 +16,7 @@ import { OsInstallationSeparationCard } from "@/components/ordens-servico/worksp
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
 import { t } from "@/lib/i18n";
-import { parseOsAmbienteInstalacaoStatus } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import { parseOsAmbienteInstalacaoStatus, validarCapturaBloqueioAmbiente } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import {
   buildInstallationFinancialStatus,
   formatInstallationBalance,
@@ -249,6 +249,26 @@ export function OsWorkspaceInstallation({
       ? t("os.workspace.installation.confirmFinishPartial")
       : t("os.workspace.installation.confirmFinish");
     if (!confirm(confirmMsg)) return;
+
+    for (const amb of ambientes) {
+      const nome = amb.nome?.trim() || "Ambiente";
+      const st = parseOsAmbienteInstalacaoStatus(amb.instalacao_status);
+      if (st === "pending") {
+        setMsg(`${nome}: ${t("os.workspace.installation.ambientePendingBeforeFinish")}`);
+        return;
+      }
+      if (st === "blocked") {
+        const blockErr = validarCapturaBloqueioAmbiente(
+          amb.instalacao_bloqueio_categoria,
+          amb.instalacao_bloqueio_motivo,
+        );
+        if (blockErr) {
+          setMsg(`${nome}: ${t("os.workspace.installation.ambienteBlockBeforeFinish")}`);
+          return;
+        }
+      }
+    }
+
     startTransition(async () => {
       setMsg(null);
       if (executionNotes.trim() !== savedNotesRef.current.trim()) {
@@ -262,13 +282,18 @@ export function OsWorkspaceInstallation({
         }
         savedNotesRef.current = executionNotes;
       }
-      await salvarPagamentoInstalacao(ordem.id, payment);
+      const paySave = await salvarPagamentoInstalacao(ordem.id, payment);
+      if (!paySave.ok) {
+        setMsg(paySave.message);
+        return;
+      }
       const r = await finalizarInstalacao(ordem.id);
       if (!r.ok) {
         setMsg(r.message);
         return;
       }
       if (r.modo === "parcial_projeto") {
+        setMsg(t("os.workspace.installation.partialFinishSuccess"));
         onAtualizado();
         return;
       }

@@ -11,10 +11,7 @@ import {
   validarCapturaBloqueioAmbiente,
   validarFinalizacaoInstalacaoAmbientes,
 } from "@/lib/ordens-servico/os-ambiente-instalacao";
-import {
-  buildOperationalSnapshot,
-  parseOsStage,
-} from "@/lib/ordens-servico/operacional-snapshot";
+import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import {
   buildInstallationFinancialStatus,
   installationPaymentFromOrdem,
@@ -22,8 +19,9 @@ import {
   parseInstallationPaymentAmount,
   type InstallationPaymentCapture,
 } from "@/lib/ordens-servico/installation-workspace";
-import { orderStatusOnEnterStage } from "@/lib/ordens-servico/workflow";
-import { resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
+import {
+  retornarOsInstalacaoAoProjeto,
+} from "@/lib/ordens-servico/retorno-projeto-instalacao";
 import {
   OS_ANEXO_TIPO_INSTALLATION,
   OS_ANEXO_TIPO_INSTALLATION_PAYMENT_RECEIPT,
@@ -454,73 +452,14 @@ async function retornarOsAoProjetoInstalacaoParcial(
   userId: string,
   ambientes: OsAmbiente[],
 ): Promise<ActionResult> {
-  const blocked = ambientes.filter(
-    (a) => parseOsAmbienteInstalacaoStatus(a.instalacao_status) === "blocked",
-  );
-  const blockedNames = blocked.map((a) => a.nome?.trim() || "Environment").join(", ");
-  const descricao = `Partial installation — blocked environments: ${blockedNames}. Work order returned to Project.`;
-
-  const { data: os, error: osErr } = await supabase
-    .from("ordens_servico")
-    .select(
-      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id, status",
-    )
-    .eq("id", osId)
-    .single();
-
-  if (osErr || !os) {
-    return { ok: false, message: osErr?.message ?? "Work order not found" };
-  }
-
-  const equipeFallback =
-    (os.equipe_atual_id as string | null) ?? (os.equipe_id as string | null);
-
-  const { equipeId, error: eqErr } = await resolveDefaultTeamForStage(
+  const ret = await retornarOsInstalacaoAoProjeto(
     supabase,
-    "project",
-    equipeFallback,
+    osId,
+    userId,
+    ambientes,
   );
-
-  if (eqErr || !equipeId) {
-    return {
-      ok: false,
-      message: eqErr ?? "Project stage team not configured",
-    };
-  }
-
-  const statusOrdem = orderStatusOnEnterStage("project");
-  const snapshot = buildOperationalSnapshot(equipeId, "project", statusOrdem);
-
-  const { error: updErr } = await supabase
-    .from("ordens_servico")
-    .update({
-      etapa_atual: snapshot.etapa_atual,
-      status_atual: snapshot.status_atual,
-      equipe_atual_id: snapshot.equipe_atual_id,
-      equipe_id: equipeId,
-      status: statusOrdem,
-    })
-    .eq("id", osId);
-
-  if (updErr) return { ok: false, message: updErr.message };
-
-  const when = new Date().toISOString();
-  const { error: evErr } = await supabase.from("agenda_eventos").insert({
-    ordem_servico_id: osId,
-    cliente_id: os.cliente_id as string,
-    equipe_id: equipeFallback ?? equipeId,
-    responsavel_id: userId,
-    tipo_evento: "stage_changed",
-    etapa: "project",
-    status: "completed",
-    titulo: "stage_changed",
-    descricao,
-    ...spreadAgendaEventoDatetime(when),
-  });
-
-  if (evErr) return { ok: false, message: evErr.message };
-
-  return { ok: true, id: osId };
+  if (!ret.ok) return ret;
+  return { ok: true, id: ret.id };
 }
 
 export async function salvarStatusAmbienteInstalacao(
@@ -538,7 +477,7 @@ export async function salvarStatusAmbienteInstalacao(
 
     const status = parseOsAmbienteInstalacaoStatus(capture.status);
 
-    if (status === "blocked") {
+    if (status === "blocked" && capture.bloqueio_categoria && capture.bloqueio_motivo) {
       const blockErr = validarCapturaBloqueioAmbiente(
         capture.bloqueio_categoria,
         capture.bloqueio_motivo,

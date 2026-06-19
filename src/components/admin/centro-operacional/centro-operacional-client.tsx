@@ -1334,6 +1334,9 @@ function FilaProjetoRow({
 }) {
   const status = filaProjetoStatusBadge(item.statusAtual);
   const pendencias = filaProjetoPendencias(item);
+  const bloqueadosLabel = item.ambientesBloqueados
+    .map((b) => (b.motivo ? `${b.nome} (${b.motivo})` : b.nome))
+    .join(" · ");
 
   return (
     <li className={last ? "" : "border-b border-cc-border"}>
@@ -1357,13 +1360,26 @@ function FilaProjetoRow({
             ) : (
               <span className="text-xs text-cc-muted">No team</span>
             )}
-            <span
-              className={`inline-flex items-center gap-1 rounded-ds px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.badge}`}
-            >
-              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} aria-hidden />
-              {status.label}
-            </span>
-            {pendencias.length > 0 ? (
+            {item.retornoInstalacaoParcial ? (
+              <span className="inline-flex items-center gap-1 rounded-ds bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 ring-1 ring-red-200">
+                {t("centro.projectQueue.partialInstallUrgent")}
+              </span>
+            ) : (
+              <span
+                className={`inline-flex items-center gap-1 rounded-ds px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.badge}`}
+              >
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} aria-hidden />
+                {status.label}
+              </span>
+            )}
+            {item.retornoInstalacaoParcial ? (
+              <span className="text-[10px] font-medium text-amber-900">
+                {t("centro.projectQueue.partialInstallSummary", {
+                  installed: item.ambientesInstalados.join(", "),
+                  blocked: bloqueadosLabel,
+                })}
+              </span>
+            ) : pendencias.length > 0 ? (
               <span className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
                 Missing: {pendencias.join(" · ")}
               </span>
@@ -1373,6 +1389,13 @@ function FilaProjetoRow({
               </span>
             )}
           </div>
+          {item.retornoInstalacaoParcial && pendencias.length > 0 ? (
+            <p className="mt-1 text-[10px] text-cc-muted">
+              {t("centro.projectQueue.partialInstallStillMissing", {
+                items: pendencias.join(" · "),
+              })}
+            </p>
+          ) : null}
         </div>
         <IconChevronRight className="h-4 w-4 shrink-0 text-cc-border-strong group-hover:text-cc-muted" />
       </button>

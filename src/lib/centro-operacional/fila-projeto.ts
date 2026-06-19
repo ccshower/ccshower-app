@@ -15,6 +15,10 @@ export type FilaProjetoItem = {
   temCnc: boolean;
   temListaSeparacao: boolean;
   temInstalacaoAgendada: boolean;
+  /** Instalação parcial — alguns ambientes concluídos, outros bloqueados. */
+  retornoInstalacaoParcial: boolean;
+  ambientesInstalados: string[];
+  ambientesBloqueados: { nome: string; motivo: string | null }[];
 };
 
 export const filaProjetoStatusConfig: Record<

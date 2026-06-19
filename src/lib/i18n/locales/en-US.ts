@@ -211,6 +211,13 @@ export const enUS = {
           "Installation date cannot be before the expected material date.",
         installationConflictAlreadyBooked:
           "An installation is already scheduled for this team at this time.",
+        partialInstallReturnHint:
+          "Partial installation return: completed environments are locked. Edit only environments with a pending block (CNC, material, etc.).",
+        partialInstallReturnTitle: "Partial installation — urgent action",
+        ambienteInstalado: "Installed",
+        ambienteInstaladoLocked: "Environment already installed",
+        ambienteInstaladoVisitPhotos:
+          "Already installed on site. Commercial visit photos are reference only.",
       },
       installation: {
         financialTitle: "Financial status",
@@ -260,7 +267,14 @@ export const enUS = {
         blockNotesPlaceholder: "e.g. tempered glass broken during install",
         saveBlock: "Save block",
         ambientePhotosRequired: "At least one photo required when marking completed.",
+        ambientePendingBeforeFinish:
+          "Mark as completed or blocked (and save the block) before finishing.",
+        ambienteBlockBeforeFinish: "Save the block with category and reason before finishing.",
         photosGeneral: "General photos (no environment linked)",
+        ambienteJaInstaladoHint:
+          "This environment is already installed. No further action needed here.",
+        partialFinishSuccess:
+          "Partial installation recorded. The work order returned to Project for blocked environments.",
       },
     },
     card: {
@@ -604,6 +618,14 @@ export const enUS = {
     fieldTeam: "Team",
     fieldType: "Type",
     fieldStatus: "Status",
+  },
+  centro: {
+    projectQueue: {
+      partialInstallUrgent: "Partial install",
+      partialInstallSummary:
+        "Installed: {installed} · Blocked: {blocked}",
+      partialInstallStillMissing: "Still missing in project: {items}",
+    },
   },
 } as const;
 

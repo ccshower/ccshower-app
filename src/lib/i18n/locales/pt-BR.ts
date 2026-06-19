@@ -211,6 +211,13 @@ export const ptBR = {
           "A data da instalação não pode ser anterior à data prevista do material.",
         installationConflictAlreadyBooked:
           "Já existe uma instalação agendada para esta equipe neste horário.",
+        partialInstallReturnHint:
+          "Retorno da instalação parcial: ambientes já instalados estão bloqueados para edição. Ajuste apenas os ambientes com bloqueio pendente (CNC, material, etc.).",
+        partialInstallReturnTitle: "Instalação parcial — ação urgente",
+        ambienteInstalado: "Instalado",
+        ambienteInstaladoLocked: "Ambiente já instalado",
+        ambienteInstaladoVisitPhotos:
+          "Já instalado na obra. Fotos da visita comercial são apenas referência.",
       },
       installation: {
         financialTitle: "Status financeiro",
@@ -260,7 +267,13 @@ export const ptBR = {
         blockNotesPlaceholder: "ex.: vidro temperado quebrou na instalação",
         saveBlock: "Salvar bloqueio",
         ambientePhotosRequired: "Pelo menos uma foto ao marcar como concluído.",
+        ambientePendingBeforeFinish:
+          "Marque como concluído ou bloqueado (e salve o bloqueio) antes de finalizar.",
+        ambienteBlockBeforeFinish: "Salve o bloqueio com categoria e motivo antes de finalizar.",
         photosGeneral: "Fotos gerais (sem ambiente vinculado)",
+        ambienteJaInstaladoHint: "Este ambiente já foi instalado. Não é necessário nova ação aqui.",
+        partialFinishSuccess:
+          "Instalação parcial registrada. A OS voltou ao Projeto para tratar os ambientes bloqueados.",
       },
     },
     card: {
@@ -539,6 +552,14 @@ export const ptBR = {
     fieldTeam: "Equipe",
     fieldType: "Tipo",
     fieldStatus: "Status",
+  },
+  centro: {
+    projectQueue: {
+      partialInstallUrgent: "Instalação parcial",
+      partialInstallSummary:
+        "Instalados: {installed} · Bloqueados: {blocked}",
+      partialInstallStillMissing: "Ainda falta no projeto: {items}",
+    },
   },
 } as const;
 

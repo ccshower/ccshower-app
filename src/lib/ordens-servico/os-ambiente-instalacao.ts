@@ -36,6 +36,61 @@ export function ambienteInstalacaoFromRow(amb: OsAmbiente): AmbienteInstalacaoCa
   };
 }
 
+export function isAmbienteInstalacaoConcluido(amb: OsAmbiente): boolean {
+  return parseOsAmbienteInstalacaoStatus(amb.instalacao_status) === "completed";
+}
+
+export function isAmbienteInstalacaoBloqueado(amb: OsAmbiente): boolean {
+  return parseOsAmbienteInstalacaoStatus(amb.instalacao_status) === "blocked";
+}
+
+/** OS voltou ao Projeto após instalação parcial (alguns concluídos, outros bloqueados). */
+export function osTemRetornoInstalacaoParcial(ambientes: OsAmbiente[]): boolean {
+  if (ambientes.length === 0) return false;
+  let completed = 0;
+  let blocked = 0;
+  for (const amb of ambientes) {
+    const status = parseOsAmbienteInstalacaoStatus(amb.instalacao_status);
+    if (status === "completed") completed++;
+    if (status === "blocked") blocked++;
+  }
+  return completed > 0 && blocked > 0;
+}
+
+/** No Projeto pós-instalação parcial: só ambientes bloqueados podem ser editados. */
+export function isAmbienteProjetoEditavel(amb: OsAmbiente, ambientes: OsAmbiente[]): boolean {
+  if (!osTemRetornoInstalacaoParcial(ambientes)) return true;
+  return isAmbienteInstalacaoBloqueado(amb);
+}
+
+export function ambientesInstalacaoBloqueados(ambientes: OsAmbiente[]): OsAmbiente[] {
+  return ambientes.filter(isAmbienteInstalacaoBloqueado);
+}
+
+export function ambientesInstalacaoConcluidos(ambientes: OsAmbiente[]): OsAmbiente[] {
+  return ambientes.filter(isAmbienteInstalacaoConcluido);
+}
+
+export type ResumoRetornoInstalacaoParcial = {
+  instalados: string[];
+  bloqueados: { nome: string; motivo: string | null }[];
+};
+
+export function resumoRetornoInstalacaoParcial(
+  ambientes: OsAmbiente[],
+): ResumoRetornoInstalacaoParcial | null {
+  if (!osTemRetornoInstalacaoParcial(ambientes)) return null;
+  return {
+    instalados: ambientesInstalacaoConcluidos(ambientes).map(
+      (a) => a.nome?.trim() || "Ambiente",
+    ),
+    bloqueados: ambientesInstalacaoBloqueados(ambientes).map((a) => ({
+      nome: a.nome?.trim() || "Ambiente",
+      motivo: a.instalacao_bloqueio_motivo ?? null,
+    })),
+  };
+}
+
 export function categoriasBloqueioAmbienteInstalacao(): string[] {
   return BLOQUEIO_OPCOES_POR_ETAPA.installation.map((o) => o.categoria);
 }

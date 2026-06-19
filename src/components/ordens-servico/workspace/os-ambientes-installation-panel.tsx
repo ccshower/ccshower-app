@@ -7,6 +7,7 @@ import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-uploa
 import {
   ambienteInstalacaoFromRow,
   categoriasBloqueioAmbienteInstalacao,
+  isAmbienteInstalacaoConcluido,
   motivosBloqueioAmbienteInstalacao,
   type AmbienteInstalacaoCapture,
   type OsAmbienteInstalacaoStatus,
@@ -58,6 +59,7 @@ function AmbienteInstalacaoCard({
   onMessage?: (message: string | null) => void;
 }) {
   const initial = ambienteInstalacaoFromRow(ambiente);
+  const jaInstalado = isAmbienteInstalacaoConcluido(ambiente);
   const [status, setStatus] = useState<OsAmbienteInstalacaoStatus>(initial.status);
   const [categoria, setCategoria] = useState(initial.bloqueio_categoria ?? "");
   const [motivo, setMotivo] = useState(initial.bloqueio_motivo ?? "");
@@ -143,7 +145,42 @@ function AmbienteInstalacaoCard({
     });
   }
 
-  const busy = disabled || pending;
+  const busy = disabled || pending || jaInstalado;
+
+  if (jaInstalado) {
+    return (
+      <li className="rounded-sm border border-emerald-200 bg-emerald-50/40 p-3 shadow-sheet">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-cc-ink">{ambiente.nome}</p>
+          <span className="rounded-ds bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+            {t("os.workspace.project.ambienteInstalado")}
+          </span>
+        </div>
+        {fotos.length > 0 ? (
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {fotos.map((f) => (
+              <li
+                key={f.id}
+                className="relative aspect-square overflow-hidden rounded-sm border border-cc-border"
+              >
+                {f.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.url}
+                    alt={f.nome_arquivo}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <p className="mt-2 text-xs text-cc-muted">
+          {t("os.workspace.installation.ambienteJaInstaladoHint")}
+        </p>
+      </li>
+    );
+  }
 
   return (
     <li className="rounded-sm border border-cc-border bg-white/80 p-3 shadow-sheet">

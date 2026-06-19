@@ -17,6 +17,8 @@ import {
 import { buildAgendaIntervalIso } from "@/lib/ordens-servico/datetime";
 import { compararYmd, hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
 import { parseValorEtapaInput } from "@/lib/ordens-servico/os-valores-etapa";
+import { osTemRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import { prepararAmbientesBloqueadosParaNovaInstalacao } from "@/lib/ordens-servico/retorno-projeto-instalacao";
 import {
   buildOperationalSnapshot,
   parseOsStage,
@@ -27,7 +29,7 @@ import {
   type EquipeStageFilterDebug,
 } from "@/lib/ordens-servico/workflow-equipe";
 import { createClient } from "@/lib/supabase/server";
-import type { CatalogoItem, Equipe, Fornecedor, OsSeparationListItem } from "@/lib/types/database";
+import type { CatalogoItem, Equipe, Fornecedor, OsAmbiente, OsSeparationListItem } from "@/lib/types/database";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -680,6 +682,16 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
 
     const { os } = loaded;
 
+    const { data: ambientes, error: ambErr } = await supabase
+      .from("os_ambientes")
+      .select("*")
+      .eq("ordem_servico_id", osId)
+      .eq("ativo", true);
+
+    if (ambErr) return { ok: false, message: ambErr.message };
+
+    const ambientesList = (ambientes ?? []) as OsAmbiente[];
+
     const ev = await registrarEventoProjetoConcluido(supabase, {
       ordem_servico_id: osId,
       cliente_id: os.cliente_id,
@@ -690,6 +702,15 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
 
     const trans = await transicionarEtapaOrdemServico(osId, "installation");
     if (!trans.ok) return trans;
+
+    if (osTemRetornoInstalacaoParcial(ambientesList)) {
+      const prep = await prepararAmbientesBloqueadosParaNovaInstalacao(
+        supabase,
+        osId,
+        ambientesList,
+      );
+      if (prep.error) return { ok: false, message: prep.error };
+    }
 
     const { data: evInst } = await supabase
       .from("agenda_eventos")
