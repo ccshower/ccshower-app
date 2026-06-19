@@ -1,17 +1,17 @@
-import { createClient } from "@/lib/supabase/server";
 import {
   AGENDA_EVENTO_DATETIME_COLUMNS,
+  agendaEventoStartIso,
   hasAgendaEventoStart,
 } from "@/lib/ordens-servico/agenda-evento-query";
-import { isOsNaFilaProjeto } from "@/lib/ordens-servico/fila-projeto-query";
-import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
+import { formatOperacionalDateTime } from "@/lib/ordens-servico/datetime";
+import { createClient } from "@/lib/supabase/server";
 import type { Cliente, Equipe } from "@/lib/types/database";
 
-import type { FilaProjetoItem } from "./fila-projeto";
+import type { FilaInstalacaoItem } from "./fila-instalacao";
 import { resolveFilaClienteNome } from "./fila-cliente-nome";
 
-export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
-  fila: FilaProjetoItem[];
+export async function loadFilaInstalacao(unidadeId?: string | null): Promise<{
+  fila: FilaInstalacaoItem[];
   error: string | null;
 }> {
   const supabase = await createClient();
@@ -19,11 +19,11 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
   let osQuery = supabase
     .from("ordens_servico")
     .select(
-      "id, cliente_id, titulo, criado_em, atualizado_em, equipe_id, equipe_atual_id, status_atual, etapa_atual, fornecedor_id, data_prevista_material",
+      "id, cliente_id, titulo, atualizado_em, equipe_id, equipe_atual_id, status_atual, etapa_atual, status",
     )
     .eq("ativo", true)
-    .eq("etapa_atual", "project")
-    .in("status_atual", ["project_pending", "project_in_progress"]);
+    .eq("etapa_atual", "installation")
+    .in("status", ["open", "scheduled", "in_progress"]);
 
   if (unidadeId) osQuery = osQuery.eq("unidade_id", unidadeId);
 
@@ -35,16 +35,15 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
     return { fila: [], error: osError.message };
   }
 
-  const rows = (osRows ?? []).filter(isOsNaFilaProjeto);
-  if (!rows.length) {
+  if (!osRows?.length) {
     return { fila: [], error: null };
   }
 
-  const osIds = rows.map((o) => o.id as string);
-  const clienteIds = [...new Set(rows.map((o) => o.cliente_id as string))];
+  const osIds = osRows.map((o) => o.id as string);
+  const clienteIds = [...new Set(osRows.map((o) => o.cliente_id as string))];
   const equipeIds = [
     ...new Set(
-      rows
+      osRows
         .map((o) => (o.equipe_atual_id ?? o.equipe_id) as string | null)
         .filter((id): id is string => Boolean(id)),
     ),
@@ -53,8 +52,6 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
   const [
     { data: clientes, error: clientesError },
     { data: equipesRows, error: equipesError },
-    { data: cncRows, error: cncError },
-    { data: listRows, error: listError },
     { data: instRows, error: instError },
   ] = await Promise.all([
     supabase.from("clientes").select("id, nome").in("id", clienteIds).eq("ativo", true),
@@ -68,30 +65,16 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
           error: null,
         }),
     supabase
-      .from("os_anexos")
-      .select("ordem_servico_id")
-      .in("ordem_servico_id", osIds)
-      .eq("tipo", OS_ANEXO_TIPO_CNC),
-    supabase
-      .from("os_separation_list_items")
-      .select("ordem_servico_id")
-      .in("ordem_servico_id", osIds),
-    supabase
       .from("agenda_eventos")
-      .select(`ordem_servico_id, status, ${AGENDA_EVENTO_DATETIME_COLUMNS}`)
+      .select(`ordem_servico_id, ${AGENDA_EVENTO_DATETIME_COLUMNS}`)
       .in("ordem_servico_id", osIds)
       .eq("tipo_evento", "installation")
-      .neq("status", "cancelled"),
+      .neq("status", "cancelled")
+      .order("data_inicio", { ascending: true }),
   ]);
 
   const error =
-    clientesError?.message ??
-    equipesError?.message ??
-    cncError?.message ??
-    listError?.message ??
-    instError?.message ??
-    null;
-
+    clientesError?.message ?? equipesError?.message ?? instError?.message ?? null;
   if (error) {
     return { fila: [], error };
   }
@@ -102,21 +85,26 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
     eqMap.set(equipe.id, equipe);
   }
 
-  const cncOsIds = new Set((cncRows ?? []).map((r) => r.ordem_servico_id as string));
-  const listOsIds = new Set((listRows ?? []).map((r) => r.ordem_servico_id as string));
-  const instOsIds = new Set(
-    (instRows ?? [])
-      .filter((ev) => hasAgendaEventoStart(ev))
-      .map((ev) => ev.ordem_servico_id as string),
-  );
+  const instPorOs = new Map<string, { agendada: boolean; quando: string | null }>();
+  for (const ev of instRows ?? []) {
+    const osId = ev.ordem_servico_id as string;
+    if (!hasAgendaEventoStart(ev)) continue;
+    if (instPorOs.has(osId)) continue;
+    const start = agendaEventoStartIso(ev);
+    instPorOs.set(osId, {
+      agendada: true,
+      quando: start ? formatOperacionalDateTime(start) : null,
+    });
+  }
 
-  const fila: FilaProjetoItem[] = [];
+  const fila: FilaInstalacaoItem[] = [];
 
-  for (const os of rows) {
+  for (const os of osRows) {
     const cliente = clienteMap.get(os.cliente_id as string);
     const equipeId = (os.equipe_atual_id ?? os.equipe_id) as string | null;
     const equipe = equipeId ? eqMap.get(equipeId) : undefined;
     const osId = os.id as string;
+    const inst = instPorOs.get(osId);
 
     fila.push({
       osId,
@@ -125,14 +113,10 @@ export async function loadFilaProjeto(unidadeId?: string | null): Promise<{
       equipeId,
       equipeNome: equipe?.nome ?? null,
       equipeCorPrimaria: equipe?.cor_primaria ?? null,
-      statusAtual: (os.status_atual as string) ?? "project_in_progress",
-      criadoEm: os.criado_em as string,
+      statusAtual: (os.status_atual as string) ?? "installation_pending",
+      instalacaoAgendada: inst?.agendada ?? false,
+      instalacaoQuando: inst?.quando ?? null,
       atualizadoEm: os.atualizado_em as string,
-      temFornecedor: Boolean(os.fornecedor_id),
-      temDataMaterial: Boolean(os.data_prevista_material),
-      temCnc: cncOsIds.has(osId),
-      temListaSeparacao: listOsIds.has(osId),
-      temInstalacaoAgendada: instOsIds.has(osId),
     });
   }
 
