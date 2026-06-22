@@ -1,5 +1,12 @@
 export type TipoUsuario = "comum" | "manager" | "admin";
 
+export type FichaImportStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "skipped";
+
 export type Unidade = {
   id: string;
   nome: string;
@@ -165,6 +172,9 @@ export type OsAnexo = {
   tamanho_bytes: number;
   criado_por: string | null;
   criado_em: string;
+  ficha_import_status?: FichaImportStatus | null;
+  ficha_imported_at?: string | null;
+  ficha_import_error?: string | null;
 };
 
 export type OsAmbiente = {
@@ -239,6 +249,25 @@ export type OsSeparationListItem = {
   catalogo_item?: Pick<CatalogoItem, "id" | "nome" | "categoria" | "unidade"> | null;
 };
 
+export type OsFichaTecnicaItem = {
+  id: string;
+  ordem_servico_id: string;
+  os_ambiente_id: string | null;
+  os_anexo_id: string;
+  section: string;
+  sku: string;
+  quantity: number;
+  glass_spec: string | null;
+  finish: string | null;
+  notes: string | null;
+  sort_order: number;
+  catalogo_item_id: string | null;
+  qty_reserved: number;
+  qty_consumed: number;
+  criado_em: string;
+  atualizado_em: string;
+};
+
 export type OsRepairEpisode = {
   id: string;
   ordem_servico_id: string;
@@ -289,6 +318,8 @@ export type OrdemServicoWithRelations = OrdemServico & {
   anexo_cnc?: OsAnexoComUrl | null;
   /** All technical drawing uploads for the project stage. */
   anexos_cnc?: OsAnexoComUrl[];
+  /** Hardware extraído do PDF de projeto (SHOWER FITTINGS etc.). */
+  ficha_tecnica?: OsFichaTecnicaItem[];
   /** Fluxo REPAIR ativo — instalação de manutenção pós-conclusão. */
   repair_episode?: OsRepairEpisode | null;
   bloqueio_ativo?: OsCrash | null;

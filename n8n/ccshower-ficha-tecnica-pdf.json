@@ -1,0 +1,801 @@
+{
+  "name": "CCSHOWER - Ficha Tecnica PDF",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## CCSHOWER — Ficha técnica (PDF Projeto)\n\n**Credenciais n8n (obrigatorio):**\n1. **Supabase CCSHOWER** — Host + Service Role\n2. **OpenAI CCSHOWER** — API Key\n\nModelo OpenAI: edite `openai_model` no nó Normalizar (padrao gpt-4o).\n\n**Vercel:** `N8N_WEBHOOK_FICHA_TECNICA_URL`",
+        "height": 340,
+        "width": 420
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Notas",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-320, -120]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ccshower-ficha-tecnica",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "Webhook CCSHOWER",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ccshower-ficha-tecnica"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "event",
+              "value": "={{ $json.body?.event ?? $json.event ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "os_id",
+              "value": "={{ $json.body?.os_id ?? $json.os_id ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "os_anexo_id",
+              "value": "={{ $json.body?.os_anexo_id ?? $json.os_anexo_id ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "os_ambiente_id",
+              "value": "={{ $json.body?.os_ambiente_id ?? $json.os_ambiente_id ?? null }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "signed_url",
+              "value": "={{ $json.body?.signed_url ?? $json.signed_url ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "storage_path",
+              "value": "={{ $json.body?.storage_path ?? $json.storage_path ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "nome_arquivo",
+              "value": "={{ $json.body?.nome_arquivo ?? $json.nome_arquivo ?? 'drawing.pdf' }}",
+              "type": "string"
+            },
+            {
+              "id": "f10",
+              "name": "openai_model",
+              "value": "gpt-4o",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000020",
+      "name": "Normalizar payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "cnc_pdf_uploaded",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.os_anexo_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000030",
+      "name": "Evento valido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/os_anexos?id=eq.{{ $json.os_anexo_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ficha_import_status\": \"processing\",\n  \"ficha_import_error\": null\n}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000040",
+      "name": "Supabase - Marcar processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, -80],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "PATCH os_anexos → processing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ $('Normalizar payload').item.json.signed_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000050",
+      "name": "Tem signed_url?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [960, -80]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Normalizar payload').item.json.signed_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000060",
+      "name": "Download PDF (signed URL)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, -160]
+    },
+    {
+      "parameters": {
+        "url": "={{ $credentials.supabaseApi.host }}/storage/v1/object/os-anexos/{{ $('Normalizar payload').item.json.storage_path }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000070",
+      "name": "Download PDF (Supabase Storage)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 0],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Fallback se signed_url expirar"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000080",
+      "name": "Extrair texto PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [1440, -80]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nconst pdfNode = $input.first().json;\nconst text = String(pdfNode.text ?? pdfNode.data ?? '');\n\nfunction parseShowerFittings(source) {\n  const normalized = source.replace(/\\r\\n/g, '\\n');\n  const start = normalized.search(/SHOWER\\s+FITTINGS/i);\n  if (start === -1) {\n    return { ok: false, error: 'Secao SHOWER FITTINGS nao encontrada no PDF' };\n  }\n\n  let chunk = normalized.slice(start);\n  const endMarkers = [/\\n\\s*HIGH\\s+DREAM/i, /\\n\\s*Page\\s+\\d+/i, /\\f/];\n  for (const marker of endMarkers) {\n    const idx = chunk.search(marker);\n    if (idx > 30) chunk = chunk.slice(0, idx);\n  }\n\n  const lines = chunk.split('\\n').slice(1);\n  const lineRe = /^\\s*(\\d+(?:\\.\\d+)?)\\s+([A-Z0-9][A-Z0-9-]*)\\s*(?:\\(([^)]+)\\))?\\s*(.*?)\\s*$/i;\n  const items = [];\n\n  for (const rawLine of lines) {\n    const line = rawLine.trim();\n    if (!line || /^SHOWER/i.test(line)) continue;\n    const match = line.match(lineRe);\n    if (!match) continue;\n    const [, qty, sku, glass, finishPart] = match;\n    items.push({\n      section: 'SHOWER FITTINGS',\n      sku: sku.toUpperCase(),\n      quantity: Number(qty),\n      glass_spec: glass?.trim() || null,\n      finish: finishPart?.trim() || null,\n      sort_order: items.length,\n    });\n  }\n\n  if (items.length === 0) {\n    return { ok: false, error: 'Nenhum item encontrado em SHOWER FITTINGS' };\n  }\n  return { ok: true, items };\n}\n\nconst parsed = parseShowerFittings(text);\n\nreturn [{\n  json: {\n    ...ctx,\n    parse_ok: parsed.ok,\n    parse_error: parsed.error ?? null,\n    items: parsed.items ?? [],\n    item_count: parsed.items?.length ?? 0,\n    extraction_method: 'text',\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000090",
+      "name": "Parse SHOWER FITTINGS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, -80]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nconst names = ['Download PDF (signed URL)', 'Download PDF (Supabase Storage)'];\nlet bin = null;\nlet fileName = ctx.nome_arquivo || 'drawing.pdf';\nfor (const n of names) {\n  try {\n    const row = $(n).first();\n    if (row.binary) {\n      const key = Object.keys(row.binary)[0];\n      bin = row.binary[key];\n      fileName = bin.fileName || fileName;\n      break;\n    }\n  } catch (e) { /* skip */ }\n}\nif (!bin?.data) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: 'Binario PDF nao encontrado para OpenAI', items: [], item_count: 0, extraction_method: 'openai' } }];\n}\n\nconst mime = bin.mimeType || 'application/pdf';\nconst rawB64 = String(bin.data);\nconst fileData = rawB64.startsWith('data:') ? rawB64 : `data:${mime};base64,${rawB64}`;\nconst model = (ctx.openai_model || 'gpt-4o').trim();\nconst prompt = [\n  'Voce recebe um INSTALLATION SHEET da CC Shower Door (PDF).',\n  'Extraia APENAS a secao SHOWER FITTINGS (lista de hardware).',\n  '',\n  'Retorne JSON com este formato:',\n  '{\"items\":[{\"section\":\"SHOWER FITTINGS\",\"sku\":\"CODIGO\",\"quantity\":1,\"glass_spec\":\"to suit 1/2\\\\\" glass ou null\",\"finish\":\"Brushed Bronze ou null\",\"sort_order\":0}]}',\n  '',\n  'Regras:',\n  '- sku em MAIUSCULAS',\n  '- quantity numerico',\n  '- glass_spec = texto entre parenteses apos o SKU',\n  '- finish = acabamento no fim da linha',\n  '- sort_order comeca em 0',\n  '- Se nao achar SHOWER FITTINGS: {\"items\":[],\"error\":\"motivo\"}',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...ctx,\n    pdf_base64: rawB64,\n    pdf_mime: mime,\n    pdf_file_name: fileName,\n    openai_model: model,\n    openai_body: {\n      model,\n      temperature: 0,\n      max_tokens: 2048,\n      response_format: { type: 'json_object' },\n      messages: [{\n        role: 'user',\n        content: [\n          { type: 'file', file: { filename: fileName, file_data: fileData } },\n          { type: 'text', text: prompt },\n        ],\n      }],\n    },\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000095",
+      "name": "PDF para base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 120],
+      "notesInFlow": true,
+      "notes": "robert.pdf = imagem → OpenAI"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c7",
+              "leftValue": "={{ $json.openai_body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000095b",
+      "name": "PDF pronto OpenAI?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2040, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.openai_body) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000096",
+      "name": "OpenAI - Extrair SHOWER FITTINGS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2160, 120],
+      "credentials": {
+        "openAiApi": {
+          "name": "OpenAI CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('PDF para base64').first().json;\nconst res = $input.first().json;\nlet text = '';\nif (res.choices?.[0]?.message?.content) {\n  text = String(res.choices[0].message.content);\n} else if (res.error?.message) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: res.error.message, items: [], item_count: 0, extraction_method: 'openai' } }];\n} else if (res.error) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: JSON.stringify(res.error), items: [], item_count: 0, extraction_method: 'openai' } }];\n}\n\nlet parsed = null;\ntry {\n  const match = text.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : JSON.parse(text);\n} catch (e) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: 'OpenAI nao retornou JSON valido: ' + text.slice(0, 200), items: [], item_count: 0, extraction_method: 'openai' } }];\n}\n\nif (parsed?.error) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: parsed.error, items: [], item_count: 0, extraction_method: 'openai' } }];\n}\n\nconst items = (parsed?.items ?? []).map((item, i) => ({\n  section: item.section || 'SHOWER FITTINGS',\n  sku: String(item.sku || '').trim().toUpperCase(),\n  quantity: Number(item.quantity),\n  glass_spec: item.glass_spec?.trim() || null,\n  finish: item.finish?.trim() || null,\n  sort_order: typeof item.sort_order === 'number' ? item.sort_order : i,\n}));\n\nconst valid = items.filter((it) => it.sku && Number.isFinite(it.quantity) && it.quantity > 0);\nif (valid.length === 0) {\n  return [{ json: { ...ctx, parse_ok: false, parse_error: 'Nenhum item em SHOWER FITTINGS (OpenAI)', items: [], item_count: 0, extraction_method: 'openai' } }];\n}\n\nreturn [{ json: { ...ctx, parse_ok: true, parse_error: null, items: valid, item_count: valid.length, extraction_method: 'openai' } }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000097",
+      "name": "Parse resposta LLM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, 120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c6",
+              "leftValue": "={{ $json.parse_ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000098",
+      "name": "Itens LLM ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2640, 120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c4",
+              "leftValue": "={{ $json.parse_ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000100",
+      "name": "Itens encontrados?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1920, -80]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/os_ficha_tecnica_items?os_anexo_id=eq.{{ $json.os_anexo_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000110",
+      "name": "Supabase - Limpar itens antigos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2160, -200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet extracted = null;\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_ok) extracted = t;\n} catch (e) { /* skip */ }\nif (!extracted) {\n  try {\n    const v = $('Parse resposta LLM').first().json;\n    if (v.parse_ok) extracted = v;\n  } catch (e) { /* skip */ }\n}\nif (!extracted) {\n  throw new Error('Dados da extracao nao encontrados');\n}\nconst items = extracted.items ?? [];\nconst mapped = items.map((item) => ({\n  ordem_servico_id: ctx.os_id,\n  os_ambiente_id: ctx.os_ambiente_id || null,\n  os_anexo_id: ctx.os_anexo_id,\n  section: item.section || 'SHOWER FITTINGS',\n  sku: item.sku,\n  quantity: item.quantity,\n  glass_spec: item.glass_spec,\n  finish: item.finish,\n  notes: item.notes ?? null,\n  sort_order: item.sort_order ?? 0,\n  catalogo_item_id: null,\n}));\n\nreturn [{ json: { ...ctx, ...extracted, insert_rows: mapped } }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000120",
+      "name": "Montar rows Supabase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/os_ficha_tecnica_items",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.insert_rows) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000130",
+      "name": "Supabase - Inserir ficha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, -200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/ordens_servico?id=eq.{{ $('Montar rows Supabase').item.json.os_id }}&select=id,cliente_id,equipe_id,equipe_atual_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000140",
+      "name": "Supabase - Buscar OS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, -200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Montar rows Supabase').first().json;\nconst osList = $input.first().json;\nconst os = Array.isArray(osList) ? osList[0] : osList;\nconst equipe_id = os?.equipe_atual_id ?? os?.equipe_id ?? null;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...ctx,\n    timeline_payload: equipe_id ? {\n      ordem_servico_id: ctx.os_id,\n      cliente_id: os.cliente_id,\n      equipe_id,\n      responsavel_id: null,\n      tipo_evento: 'cnc_ficha_importada',\n      etapa: 'project',\n      status: 'completed',\n      titulo: 'cnc_ficha_importada',\n      descricao: JSON.stringify({ os_anexo_id: ctx.os_anexo_id, item_count: ctx.item_count }),\n      data_inicio: now,\n      data_fim: now,\n    } : null,\n  },\n}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000150",
+      "name": "Montar timeline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3120, -200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c5",
+              "leftValue": "={{ $json.timeline_payload }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000160",
+      "name": "Tem equipe OS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3360, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/agenda_eventos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.timeline_payload) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000170",
+      "name": "Supabase - Timeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, -280],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/os_anexos?id=eq.{{ $('Montar rows Supabase').item.json.os_anexo_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ficha_import_status\": \"completed\",\n  \"ficha_import_error\": null,\n  \"ficha_imported_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000180",
+      "name": "Supabase - Marcar completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3840, -200],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"os_anexo_id\": \"{{ $('Montar rows Supabase').item.json.os_anexo_id }}\",\n  \"item_count\": {{ $('Montar rows Supabase').item.json.item_count }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000190",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [4080, -200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet err = 'Falha ao extrair ficha tecnica do PDF';\ntry {\n  const p = $('PDF para base64').first().json;\n  if (p.parse_error) err = p.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_error) err = t.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const v = $('Parse resposta LLM').first().json;\n  if (v.parse_error) err = v.parse_error;\n} catch (e) { /* skip */ }\nreturn [{ json: { ...ctx, fail_error: err } }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000200",
+      "name": "Preparar falha parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 80]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $credentials.supabaseApi.host }}/rest/v1/os_anexos?id=eq.{{ $json.os_anexo_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ficha_import_status\": \"failed\",\n  \"ficha_import_error\": {{ JSON.stringify($json.fail_error) }},\n  \"ficha_imported_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000210",
+      "name": "Supabase - Marcar failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2400, 80],
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase CCSHOWER"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": false,\n  \"os_anexo_id\": \"{{ $('Preparar falha parse').item.json.os_anexo_id }}\",\n  \"error\": {{ JSON.stringify($('Preparar falha parse').item.json.fail_error) }}\n}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000220",
+      "name": "Responder falha",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2640, 80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": false,\n  \"error\": \"Payload invalido — evento deve ser cnc_pdf_uploaded com os_anexo_id\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000230",
+      "name": "Responder payload invalido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 160]
+    }
+  ],
+  "connections": {
+    "Webhook CCSHOWER": {
+      "main": [[{ "node": "Normalizar payload", "type": "main", "index": 0 }]]
+    },
+    "Normalizar payload": {
+      "main": [[{ "node": "Evento valido?", "type": "main", "index": 0 }]]
+    },
+    "Evento valido?": {
+      "main": [
+        [{ "node": "Supabase - Marcar processing", "type": "main", "index": 0 }],
+        [{ "node": "Responder payload invalido", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase - Marcar processing": {
+      "main": [[{ "node": "Tem signed_url?", "type": "main", "index": 0 }]]
+    },
+    "Tem signed_url?": {
+      "main": [
+        [{ "node": "Download PDF (signed URL)", "type": "main", "index": 0 }],
+        [{ "node": "Download PDF (Supabase Storage)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Download PDF (signed URL)": {
+      "main": [[{ "node": "Extrair texto PDF", "type": "main", "index": 0 }]]
+    },
+    "Download PDF (Supabase Storage)": {
+      "main": [[{ "node": "Extrair texto PDF", "type": "main", "index": 0 }]]
+    },
+    "Extrair texto PDF": {
+      "main": [[{ "node": "Parse SHOWER FITTINGS", "type": "main", "index": 0 }]]
+    },
+    "Parse SHOWER FITTINGS": {
+      "main": [[{ "node": "Itens encontrados?", "type": "main", "index": 0 }]]
+    },
+    "Itens encontrados?": {
+      "main": [
+        [{ "node": "Supabase - Limpar itens antigos", "type": "main", "index": 0 }],
+        [{ "node": "PDF para base64", "type": "main", "index": 0 }]
+      ]
+    },
+    "PDF para base64": {
+      "main": [[{ "node": "PDF pronto OpenAI?", "type": "main", "index": 0 }]]
+    },
+    "PDF pronto OpenAI?": {
+      "main": [
+        [{ "node": "OpenAI - Extrair SHOWER FITTINGS", "type": "main", "index": 0 }],
+        [{ "node": "Preparar falha parse", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI - Extrair SHOWER FITTINGS": {
+      "main": [[{ "node": "Parse resposta LLM", "type": "main", "index": 0 }]]
+    },
+    "Parse resposta LLM": {
+      "main": [[{ "node": "Itens LLM ok?", "type": "main", "index": 0 }]]
+    },
+    "Itens LLM ok?": {
+      "main": [
+        [{ "node": "Supabase - Limpar itens antigos", "type": "main", "index": 0 }],
+        [{ "node": "Preparar falha parse", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase - Limpar itens antigos": {
+      "main": [[{ "node": "Montar rows Supabase", "type": "main", "index": 0 }]]
+    },
+    "Montar rows Supabase": {
+      "main": [[{ "node": "Supabase - Inserir ficha", "type": "main", "index": 0 }]]
+    },
+    "Supabase - Inserir ficha": {
+      "main": [[{ "node": "Supabase - Buscar OS", "type": "main", "index": 0 }]]
+    },
+    "Supabase - Buscar OS": {
+      "main": [[{ "node": "Montar timeline", "type": "main", "index": 0 }]]
+    },
+    "Montar timeline": {
+      "main": [[{ "node": "Tem equipe OS?", "type": "main", "index": 0 }]]
+    },
+    "Tem equipe OS?": {
+      "main": [
+        [{ "node": "Supabase - Timeline", "type": "main", "index": 0 }],
+        [{ "node": "Supabase - Marcar completed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase - Timeline": {
+      "main": [[{ "node": "Supabase - Marcar completed", "type": "main", "index": 0 }]]
+    },
+    "Supabase - Marcar completed": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    },
+    "Preparar falha parse": {
+      "main": [[{ "node": "Supabase - Marcar failed", "type": "main", "index": 0 }]]
+    },
+    "Supabase - Marcar failed": {
+      "main": [[{ "node": "Responder falha", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

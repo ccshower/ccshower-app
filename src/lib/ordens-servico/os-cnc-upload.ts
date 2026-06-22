@@ -1,6 +1,10 @@
 import {
   isAmbienteProjetoEditavel,
 } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import {
+  dispatchFichaTecnicaWebhook,
+  isN8nFichaTecnicaWebhookConfigured,
+} from "@/lib/ordens-servico/os-ficha-tecnica-webhook";
 import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
 import {
   loadOsAnexoUploadContext,
@@ -112,21 +116,43 @@ async function uploadSingleCncFile(
 
   if (upErr) return { ok: false, message: upErr.message };
 
-  const { error: insErr } = await supabase.from("os_anexos").insert({
-    ordem_servico_id: os.id,
-    empresa_id: os.empresa_id,
-    os_ambiente_id: osAmbienteId,
-    tipo: OS_ANEXO_TIPO_CNC,
-    storage_path: storagePath,
-    nome_arquivo: nome,
-    mime_type: mime,
-    tamanho_bytes: file.size,
-    criado_por: userId,
-  });
+  const isPdf = mime === "application/pdf";
+  const fichaImportStatus =
+    isPdf && isN8nFichaTecnicaWebhookConfigured() ? "pending" : isPdf ? "skipped" : null;
 
-  if (insErr) {
+  const { data: anexoRow, error: insErr } = await supabase
+    .from("os_anexos")
+    .insert({
+      ordem_servico_id: os.id,
+      empresa_id: os.empresa_id,
+      os_ambiente_id: osAmbienteId,
+      tipo: OS_ANEXO_TIPO_CNC,
+      storage_path: storagePath,
+      nome_arquivo: nome,
+      mime_type: mime,
+      tamanho_bytes: file.size,
+      criado_por: userId,
+      ficha_import_status: fichaImportStatus,
+    })
+    .select("id")
+    .single();
+
+  if (insErr || !anexoRow?.id) {
     await supabase.storage.from(OS_ANEXOS_BUCKET).remove([storagePath]);
-    return { ok: false, message: insErr.message };
+    return { ok: false, message: insErr?.message ?? "Erro ao registrar anexo" };
+  }
+
+  if (isPdf && fichaImportStatus === "pending") {
+    void dispatchFichaTecnicaWebhook({
+      supabase,
+      osId: os.id,
+      osAnexoId: anexoRow.id as string,
+      osAmbienteId: osAmbienteId,
+      empresaId: os.empresa_id,
+      storagePath,
+      mimeType: mime,
+      nomeArquivo: nome,
+    });
   }
 
   return { ok: true, id: os.id };

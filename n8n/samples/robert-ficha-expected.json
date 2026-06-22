@@ -1,0 +1,38 @@
+{
+  "source": "robert.pdf — INSTALLATION SHEET CC SHOWER DOOR",
+  "note": "PDF pagina 1 e imagem (sem camada de texto). Extracao via visao/LLM.",
+  "items": [
+    {
+      "section": "SHOWER FITTINGS",
+      "sku": "GCB184BBRZ",
+      "quantity": 1,
+      "glass_spec": "to suit 1/2\" glass",
+      "finish": "Brushed Bronze",
+      "sort_order": 0
+    },
+    {
+      "section": "SHOWER FITTINGS",
+      "sku": "SCU4BBRZ",
+      "quantity": 5,
+      "glass_spec": "to suit 1/2\" glass",
+      "finish": "Brushed Bronze",
+      "sort_order": 1
+    },
+    {
+      "section": "SHOWER FITTINGS",
+      "sku": "BM8X8BBRZ",
+      "quantity": 1,
+      "glass_spec": "to suit 3/8\" glass",
+      "finish": "Brushed Bronze",
+      "sort_order": 2
+    },
+    {
+      "section": "SHOWER FITTINGS",
+      "sku": "V1E037BBRZ",
+      "quantity": 2,
+      "glass_spec": "to suit 3/8\" glass",
+      "finish": "Brushed Bronze",
+      "sort_order": 3
+    }
+  ]
+}

@@ -29,6 +29,7 @@ import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa"
 import { osTemRetornoInstalacaoParcial, resumoRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { OsAmbientesCncProjectPanel } from "@/components/ordens-servico/workspace/os-ambientes-cnc-project-panel";
 import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
+import { OsFichaTecnicaPanel } from "@/components/ordens-servico/workspace/os-ficha-tecnica-panel";
 import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
@@ -709,6 +710,8 @@ export function OsWorkspaceProject({
         onAtualizado={onAtualizado}
         onMessage={setMsg}
       />
+
+      <OsFichaTecnicaPanel ordem={ordem} />
 
       <OsSeparationListCard
         count={itens.length}

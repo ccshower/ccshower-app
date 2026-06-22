@@ -9,7 +9,7 @@ import { enrichEventosTimeline } from "@/lib/ordens-servico/enrich-eventos-timel
 import { createClient } from "@/lib/supabase/server";
 import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
 import { OS_ANEXOS_BUCKET } from "@/lib/ordens-servico/visita-comercial";
-import type { AgendaEvento, Fornecedor, OrdemServicoWithRelations, OsAnexo, OsSeparationListItem } from "@/lib/types/database";
+import type { AgendaEvento, Fornecedor, OrdemServicoWithRelations, OsAnexo, OsFichaTecnicaItem, OsSeparationListItem } from "@/lib/types/database";
 
 export async function loadOrdemServicoDetalhe(
   id: string,
@@ -34,6 +34,7 @@ export async function loadOrdemServicoDetalhe(
     { data: eventos },
     { data: listaSeparacao },
     { data: cncRows },
+    { data: fichaTecnicaRows },
     { data: bloqueioAtivo },
     { data: ambientesRows },
     { data: anexosVisitaRows },
@@ -84,6 +85,12 @@ export async function loadOrdemServicoDetalhe(
         .eq("ordem_servico_id", id)
         .eq("tipo", OS_ANEXO_TIPO_CNC)
         .order("criado_em", { ascending: false }),
+      supabase
+        .from("os_ficha_tecnica_items")
+        .select("*")
+        .eq("ordem_servico_id", id)
+        .order("sort_order", { ascending: true })
+        .order("criado_em", { ascending: true }),
       supabase
         .from("os_crashes")
         .select("*")
@@ -201,6 +208,7 @@ export async function loadOrdemServicoDetalhe(
       })),
       anexo_cnc,
       anexos_cnc,
+      ficha_tecnica: (fichaTecnicaRows ?? []) as OsFichaTecnicaItem[],
       anexos_visita,
       ambientes: (ambientesRows ?? []) as OrdemServicoWithRelations["ambientes"],
       repair_episode: (repairEpisode as OrdemServicoWithRelations["repair_episode"]) ?? null,
