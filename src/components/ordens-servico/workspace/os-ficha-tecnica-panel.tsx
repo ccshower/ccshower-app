@@ -149,7 +149,9 @@ export function OsFichaTecnicaPanel({ ordem }: Props) {
 
       {pendingLatest ? (
         <p className="mt-3 rounded-sm border border-dashed border-cc-border px-3 py-2 text-xs font-light text-cc-muted">
-          {t("os.workspace.project.fichaImportWaiting")}
+          {pendingLatest.ficha_import_status === "processing"
+            ? t("os.workspace.project.fichaImportProcessing")
+            : t("os.workspace.project.fichaImportWaiting")}
         </p>
       ) : null}
 

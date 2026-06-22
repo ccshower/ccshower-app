@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## CCSHOWER — Ficha técnica (PDF Projeto)\n\n**Credenciais n8n:**\n1. **ccshower_supabase** — Supabase API\n2. **openai_spifo** — OpenAI API\n\n**supabase_url** no Normalizar: gilnvnzooeanzcaktrlg.supabase.co\n\n**Vercel:** `N8N_WEBHOOK_FICHA_TECNICA_URL`",
+        "content": "## CCSHOWER — Ficha técnica (PDF Projeto)\n\n**Credenciais n8n:** ccshower_supabase + openai_spifo\n\n**Vercel:** N8N_WEBHOOK_FICHA_TECNICA_URL, APP_BASE_URL, N8N_WEBHOOK_SECRET\n\nO app envia callback_url + callback_secret no webhook (sem $env no n8n).\nGravação: nó **App - Callback ficha**.",
         "height": 340,
         "width": 420
       },
@@ -82,7 +82,19 @@
             {
               "id": "f11",
               "name": "supabase_url",
-              "value": "={{ ($env.SUPABASE_URL || 'https://gilnvnzooeanzcaktrlg.supabase.co').replace(/\\/$/, '') }}",
+              "value": "https://gilnvnzooeanzcaktrlg.supabase.co",
+              "type": "string"
+            },
+            {
+              "id": "f12",
+              "name": "callback_url",
+              "value": "={{ $json.body?.callback_url ?? $json.callback_url ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f13",
+              "name": "callback_secret",
+              "value": "={{ $json.body?.callback_secret ?? $json.callback_secret ?? '' }}",
               "type": "string"
             }
           ]
@@ -437,13 +449,41 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet extracted = null;\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_ok) extracted = t;\n} catch (e) { /* skip */ }\nif (!extracted) {\n  try {\n    const v = $('Parse resposta LLM').first().json;\n    if (v.parse_ok) extracted = v;\n  } catch (e) { /* skip */ }\n}\nif (!extracted) {\n  throw new Error('Dados da extracao nao encontrados');\n}\nconst items = extracted.items ?? [];\nconst mapped = items.map((item) => ({\n  ordem_servico_id: ctx.os_id,\n  os_ambiente_id: ctx.os_ambiente_id || null,\n  os_anexo_id: ctx.os_anexo_id,\n  section: item.section || 'SHOWER FITTINGS',\n  sku: item.sku,\n  quantity: item.quantity,\n  glass_spec: item.glass_spec,\n  finish: item.finish,\n  notes: item.notes ?? null,\n  sort_order: item.sort_order ?? 0,\n  catalogo_item_id: null,\n}));\n\nreturn [{ json: { ...ctx, ...extracted, insert_rows: mapped } }];"
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nif (!ctx.callback_url) {\n  throw new Error('callback_url ausente — configure APP_BASE_URL na Vercel e redeploy');\n}\nif (!ctx.callback_secret) {\n  throw new Error('callback_secret ausente — configure N8N_WEBHOOK_SECRET na Vercel e redeploy');\n}\nlet extracted = null;\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_ok) extracted = t;\n} catch (e) { /* skip */ }\nif (!extracted) {\n  try {\n    const v = $('Parse resposta LLM').first().json;\n    if (v.parse_ok) extracted = v;\n  } catch (e) { /* skip */ }\n}\nif (!extracted) {\n  throw new Error('Dados da extracao nao encontrados');\n}\nconst items = extracted.items ?? [];\nif (!items.length) {\n  throw new Error('Nenhum item SHOWER FITTINGS extraido');\n}\nconst callbackItems = items.map((item, index) => ({\n  section: item.section || 'SHOWER FITTINGS',\n  sku: item.sku,\n  quantity: item.quantity,\n  glass_spec: item.glass_spec ?? null,\n  finish: item.finish ?? null,\n  notes: item.notes ?? null,\n  sort_order: item.sort_order ?? index,\n  catalogo_item_id: null,\n}));\n\nreturn [{\n  json: {\n    ...ctx,\n    item_count: callbackItems.length,\n    callback_body: {\n      os_anexo_id: ctx.os_anexo_id,\n      status: 'completed',\n      items: callbackItems,\n    },\n  },\n}];"
       },
       "id": "a1000000-0000-4000-8000-000000000120",
       "name": "Montar rows Supabase",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [2400, -200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Normalizar payload').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Normalizar payload').item.json.callback_secret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.callback_body }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000125",
+      "name": "App - Callback ficha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, -200]
     },
     {
       "parameters": {
@@ -627,13 +667,41 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet err = 'Falha ao extrair ficha tecnica do PDF';\ntry {\n  const p = $('PDF para base64').first().json;\n  if (p.parse_error) err = p.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_error) err = t.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const v = $('Parse resposta LLM').first().json;\n  if (v.parse_error) err = v.parse_error;\n} catch (e) { /* skip */ }\nreturn [{ json: { ...ctx, fail_error: err } }];"
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet err = 'Falha ao extrair ficha tecnica do PDF';\ntry {\n  const p = $('PDF para base64').first().json;\n  if (p.parse_error) err = p.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_error) err = t.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const v = $('Parse resposta LLM').first().json;\n  if (v.parse_error) err = v.parse_error;\n} catch (e) { /* skip */ }\nconst callback_body = {\n  os_anexo_id: ctx.os_anexo_id,\n  status: 'failed',\n  error: err,\n};\nreturn [{ json: { ...ctx, fail_error: err, callback_body } }];"
       },
       "id": "a1000000-0000-4000-8000-000000000200",
       "name": "Preparar falha parse",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [2160, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Normalizar payload').item.json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Normalizar payload').item.json.callback_secret }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.callback_body }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000205",
+      "name": "App - Callback falha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2400, 80]
     },
     {
       "parameters": {
@@ -764,7 +832,10 @@
       "main": [[{ "node": "Montar rows Supabase", "type": "main", "index": 0 }]]
     },
     "Montar rows Supabase": {
-      "main": [[{ "node": "Supabase - Inserir ficha", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "App - Callback ficha", "type": "main", "index": 0 }]]
+    },
+    "App - Callback ficha": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
     },
     "Supabase - Inserir ficha": {
       "main": [[{ "node": "Supabase - Buscar OS", "type": "main", "index": 0 }]]
@@ -788,7 +859,10 @@
       "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
     },
     "Preparar falha parse": {
-      "main": [[{ "node": "Supabase - Marcar failed", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "App - Callback falha", "type": "main", "index": 0 }]]
+    },
+    "App - Callback falha": {
+      "main": [[{ "node": "Responder falha", "type": "main", "index": 0 }]]
     },
     "Supabase - Marcar failed": {
       "main": [[{ "node": "Responder falha", "type": "main", "index": 0 }]]

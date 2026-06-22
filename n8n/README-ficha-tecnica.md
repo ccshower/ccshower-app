@@ -55,9 +55,14 @@ Copie a **Production URL** do nó **Webhook CCSHOWER** (não use a URL de *Test*
 ```env
 N8N_WEBHOOK_FICHA_TECNICA_URL=https://SEU-N8N/webhook/ccshower-ficha-tecnica
 APP_BASE_URL=https://seu-app.vercel.app
+N8N_WEBHOOK_SECRET=mesmo-token-longo-aleatorio
 ```
 
-**Importante:** após adicionar/alterar variáveis na Vercel, faça **Redeploy** do projeto — sem isso o upload do PDF não dispara o n8n.
+O segredo fica **só na Vercel**. O app envia `callback_secret` no body do webhook — o n8n **não precisa** de `$env` (muitos servidores bloqueiam `access to env vars denied`).
+
+No nó **Normalizar payload**, `supabase_url`, `callback_url` e `callback_secret` devem aparecer **verdes** na execução.
+
+**Importante:** após adicionar/alterar variáveis na Vercel, faça **Redeploy** — sem isso o upload não envia `callback_url` / `callback_secret`.
 
 Só **arquivos PDF** disparam o workflow (`.dwg`, `.dxf`, etc. são ignorados).
 
@@ -75,29 +80,46 @@ limit 5;
 - `skipped` → `N8N_WEBHOOK_FICHA_TECNICA_URL` ausente no deploy
 - `processing` / `completed` / `failed` → n8n recebeu e processou (ou falhou)
 
-Nada de `OPENAI_API_KEY` ou `SUPABASE_*` no Vercel — ficam só nas credenciais n8n.
+Nada de `OPENAI_API_KEY` ou `SUPABASE_*` no Vercel — ficam só nas credenciais n8n (exceto `N8N_WEBHOOK_SECRET` e URLs acima).
 
 ---
 
-## 5. PDF `robert.pdf`
+## 5. Gravação no banco (callback do app)
+
+Após extrair os itens, o n8n **não** insere mais direto em `os_ficha_tecnica_items`. Ele chama:
+
+`POST {APP_BASE_URL}/api/webhooks/n8n/ficha-tecnica`
+
+com `Authorization: Bearer {N8N_WEBHOOK_SECRET}`. O app usa `SUPABASE_SERVICE_ROLE_KEY` e grava itens + marca o anexo `completed`.
+
+Se `count(*)` em `os_ficha_tecnica_items` continuar 0:
+
+1. Vercel tem `APP_BASE_URL` e `N8N_WEBHOOK_SECRET`? (redeploy após alterar)
+2. **Normalizar payload** — `callback_secret` verde e preenchido?
+3. **App - Callback ficha** — HTTP **200** com `{"ok":true,"item_count":N}` (401 = secret ausente na Vercel)
+
+---
+
+## 6. PDF `robert.pdf`
 
 - INSTALLATION SHEET em **imagem** (sem texto no PDF)
 - Ramo OpenAI extrai **SHOWER FITTINGS** → 4 itens (ver `samples/robert-ficha-expected.json`)
 
 ---
 
-## 6. Nós que usam cada credencial
+## 7. Nós que usam cada credencial
 
 | Credencial | Nós |
 |------------|-----|
-| **ccshower_supabase** | Marcar processing, Download Storage, Limpar, Inserir, Buscar OS, Timeline, Marcar completed/failed |
+| **ccshower_supabase** | Marcar processing, Download Storage, Limpar itens antigos |
 | **openai_spifo** | OpenAI - Extrair SHOWER FITTINGS |
+| **callback_secret** (vem do webhook Vercel) | App - Callback ficha / App - Callback falha |
 
 Headers Supabase (`apikey` + `Authorization`) vêm da credencial **ccshower_supabase** (service role). A **base da URL** vem do campo `supabase_url` no nó Normalizar.
 
 ---
 
-## 7. Teste
+## 8. Teste
 
 1. Credenciais criadas e vinculadas
 2. Workflow **ativo**

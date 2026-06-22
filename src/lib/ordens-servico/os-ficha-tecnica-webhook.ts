@@ -62,7 +62,19 @@ export async function dispatchFichaTecnicaWebhook(
   };
 
   const callbackUrl = resolveFichaTecnicaCallbackUrl();
-  const body = callbackUrl ? { ...payload, callback_url: callbackUrl } : payload;
+  const callbackSecret = process.env.N8N_WEBHOOK_SECRET?.trim() ?? "";
+  const body =
+    callbackUrl && callbackSecret
+      ? { ...payload, callback_url: callbackUrl, callback_secret: callbackSecret }
+      : callbackUrl
+        ? { ...payload, callback_url: callbackUrl }
+        : payload;
+
+  if (callbackUrl && !callbackSecret) {
+    console.warn(
+      "[ficha-tecnica] APP_BASE_URL definido mas N8N_WEBHOOK_SECRET ausente — o n8n nao conseguira gravar itens via callback",
+    );
+  }
 
   try {
     const res = await fetch(N8N_WEBHOOK_FICHA_TECNICA_URL, {
