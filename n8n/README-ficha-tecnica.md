@@ -36,7 +36,7 @@ Usa **credenciais do n8n** para auth Supabase/OpenAI + **`supabase_url`** no nó
    - Nó **OpenAI - Extrair SHOWER FITTINGS** → `OpenAI CCSHOWER`
 4. Se não pedir automaticamente: abra cada nó HTTP e selecione a credencial no campo **Credential**
 
-> **n8n 2.16+:** `$credentials.supabaseApi.host` não funciona na URL dos nós HTTP — por isso usamos `supabase_url` no Normalizar.
+> **n8n 2.16+:** `$credentials.supabaseApi.host` não funciona na URL dos nós HTTP — por isso usamos `supabase_url` no Normalizar. Com `binaryDataMode: database`, o nó **PDF para base64** usa `getBinaryDataBuffer` (não leia `bin.data` direto).
 
 ---
 
