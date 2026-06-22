@@ -169,7 +169,7 @@ export const ptBR = {
         fichaColSection: "Seção",
         fichaImportPending: "Na fila",
         fichaImportProcessing: "Atualizando ficha técnica…",
-        fichaImportCompleted: "Atualizada",
+        fichaImportCompleted: "Lista atualizada",
         fichaImportFailed: "Não foi possível atualizar",
         fichaImportSkipped: "Atualização automática indisponível",
         fichaImportWaiting:
@@ -180,7 +180,8 @@ export const ptBR = {
           "Verifique o PDF e tente enviar novamente.",
         separationList: "Lista de Separação",
         separationListTitle: "Lista de Separação",
-        separationListSubtitle: "Opcional — itens necessários para executar a instalação.",
+        separationListSubtitle:
+          "Preenchida automaticamente a partir do PDF de projeto — a instalação usa esta lista.",
         separationListCount: "{count} itens",
         separationListRegistered: "Lista registrada",
         separationListRegisteredCount: "{count} itens cadastrados",

@@ -17,6 +17,7 @@ const labelClass =
 
 type DraftItem = SeparationListItemInput & {
   _key: string;
+  notes?: string | null;
   catalogo_item?: OsSeparationListItem["catalogo_item"];
 };
 
@@ -47,6 +48,7 @@ function toDraft(itens: OsSeparationListItem[]): DraftItem[] {
     id: item.id,
     item_id: item.item_id,
     quantity: Number(item.quantity),
+    notes: item.notes,
     catalogo_item: item.catalogo_item,
   }));
 }

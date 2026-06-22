@@ -5,6 +5,7 @@ import type { OsSeparationListItem } from "@/lib/types/database";
 
 type RowItem = Pick<OsSeparationListItem, "item_id" | "quantity"> & {
   _key: string;
+  notes?: string | null;
   catalogo_item?: OsSeparationListItem["catalogo_item"];
 };
 
@@ -16,6 +17,10 @@ type Props = {
 
 function labelItem(item: RowItem): string {
   return item.catalogo_item?.nome ?? "—";
+}
+
+function labelDetail(item: RowItem): string | null {
+  return item.notes?.trim() || null;
 }
 
 function labelUnit(item: RowItem): string {
@@ -45,8 +50,15 @@ export function OsSeparationListRows({ itens, onRemover, disabled }: Props) {
           key={item._key}
           className="flex items-center gap-2 px-3 py-2.5 text-sm"
         >
-          <span className="min-w-0 shrink truncate font-light text-cc-ink">
-            {labelItem(item)}
+          <span className="min-w-0 shrink">
+            <span className="block truncate font-light text-cc-ink">
+              {labelItem(item)}
+            </span>
+            {labelDetail(item) ? (
+              <span className="mt-0.5 block truncate text-xs font-light text-cc-muted">
+                {labelDetail(item)}
+              </span>
+            ) : null}
           </span>
           <span
             className="min-w-[1rem] flex-1 border-b border-dotted border-cc-border/80"

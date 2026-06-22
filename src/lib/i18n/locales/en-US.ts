@@ -169,7 +169,7 @@ export const enUS = {
         fichaColSection: "Section",
         fichaImportPending: "Queued",
         fichaImportProcessing: "Updating technical sheet…",
-        fichaImportCompleted: "Updated",
+        fichaImportCompleted: "List updated",
         fichaImportFailed: "Could not update",
         fichaImportSkipped: "Automatic update unavailable",
         fichaImportWaiting:
@@ -180,7 +180,8 @@ export const enUS = {
           "Check the PDF and try uploading again.",
         separationList: "Separation list",
         separationListTitle: "Separation list",
-        separationListSubtitle: "Optional — items needed to execute installation.",
+        separationListSubtitle:
+          "Filled automatically from the project PDF — installation uses this list.",
         separationListCount: "{count} items",
         separationListRegistered: "List registered",
         separationListRegisteredCount: "{count} items registered",

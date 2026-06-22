@@ -29,8 +29,7 @@ import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa"
 import { osTemRetornoInstalacaoParcial, resumoRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { OsAmbientesCncProjectPanel } from "@/components/ordens-servico/workspace/os-ambientes-cnc-project-panel";
 import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
-import { OsFichaTecnicaPanel } from "@/components/ordens-servico/workspace/os-ficha-tecnica-panel";
-import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-separation-list-card";
+import { OsSeparationListProjectPanel } from "@/components/ordens-servico/workspace/os-separation-list-project-panel";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
 import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import {
@@ -711,10 +710,9 @@ export function OsWorkspaceProject({
         onMessage={setMsg}
       />
 
-      <OsFichaTecnicaPanel ordem={ordem} />
-
-      <OsSeparationListCard
-        count={itens.length}
+      <OsSeparationListProjectPanel
+        ordem={ordem}
+        itens={itens}
         onVer={itens.length > 0 ? () => setListaMode("view") : undefined}
         onEditar={() => setListaMode("edit")}
       />

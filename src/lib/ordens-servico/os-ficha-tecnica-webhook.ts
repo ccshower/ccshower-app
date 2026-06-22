@@ -5,6 +5,7 @@ import {
   resolveFichaTecnicaCallbackPath,
   resolveFichaTecnicaCallbackUrl,
 } from "@/lib/ordens-servico/os-ficha-tecnica";
+import { syncSeparationListFromPdfItems } from "@/lib/ordens-servico/os-ficha-to-separation-list";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -174,7 +175,7 @@ export async function importFichaTecnicaFromN8n(
   const items = payload.items ?? [];
   const { data: os, error: osErr } = await supabase
     .from("ordens_servico")
-    .select("id, cliente_id, equipe_id, equipe_atual_id")
+    .select("id, cliente_id, equipe_id, equipe_atual_id, empresa_id")
     .eq("id", anexo.ordem_servico_id)
     .single();
 
@@ -182,29 +183,19 @@ export async function importFichaTecnicaFromN8n(
     return { ok: false, message: osErr?.message ?? "OS nao encontrada" };
   }
 
-  const { error: delErr } = await supabase
+  const { error: delFichaErr } = await supabase
     .from("os_ficha_tecnica_items")
     .delete()
     .eq("os_anexo_id", payload.os_anexo_id);
 
-  if (delErr) return { ok: false, message: delErr.message };
+  if (delFichaErr) return { ok: false, message: delFichaErr.message };
 
-  const rows = items.map((item) => ({
-    ordem_servico_id: anexo.ordem_servico_id,
-    os_ambiente_id: anexo.os_ambiente_id,
-    os_anexo_id: payload.os_anexo_id,
-    section: item.section ?? "SHOWER FITTINGS",
-    sku: item.sku,
-    quantity: item.quantity,
-    glass_spec: item.glass_spec,
-    finish: item.finish,
-    notes: item.notes,
-    sort_order: item.sort_order ?? 0,
-    catalogo_item_id: item.catalogo_item_id,
-  }));
-
-  const { error: insErr } = await supabase.from("os_ficha_tecnica_items").insert(rows);
-  if (insErr) return { ok: false, message: insErr.message };
+  const sync = await syncSeparationListFromPdfItems(supabase, {
+    ordem_servico_id: anexo.ordem_servico_id as string,
+    empresa_id: (os.empresa_id as string | null) ?? null,
+    items,
+  });
+  if (!sync.ok) return sync;
 
   const { error: updErr } = await supabase
     .from("os_anexos")
