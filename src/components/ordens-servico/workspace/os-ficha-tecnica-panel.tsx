@@ -1,7 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+
 import { t } from "@/lib/i18n";
-import type { FichaImportStatus, OrdemServicoWithRelations, OsFichaTecnicaItem } from "@/lib/types/database";
+import type {
+  FichaImportStatus,
+  OrdemServicoWithRelations,
+  OsAnexoComUrl,
+  OsFichaTecnicaItem,
+} from "@/lib/types/database";
 
 const sectionLabel =
   "text-[10px] font-semibold uppercase tracking-[0.1em] text-cc-muted";
@@ -57,15 +65,68 @@ function groupItemsByAmbiente(items: OsFichaTecnicaItem[], ordem: OrdemServicoWi
   return [...groups.values()];
 }
 
+const FICHA_IMPORT_POLL_MS = 5000;
+
+function sortPdfAnexosDesc(anexos: OsAnexoComUrl[]): OsAnexoComUrl[] {
+  return [...anexos].sort(
+    (a, b) =>
+      new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime(),
+  );
+}
+
+/** Status de import só do PDF mais recente — evita misturar falhas de testes anteriores. */
+function resolveLatestImportUi(
+  pdfAnexos: OsAnexoComUrl[],
+  itemCount: number,
+): {
+  latestPdf: OsAnexoComUrl | null;
+  pendingLatest: OsAnexoComUrl | null;
+  failedLatest: OsAnexoComUrl | null;
+  shouldPoll: boolean;
+} {
+  const sorted = sortPdfAnexosDesc(pdfAnexos);
+  const latestPdf = sorted[0] ?? null;
+
+  if (itemCount > 0 || !latestPdf) {
+    return {
+      latestPdf,
+      pendingLatest: null,
+      failedLatest: null,
+      shouldPoll: false,
+    };
+  }
+
+  const status = latestPdf.ficha_import_status;
+  const pendingLatest =
+    status === "pending" || status === "processing" ? latestPdf : null;
+  const failedLatest = status === "failed" ? latestPdf : null;
+
+  return {
+    latestPdf,
+    pendingLatest,
+    failedLatest,
+    shouldPoll: pendingLatest != null,
+  };
+}
+
 /** Ficha técnica (hardware) extraída do PDF de projeto via N8N. */
 export function OsFichaTecnicaPanel({ ordem }: Props) {
+  const router = useRouter();
   const items = ordem.ficha_tecnica ?? [];
   const pdfAnexos =
     ordem.anexos_cnc?.filter((a) => a.mime_type === "application/pdf") ?? [];
-  const pendingImports = pdfAnexos.filter(
-    (a) => a.ficha_import_status === "pending" || a.ficha_import_status === "processing",
+
+  const { pendingLatest, failedLatest, shouldPoll } = useMemo(
+    () => resolveLatestImportUi(pdfAnexos, items.length),
+    [pdfAnexos, items.length],
   );
-  const failedImports = pdfAnexos.filter((a) => a.ficha_import_status === "failed");
+
+  useEffect(() => {
+    if (!shouldPoll) return;
+    const id = window.setInterval(() => router.refresh(), FICHA_IMPORT_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [shouldPoll, router]);
+
   const groups = groupItemsByAmbiente(items, ordem);
 
   return (
@@ -86,26 +147,25 @@ export function OsFichaTecnicaPanel({ ordem }: Props) {
         ) : null}
       </div>
 
-      {pendingImports.length > 0 ? (
+      {pendingLatest ? (
         <p className="mt-3 rounded-sm border border-dashed border-cc-border px-3 py-2 text-xs font-light text-cc-muted">
           {t("os.workspace.project.fichaImportWaiting")}
         </p>
       ) : null}
 
-      {failedImports.map((anexo) => (
-        <p
-          key={anexo.id}
-          className="mt-3 rounded-sm border border-cc-rose/40 bg-cc-rose/5 px-3 py-2 text-xs font-light text-cc-rose"
-        >
+      {failedLatest ? (
+        <p className="mt-3 rounded-sm border border-cc-rose/40 bg-cc-rose/5 px-3 py-2 text-xs font-light text-cc-rose">
           {t("os.workspace.project.fichaImportFailedDetail", {
-            file: anexo.nome_arquivo,
-            status: importStatusLabel(anexo.ficha_import_status),
-            error: anexo.ficha_import_error ?? t("os.workspace.project.fichaImportUnknownError"),
+            file: failedLatest.nome_arquivo,
+            status: importStatusLabel(failedLatest.ficha_import_status),
+            error:
+              failedLatest.ficha_import_error ??
+              t("os.workspace.project.fichaImportUnknownError"),
           })}
         </p>
-      ))}
+      ) : null}
 
-      {items.length === 0 && pendingImports.length === 0 && failedImports.length === 0 ? (
+      {items.length === 0 && !pendingLatest && !failedLatest ? (
         <p className="mt-3 text-sm font-light text-cc-muted">
           {t("os.workspace.project.fichaTecnicaEmpty")}
         </p>
