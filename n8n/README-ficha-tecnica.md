@@ -8,19 +8,19 @@ Usa **credenciais do n8n** para auth Supabase/OpenAI + **`supabase_url`** no nó
 
 ## 1. Criar credenciais no n8n (antes de importar ou ao importar)
 
-### Supabase CCSHOWER
+### ccshower_supabase
 
-1. n8n → **Credentials** → **Add credential**
+1. n8n → **Credentials** → **Add credential** (ou use a existente)
 2. Tipo: **Supabase API**
-3. Nome: `Supabase CCSHOWER`
+3. Nome: `ccshower_supabase`
 4. Preencher:
-   - **Host:** `https://SEU-PROJETO.supabase.co` (sem barra no final)
+   - **Host:** `https://gilnvnzooeanzcaktrlg.supabase.co` (sem barra no final)
    - **Service Role Secret:** chave `service_role` (Supabase → Settings → API)
 
-### OpenAI CCSHOWER
+### openai_spifo
 
 1. **Add credential** → **OpenAI API**
-2. Nome: `OpenAI CCSHOWER`
+2. Nome: `openai_spifo`
 3. **API Key:** sua chave `sk-...`
 
 ---
@@ -28,12 +28,11 @@ Usa **credenciais do n8n** para auth Supabase/OpenAI + **`supabase_url`** no nó
 ## 2. Importar workflow
 
 1. **Workflows** → **Import from File** → `ccshower-ficha-tecnica-pdf.json`
-2. Abra o nó **Normalizar payload** e ajuste **`supabase_url`**:
-   - Cole `https://SEU-PROJETO.supabase.co` (sem barra no final), **ou**
-   - Defina a env **`SUPABASE_URL`** no n8n self-hosted (tem prioridade sobre o valor fixo)
-3. Vincule credenciais nos nós HTTP:
-   - Nós **Supabase - …** e **Download PDF (Supabase Storage)** → `Supabase CCSHOWER`
-   - Nó **OpenAI - Extrair SHOWER FITTINGS** → `OpenAI CCSHOWER`
+2. O nó **Normalizar payload** já traz **`supabase_url`**:
+   - `https://gilnvnzooeanzcaktrlg.supabase.co` (ou env `SUPABASE_URL` no n8n)
+3. Credenciais esperadas no import:
+   - Nós **Supabase - …** e **Download PDF (Supabase Storage)** → `ccshower_supabase`
+   - Nó **OpenAI - Extrair SHOWER FITTINGS** → `openai_spifo`
 4. Se não pedir automaticamente: abra cada nó HTTP e selecione a credencial no campo **Credential**
 
 > **n8n 2.16+:** `$credentials.supabaseApi.host` não funciona na URL dos nós HTTP — por isso usamos `supabase_url` no Normalizar. Com `binaryDataMode: database`, o nó **PDF para base64** usa `getBinaryDataBuffer` (não leia `bin.data` direto).
@@ -91,10 +90,10 @@ Nada de `OPENAI_API_KEY` ou `SUPABASE_*` no Vercel — ficam só nas credenciais
 
 | Credencial | Nós |
 |------------|-----|
-| **Supabase CCSHOWER** | Marcar processing, Download Storage, Limpar, Inserir, Buscar OS, Timeline, Marcar completed/failed |
-| **OpenAI CCSHOWER** | OpenAI - Extrair SHOWER FITTINGS |
+| **ccshower_supabase** | Marcar processing, Download Storage, Limpar, Inserir, Buscar OS, Timeline, Marcar completed/failed |
+| **openai_spifo** | OpenAI - Extrair SHOWER FITTINGS |
 
-Headers Supabase (`apikey` + `Authorization`) vêm da credencial **Supabase CCSHOWER** (service role). A **base da URL** vem do campo `supabase_url` no nó Normalizar.
+Headers Supabase (`apikey` + `Authorization`) vêm da credencial **ccshower_supabase** (service role). A **base da URL** vem do campo `supabase_url` no nó Normalizar.
 
 ---
 

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## CCSHOWER — Ficha técnica (PDF Projeto)\n\n**Credenciais n8n (obrigatorio):**\n1. **Supabase CCSHOWER** — Host + Service Role\n2. **OpenAI CCSHOWER** — API Key\n\nModelo OpenAI: edite `openai_model` no nó Normalizar (padrao gpt-4o).\n\n**Vercel:** `N8N_WEBHOOK_FICHA_TECNICA_URL`",
+        "content": "## CCSHOWER — Ficha técnica (PDF Projeto)\n\n**Credenciais n8n:**\n1. **ccshower_supabase** — Supabase API\n2. **openai_spifo** — OpenAI API\n\n**supabase_url** no Normalizar: gilnvnzooeanzcaktrlg.supabase.co\n\n**Vercel:** `N8N_WEBHOOK_FICHA_TECNICA_URL`",
         "height": 340,
         "width": 420
       },
@@ -82,7 +82,7 @@
             {
               "id": "f11",
               "name": "supabase_url",
-              "value": "={{ ($env.SUPABASE_URL || 'https://COLOQUE-SEU-PROJETO.supabase.co').replace(/\\/$/, '') }}",
+              "value": "={{ ($env.SUPABASE_URL || 'https://gilnvnzooeanzcaktrlg.supabase.co').replace(/\\/$/, '') }}",
               "type": "string"
             }
           ]
@@ -164,7 +164,7 @@
       "position": [720, -80],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       },
       "notesInFlow": true,
@@ -240,7 +240,7 @@
       "position": [1200, 0],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       },
       "notesInFlow": true,
@@ -335,7 +335,7 @@
       "position": [2160, 120],
       "credentials": {
         "openAiApi": {
-          "name": "OpenAI CCSHOWER"
+          "name": "openai_spifo"
         }
       }
     },
@@ -431,7 +431,7 @@
       "position": [2160, -200],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
@@ -476,7 +476,7 @@
       "position": [2640, -200],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
@@ -498,7 +498,7 @@
       "position": [2880, -200],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
@@ -572,7 +572,7 @@
       "position": [3600, -280],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
@@ -607,7 +607,7 @@
       "position": [3840, -200],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
@@ -666,7 +666,7 @@
       "position": [2400, 80],
       "credentials": {
         "supabaseApi": {
-          "name": "Supabase CCSHOWER"
+          "name": "ccshower_supabase"
         }
       }
     },
