@@ -2,7 +2,7 @@
 
 Importar: **`ccshower-ficha-tecnica-pdf.json`**
 
-Usa **credenciais do n8n** (não variáveis de ambiente) para Supabase e OpenAI.
+Usa **credenciais do n8n** para auth Supabase/OpenAI + **`supabase_url`** no nó Normalizar (ou env `SUPABASE_URL` no n8n).
 
 ---
 
@@ -28,10 +28,15 @@ Usa **credenciais do n8n** (não variáveis de ambiente) para Supabase e OpenAI.
 ## 2. Importar workflow
 
 1. **Workflows** → **Import from File** → `ccshower-ficha-tecnica-pdf.json`
-2. Ao abrir, o n8n pede para **vincular credenciais** em cada nó HTTP:
+2. Abra o nó **Normalizar payload** e ajuste **`supabase_url`**:
+   - Cole `https://SEU-PROJETO.supabase.co` (sem barra no final), **ou**
+   - Defina a env **`SUPABASE_URL`** no n8n self-hosted (tem prioridade sobre o valor fixo)
+3. Vincule credenciais nos nós HTTP:
    - Nós **Supabase - …** e **Download PDF (Supabase Storage)** → `Supabase CCSHOWER`
    - Nó **OpenAI - Extrair SHOWER FITTINGS** → `OpenAI CCSHOWER`
-3. Se não pedir automaticamente: abra cada nó HTTP e selecione a credencial no campo **Credential**
+4. Se não pedir automaticamente: abra cada nó HTTP e selecione a credencial no campo **Credential**
+
+> **n8n 2.16+:** `$credentials.supabaseApi.host` não funciona na URL dos nós HTTP — por isso usamos `supabase_url` no Normalizar.
 
 ---
 
@@ -89,12 +94,7 @@ Nada de `OPENAI_API_KEY` ou `SUPABASE_*` no Vercel — ficam só nas credenciais
 | **Supabase CCSHOWER** | Marcar processing, Download Storage, Limpar, Inserir, Buscar OS, Timeline, Marcar completed/failed |
 | **OpenAI CCSHOWER** | OpenAI - Extrair SHOWER FITTINGS |
 
-Headers Supabase (`apikey` + `Authorization`) usam automaticamente:
-
-```
-{{ $credentials.supabaseApi.serviceRole }}
-{{ $credentials.supabaseApi.host }}
-```
+Headers Supabase (`apikey` + `Authorization`) vêm da credencial **Supabase CCSHOWER** (service role). A **base da URL** vem do campo `supabase_url` no nó Normalizar.
 
 ---
 
