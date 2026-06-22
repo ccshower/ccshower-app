@@ -260,6 +260,25 @@
     },
     {
       "parameters": {
+        "url": "={{ $json.signed_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-00000000009a",
+      "name": "Download PDF (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 240],
+      "notesInFlow": true,
+      "notes": "Ramo OpenAI — baixa PDF de novo com binario no input"
+    },
+    {
+      "parameters": {
         "operation": "pdf",
         "options": {}
       },
@@ -281,7 +300,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Normalizar payload').first().json;\nconst names = ['Download PDF (signed URL)', 'Download PDF (Supabase Storage)'];\nlet fileName = ctx.nome_arquivo || 'drawing.pdf';\nlet mime = 'application/pdf';\nlet buffer = null;\nlet sourceNode = null;\n\nfor (const n of names) {\n  try {\n    const row = $(n).first();\n    if (!row.binary) continue;\n    const binaryKey = Object.keys(row.binary)[0];\n    if (!binaryKey) continue;\n    buffer = await this.helpers.getBinaryDataBuffer(binaryKey, 0, n);\n    const meta = row.binary[binaryKey];\n    fileName = meta.fileName || fileName;\n    mime = meta.mimeType || mime;\n    sourceNode = n;\n    break;\n  } catch (e) {\n    /* tenta proximo no de download */\n  }\n}\n\nif (!buffer?.length) {\n  return [{\n    json: {\n      ...ctx,\n      openai_ready: false,\n      parse_ok: false,\n      parse_error: 'Binario PDF nao encontrado para OpenAI',\n      items: [],\n      item_count: 0,\n      extraction_method: 'openai',\n    },\n  }];\n}\n\nconst rawB64 = Buffer.from(buffer).toString('base64');\nconst fileData = `data:${mime};base64,${rawB64}`;\nconst model = (ctx.openai_model || 'gpt-4o').trim();\nconst prompt = [\n  'Voce recebe um INSTALLATION SHEET da CC Shower Door (PDF).',\n  'Extraia APENAS a secao SHOWER FITTINGS (lista de hardware).',\n  '',\n  'Retorne JSON com este formato:',\n  '{\"items\":[{\"section\":\"SHOWER FITTINGS\",\"sku\":\"CODIGO\",\"quantity\":1,\"glass_spec\":\"to suit 1/2\\\\\" glass ou null\",\"finish\":\"Brushed Bronze ou null\",\"sort_order\":0}]}',\n  '',\n  'Regras:',\n  '- sku em MAIUSCULAS',\n  '- quantity numerico',\n  '- glass_spec = texto entre parenteses apos o SKU',\n  '- finish = acabamento no fim da linha',\n  '- sort_order comeca em 0',\n  '- Se nao achar SHOWER FITTINGS: {\"items\":[],\"error\":\"motivo\"}',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...ctx,\n    openai_ready: true,\n    pdf_bytes: buffer.length,\n    pdf_mime: mime,\n    pdf_file_name: fileName,\n    pdf_source_node: sourceNode,\n    openai_model: model,\n    openai_body: {\n      model,\n      temperature: 0,\n      max_tokens: 2048,\n      response_format: { type: 'json_object' },\n      messages: [{\n        role: 'user',\n        content: [\n          { type: 'file', file: { filename: fileName, file_data: fileData } },\n          { type: 'text', text: prompt },\n        ],\n      }],\n    },\n  },\n}];"
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nconst inputItem = $input.first();\nconst binaryKey = Object.keys(inputItem.binary || {})[0];\n\nif (!binaryKey) {\n  return [{\n    json: {\n      ...ctx,\n      openai_ready: false,\n      parse_ok: false,\n      parse_error: 'Binario PDF nao encontrado para OpenAI',\n      items: [],\n      item_count: 0,\n      extraction_method: 'openai',\n    },\n  }];\n}\n\nlet buffer;\ntry {\n  buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n} catch (e) {\n  return [{\n    json: {\n      ...ctx,\n      openai_ready: false,\n      parse_ok: false,\n      parse_error: 'Falha ao ler binario PDF para OpenAI: ' + (e?.message || String(e)),\n      items: [],\n      item_count: 0,\n      extraction_method: 'openai',\n    },\n  }];\n}\n\nif (!buffer?.length) {\n  return [{\n    json: {\n      ...ctx,\n      openai_ready: false,\n      parse_ok: false,\n      parse_error: 'Binario PDF vazio para OpenAI',\n      items: [],\n      item_count: 0,\n      extraction_method: 'openai',\n    },\n  }];\n}\n\nconst meta = inputItem.binary[binaryKey];\nconst fileName = meta?.fileName || ctx.nome_arquivo || 'drawing.pdf';\nconst mime = meta?.mimeType || 'application/pdf';\nconst rawB64 = Buffer.from(buffer).toString('base64');\nconst fileData = `data:${mime};base64,${rawB64}`;\nconst model = (ctx.openai_model || 'gpt-4o').trim();\nconst prompt = [\n  'Voce recebe um INSTALLATION SHEET da CC Shower Door (PDF).',\n  'Extraia APENAS a secao SHOWER FITTINGS (lista de hardware).',\n  '',\n  'Retorne JSON com este formato:',\n  '{\"items\":[{\"section\":\"SHOWER FITTINGS\",\"sku\":\"CODIGO\",\"quantity\":1,\"glass_spec\":\"to suit 1/2\\\\\" glass ou null\",\"finish\":\"Brushed Bronze ou null\",\"sort_order\":0}]}',\n  '',\n  'Regras:',\n  '- sku em MAIUSCULAS',\n  '- quantity numerico',\n  '- glass_spec = texto entre parenteses apos o SKU',\n  '- finish = acabamento no fim da linha',\n  '- sort_order comeca em 0',\n  '- Se nao achar SHOWER FITTINGS: {\"items\":[],\"error\":\"motivo\"}',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...ctx,\n    openai_ready: true,\n    pdf_bytes: buffer.length,\n    pdf_mime: mime,\n    pdf_file_name: fileName,\n    openai_model: model,\n    openai_body: {\n      model,\n      temperature: 0,\n      max_tokens: 2048,\n      response_format: { type: 'json_object' },\n      messages: [{\n        role: 'user',\n        content: [\n          { type: 'file', file: { filename: fileName, file_data: fileData } },\n          { type: 'text', text: prompt },\n        ],\n      }],\n    },\n  },\n}];"
       },
       "id": "a1000000-0000-4000-8000-000000000095",
       "name": "PDF para base64",
@@ -667,7 +686,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet err = 'Falha ao extrair ficha tecnica do PDF';\ntry {\n  const p = $('PDF para base64').first().json;\n  if (p.parse_error) err = p.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_error) err = t.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const v = $('Parse resposta LLM').first().json;\n  if (v.parse_error) err = v.parse_error;\n} catch (e) { /* skip */ }\nconst callback_body = {\n  os_anexo_id: ctx.os_anexo_id,\n  status: 'failed',\n  error: err,\n};\nreturn [{ json: { ...ctx, fail_error: err, callback_body } }];"
+        "jsCode": "const ctx = $('Normalizar payload').first().json;\nlet err = 'Falha ao extrair ficha tecnica do PDF';\ntry {\n  const v = $('Parse resposta LLM').first().json;\n  if (v.parse_error) err = v.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const p = $('PDF para base64').first().json;\n  if (p.parse_error && err === 'Falha ao extrair ficha tecnica do PDF') err = p.parse_error;\n} catch (e) { /* skip */ }\ntry {\n  const t = $('Parse SHOWER FITTINGS').first().json;\n  if (t.parse_error && err === 'Falha ao extrair ficha tecnica do PDF') err = t.parse_error;\n} catch (e) { /* skip */ }\nconst callback_body = {\n  os_anexo_id: ctx.os_anexo_id,\n  status: 'failed',\n  error: err,\n};\nreturn [{ json: { ...ctx, fail_error: err, callback_body } }];"
       },
       "id": "a1000000-0000-4000-8000-000000000200",
       "name": "Preparar falha parse",
@@ -804,8 +823,11 @@
     "Itens encontrados?": {
       "main": [
         [{ "node": "Supabase - Limpar itens antigos", "type": "main", "index": 0 }],
-        [{ "node": "PDF para base64", "type": "main", "index": 0 }]
+        [{ "node": "Download PDF (OpenAI)", "type": "main", "index": 0 }]
       ]
+    },
+    "Download PDF (OpenAI)": {
+      "main": [[{ "node": "PDF para base64", "type": "main", "index": 0 }]]
     },
     "PDF para base64": {
       "main": [[{ "node": "PDF pronto OpenAI?", "type": "main", "index": 0 }]]
