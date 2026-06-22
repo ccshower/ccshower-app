@@ -282,8 +282,54 @@ export function horaOperacionalAgora(): string {
 
 /** Horário já passou no dia operacional de hoje. */
 export function horarioOperacionalJaPassou(dataVisita: string, hm: string): boolean {
-  if (dataVisita !== hojeOperacionalYmd()) return false;
-  return compararHm(hm, horaOperacionalAgora()) <= 0;
+  return horarioOperacionalJaPassouPara(
+    dataVisita,
+    hm,
+    hojeOperacionalYmd(),
+    horaOperacionalAgora(),
+  );
+}
+
+export function horarioOperacionalJaPassouPara(
+  dataVisita: string,
+  hm: string,
+  agoraYmd: string,
+  agoraHm: string,
+): boolean {
+  if (dataVisita !== agoraYmd) return false;
+  return compararHm(hm, agoraHm) <= 0;
+}
+
+/** Início indisponível por conflito de agenda ou horário já passado (hoje). */
+export function slotInicioIndisponivelParaData(
+  dataVisita: string,
+  inicio: string,
+  ocupados: readonly AgendaIntervaloOcupado[],
+  agora?: { ymd: string; hm: string },
+): boolean {
+  const agoraYmd = agora?.ymd ?? hojeOperacionalYmd();
+  const agoraHm = agora?.hm ?? horaOperacionalAgora();
+  if (horarioOperacionalJaPassouPara(dataVisita, inicio, agoraYmd, agoraHm)) {
+    return true;
+  }
+  return inicioIndisponivel(inicio, ocupados);
+}
+
+/** Término indisponível por conflito ou horário já passado (hoje). */
+export function slotFimIndisponivelParaData(
+  dataVisita: string,
+  inicio: string,
+  fim: string,
+  ocupados: readonly AgendaIntervaloOcupado[],
+  agora?: { ymd: string; hm: string },
+): boolean {
+  if (!inicio) return true;
+  const agoraYmd = agora?.ymd ?? hojeOperacionalYmd();
+  const agoraHm = agora?.hm ?? horaOperacionalAgora();
+  if (horarioOperacionalJaPassouPara(dataVisita, fim, agoraYmd, agoraHm)) {
+    return true;
+  }
+  return intervaloTemConflito(inicio, fim, ocupados);
 }
 
 /** Próximos intervalos livres a partir de agora (somente para hoje). */

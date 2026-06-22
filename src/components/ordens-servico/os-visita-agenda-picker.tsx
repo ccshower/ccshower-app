@@ -8,6 +8,7 @@ import { EquipeCompromissosDia } from "@/components/ordens-servico/equipe-compro
 import { buscarAgendaEquipeNoDia } from "@/app/ordens-servico/agenda-disponibilidade";
 import type { CompromissoEquipeDia } from "@/lib/ordens-servico/agenda-equipe-dia";
 import { defaultVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import { useOperationalClock } from "@/lib/ordens-servico/use-operational-clock";
 import { hexToRgba } from "@/lib/ui/equipe-color";
 import {
   compararYmd,
@@ -17,8 +18,8 @@ import {
   horaFimPadraoParaInicio,
   horariosFimParaInicio,
   hojeOperacionalYmd,
-  inicioIndisponivel,
-  intervaloTemConflito,
+  slotFimIndisponivelParaData,
+  slotInicioIndisponivelParaData,
   type AgendaIntervaloOcupado,
   VISITA_SLOTS_HORARIOS,
 } from "@/lib/ordens-servico/visita-slots";
@@ -62,6 +63,7 @@ export function OsVisitaAgendaPicker({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const operationalClock = useOperationalClock(open);
 
   const equipe = equipes.find((e) => e.id === equipeId);
   const cor = equipe?.cor_primaria ?? "#7189a8";
@@ -108,13 +110,21 @@ export function OsVisitaAgendaPicker({
     setIntervalos(r.intervalos);
     setCompromissos(r.compromissos);
 
-    if (horaVisita && inicioIndisponivel(horaVisita, r.intervalos)) {
+    if (
+      horaVisita &&
+      slotInicioIndisponivelParaData(dataVisita, horaVisita, r.intervalos)
+    ) {
       onHoraChange("");
       onHoraFimChange("");
     } else if (
       horaVisita &&
       horaFimVisita &&
-      intervaloTemConflito(horaVisita, horaFimVisita, r.intervalos)
+      slotFimIndisponivelParaData(
+        dataVisita,
+        horaVisita,
+        horaFimVisita,
+        r.intervalos,
+      )
     ) {
       onHoraFimChange("");
     }
@@ -124,6 +134,42 @@ export function OsVisitaAgendaPicker({
     excluirEventoId,
     horaVisita,
     horaFimVisita,
+    onHoraChange,
+    onHoraFimChange,
+  ]);
+
+  useEffect(() => {
+    if (!dataVisita || !horaVisita) return;
+    if (
+      slotInicioIndisponivelParaData(
+        dataVisita,
+        horaVisita,
+        intervalos,
+        operationalClock,
+      )
+    ) {
+      onHoraChange("");
+      onHoraFimChange("");
+      return;
+    }
+    if (
+      horaFimVisita &&
+      slotFimIndisponivelParaData(
+        dataVisita,
+        horaVisita,
+        horaFimVisita,
+        intervalos,
+        operationalClock,
+      )
+    ) {
+      onHoraFimChange("");
+    }
+  }, [
+    dataVisita,
+    horaVisita,
+    horaFimVisita,
+    intervalos,
+    operationalClock,
     onHoraChange,
     onHoraFimChange,
   ]);
@@ -180,9 +226,28 @@ export function OsVisitaAgendaPicker({
           : "Choose date and time";
 
   function selecionarInicio(slot: string) {
+    if (
+      slotInicioIndisponivelParaData(
+        dataVisita,
+        slot,
+        intervalos,
+        operationalClock,
+      )
+    ) {
+      return;
+    }
     onHoraChange(slot);
     const fimPadrao = horaFimPadraoParaInicio(slot);
-    if (fimPadrao && !intervaloTemConflito(slot, fimPadrao, intervalos)) {
+    if (
+      fimPadrao &&
+      !slotFimIndisponivelParaData(
+        dataVisita,
+        slot,
+        fimPadrao,
+        intervalos,
+        operationalClock,
+      )
+    ) {
       onHoraFimChange(fimPadrao);
     } else {
       onHoraFimChange("");
@@ -190,15 +255,20 @@ export function OsVisitaAgendaPicker({
   }
 
   function selecionarFim(slot: string) {
+    if (fimIndisponivel(slot)) return;
     onHoraFimChange(slot);
-    if (horaVisita && !intervaloTemConflito(horaVisita, slot, intervalos)) {
-      setOpen(false);
-    }
+    setOpen(false);
   }
 
   function fimIndisponivel(fim: string): boolean {
     if (!horaVisita) return true;
-    return intervaloTemConflito(horaVisita, fim, intervalos);
+    return slotFimIndisponivelParaData(
+      dataVisita,
+      horaVisita,
+      fim,
+      intervalos,
+      operationalClock,
+    );
   }
 
   return (
@@ -341,7 +411,12 @@ export function OsVisitaAgendaPicker({
                 ) : null}
                 <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
                   {VISITA_SLOTS_HORARIOS.map((slot) => {
-                    const busy = inicioIndisponivel(slot, intervalos);
+                    const busy = slotInicioIndisponivelParaData(
+                      dataVisita,
+                      slot,
+                      intervalos,
+                      operationalClock,
+                    );
                     const selected = horaVisita === slot;
                     return (
                       <button

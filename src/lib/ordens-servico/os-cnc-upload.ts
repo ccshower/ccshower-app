@@ -2,8 +2,8 @@ import {
   isAmbienteProjetoEditavel,
 } from "@/lib/ordens-servico/os-ambiente-instalacao";
 import {
-  dispatchFichaTecnicaWebhook,
   isN8nFichaTecnicaWebhookConfigured,
+  type FichaTecnicaWebhookJob,
 } from "@/lib/ordens-servico/os-ficha-tecnica-webhook";
 import { OS_ANEXO_TIPO_CNC } from "@/lib/ordens-servico/separation-list";
 import {
@@ -99,7 +99,10 @@ async function uploadSingleCncFile(
   file: UploadBlob,
   index: number,
   osAmbienteId: string | null,
-): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; id: string; fichaWebhookJob: FichaTecnicaWebhookJob | null }
+  | { ok: false; message: string }
+> {
   const nome = cncFileName(file);
   if (file.size > MAX_ANEXO_BYTES) {
     return { ok: false, message: `${nome}: file exceeds 8 MB` };
@@ -142,20 +145,25 @@ async function uploadSingleCncFile(
     return { ok: false, message: insErr?.message ?? "Erro ao registrar anexo" };
   }
 
+  let fichaWebhookJob: FichaTecnicaWebhookJob | null = null;
   if (isPdf && fichaImportStatus === "pending") {
-    void dispatchFichaTecnicaWebhook({
-      supabase,
+    const { data: signed } = await supabase.storage
+      .from(OS_ANEXOS_BUCKET)
+      .createSignedUrl(storagePath, 3600);
+
+    fichaWebhookJob = {
       osId: os.id,
       osAnexoId: anexoRow.id as string,
-      osAmbienteId: osAmbienteId,
+      osAmbienteId,
       empresaId: os.empresa_id,
       storagePath,
       mimeType: mime,
       nomeArquivo: nome,
-    });
+      signedUrl: signed?.signedUrl ?? null,
+    };
   }
 
-  return { ok: true, id: os.id };
+  return { ok: true, id: os.id, fichaWebhookJob };
 }
 
 export async function uploadCncFileFromFormData(
@@ -164,7 +172,15 @@ export async function uploadCncFileFromFormData(
   os: OsAnexoUploadContext,
   formData: FormData,
   osAmbienteId?: string | null,
-): Promise<{ ok: true; id: string; count: number } | { ok: false; message: string }> {
+): Promise<
+  | {
+      ok: true;
+      id: string;
+      count: number;
+      fichaWebhookJobs: FichaTecnicaWebhookJob[];
+    }
+  | { ok: false; message: string }
+> {
   if (!canUploadCncProject(os)) {
     return { ok: false, message: "Upload de Desenho Técnico permitido apenas na etapa Projeto" };
   }
@@ -183,6 +199,7 @@ export async function uploadCncFileFromFormData(
   }
 
   let uploaded = 0;
+  const fichaWebhookJobs: FichaTecnicaWebhookJob[] = [];
   for (let i = 0; i < files.length; i++) {
     const result = await uploadSingleCncFile(
       supabase,
@@ -201,10 +218,13 @@ export async function uploadCncFileFromFormData(
             : result.message,
       };
     }
+    if (result.fichaWebhookJob) {
+      fichaWebhookJobs.push(result.fichaWebhookJob);
+    }
     uploaded += 1;
   }
 
-  return { ok: true, id: os.id, count: uploaded };
+  return { ok: true, id: os.id, count: uploaded, fichaWebhookJobs };
 }
 
 export async function loadCncUploadContext(

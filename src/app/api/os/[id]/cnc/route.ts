@@ -1,10 +1,11 @@
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import {
   loadCncUploadContext,
   uploadCncFileFromFormData,
 } from "@/lib/ordens-servico/os-cnc-upload";
+import { dispatchFichaTecnicaWebhook } from "@/lib/ordens-servico/os-ficha-tecnica-webhook";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -61,8 +62,29 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json(result, { status: 400 });
     }
 
+    if (result.fichaWebhookJobs.length > 0) {
+      const jobs = result.fichaWebhookJobs;
+      after(async () => {
+        for (const job of jobs) {
+          const dispatched = await dispatchFichaTecnicaWebhook(job);
+          if (!dispatched.ok) {
+            console.error(
+              "[ficha-tecnica] webhook nao disparado para anexo",
+              job.osAnexoId,
+              dispatched.message,
+            );
+          }
+        }
+      });
+    }
+
     revalidateOs(osId);
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ok: true,
+      id: result.id,
+      count: result.count,
+      ficha_webhook_queued: result.fichaWebhookJobs.length,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro no upload";
     return NextResponse.json({ ok: false, message }, { status: 500 });

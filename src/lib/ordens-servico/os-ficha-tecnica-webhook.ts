@@ -5,12 +5,23 @@ import {
   resolveFichaTecnicaCallbackPath,
   resolveFichaTecnicaCallbackUrl,
 } from "@/lib/ordens-servico/os-ficha-tecnica";
-import { OS_ANEXOS_BUCKET } from "@/lib/ordens-servico/visita-comercial";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const N8N_WEBHOOK_FICHA_TECNICA_URL =
   process.env.N8N_WEBHOOK_FICHA_TECNICA_URL?.trim() ?? "";
+
+/** Dados serializáveis para disparar o webhook após o upload (ex.: `after()` na Vercel). */
+export type FichaTecnicaWebhookJob = {
+  osId: string;
+  osAnexoId: string;
+  osAmbienteId: string | null;
+  empresaId: string;
+  storagePath: string;
+  mimeType: string;
+  nomeArquivo: string;
+  signedUrl: string | null;
+};
 
 export function isN8nFichaTecnicaWebhookConfigured(): boolean {
   return Boolean(N8N_WEBHOOK_FICHA_TECNICA_URL);
@@ -27,23 +38,15 @@ export function verifyN8nWebhookSecret(request: Request): boolean {
   return header === expected;
 }
 
-export async function dispatchFichaTecnicaWebhook(params: {
-  supabase: SupabaseClient;
-  osId: string;
-  osAnexoId: string;
-  osAmbienteId: string | null;
-  empresaId: string;
-  storagePath: string;
-  mimeType: string;
-  nomeArquivo: string;
-}): Promise<void> {
+export async function dispatchFichaTecnicaWebhook(
+  params: FichaTecnicaWebhookJob,
+): Promise<{ ok: true } | { ok: false; message: string }> {
   if (!isN8nFichaTecnicaWebhookConfigured()) {
-    return;
+    return {
+      ok: false,
+      message: "N8N_WEBHOOK_FICHA_TECNICA_URL nao configurada",
+    };
   }
-
-  const { data: signed } = await params.supabase.storage
-    .from(OS_ANEXOS_BUCKET)
-    .createSignedUrl(params.storagePath, 3600);
 
   const payload: FichaTecnicaWebhookPayload = {
     event: "cnc_pdf_uploaded",
@@ -52,7 +55,7 @@ export async function dispatchFichaTecnicaWebhook(params: {
     os_ambiente_id: params.osAmbienteId,
     empresa_id: params.empresaId,
     storage_path: params.storagePath,
-    signed_url: signed?.signedUrl ?? null,
+    signed_url: params.signedUrl,
     mime_type: params.mimeType,
     nome_arquivo: params.nomeArquivo,
     callback_path: resolveFichaTecnicaCallbackPath(),
@@ -69,14 +72,24 @@ export async function dispatchFichaTecnicaWebhook(params: {
     });
 
     if (!res.ok) {
+      const detail = await res.text();
       console.error(
         "[ficha-tecnica] webhook N8N respondeu com erro:",
         res.status,
-        await res.text(),
+        detail,
       );
+      return {
+        ok: false,
+        message: `Webhook N8N retornou HTTP ${res.status}`,
+      };
     }
+
+    return { ok: true };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Falha ao chamar webhook N8N";
     console.error("[ficha-tecnica] falha ao chamar webhook N8N:", error);
+    return { ok: false, message };
   }
 }
 

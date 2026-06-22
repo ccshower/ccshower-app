@@ -46,12 +46,30 @@ No nó **Normalizar payload**, campo `openai_model`:
 
 ## 4. Webhook → Vercel
 
-Copie a **Production URL** do nó **Webhook CCSHOWER**:
+Copie a **Production URL** do nó **Webhook CCSHOWER** (não use a URL de *Test*):
 
 ```env
 N8N_WEBHOOK_FICHA_TECNICA_URL=https://SEU-N8N/webhook/ccshower-ficha-tecnica
 APP_BASE_URL=https://seu-app.vercel.app
 ```
+
+**Importante:** após adicionar/alterar variáveis na Vercel, faça **Redeploy** do projeto — sem isso o upload do PDF não dispara o n8n.
+
+Só **arquivos PDF** disparam o workflow (`.dwg`, `.dxf`, etc. são ignorados).
+
+Diagnóstico rápido no Supabase após upload de PDF:
+
+```sql
+select id, nome_arquivo, mime_type, ficha_import_status, ficha_import_error
+from os_anexos
+where tipo = 'cnc_file'
+order by criado_em desc
+limit 5;
+```
+
+- `ficha_import_status = pending` → upload ok, aguardando n8n
+- `skipped` → `N8N_WEBHOOK_FICHA_TECNICA_URL` ausente no deploy
+- `processing` / `completed` / `failed` → n8n recebeu e processou (ou falhou)
 
 Nada de `OPENAI_API_KEY` ou `SUPABASE_*` no Vercel — ficam só nas credenciais n8n.
 
