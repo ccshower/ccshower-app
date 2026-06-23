@@ -13,6 +13,7 @@ import { OsSeparationListCard } from "@/components/ordens-servico/workspace/os-s
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
 import { formatWorkspaceDateTime } from "@/components/ordens-servico/workspace/os-workspace-utils";
 import { t } from "@/lib/i18n";
+import { coutingFromOrdem, tCoutingSim } from "@/lib/ordens-servico/os-couting";
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import type { OrdemServicoWithRelations, OsAnexoComUrl } from "@/lib/types/database";
 
@@ -89,6 +90,7 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
 
   const hasAny =
     Boolean(notesRaw) ||
+    coutingFromOrdem(ordem) ||
     previewPhotos.length > 0 ||
     filesDisplay.length > 0 ||
     itensSeparacao.length > 0 ||
@@ -134,6 +136,17 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
             </p>
             <p className="mt-1 whitespace-pre-wrap text-sm font-light leading-relaxed text-cc-deep">
               {notes}
+            </p>
+          </div>
+        ) : null}
+
+        {coutingFromOrdem(ordem) ? (
+          <div className="mt-3 rounded-ds-lg border border-cc-border bg-white px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+              {t("os.couting.label")}
+            </p>
+            <p className="mt-1 text-sm font-medium text-cc-deep">
+              {tCoutingSim()}
             </p>
           </div>
         ) : null}

@@ -18,6 +18,7 @@ export const ptBR = {
   },
   client: {
     type: {
+      contractor: "Contractor",
       residential: "Residencial",
       construction_company: "Construtora",
       architect: "Arquiteto",
@@ -28,6 +29,39 @@ export const ptBR = {
     osList: {
       multiOpen:
         "{name} possui várias OS abertas. Selecione uma para abrir o painel operacional ou crie uma nova.",
+    },
+  },
+  clientes: {
+    leadSource: {
+      title: "Origem do lead",
+      hint: "De onde veio este cliente? (opcional)",
+      selectLabel: "Origem do lead",
+      selectPlaceholder: "Selecione a origem…",
+      required: "Selecione de onde veio o lead",
+      otherLabel: "Descreva",
+      otherPlaceholder: "Ex.: viu truck na rua",
+      otherRequired: "Descreva a origem do lead",
+      option: {
+        google: "Google",
+        facebook: "Facebook",
+        returning_client: "Cliente retornando",
+        referral: "Indicação",
+        contractor: "Contractor",
+        instagram: "Instagram",
+        other: "Outro",
+      },
+    },
+    contractor: {
+      adminTitle: "Contractors",
+      adminHint: "Cadastre contractors para vincular clientes do tipo Contractor.",
+      add: "Novo contractor",
+      edit: "Editar contractor",
+      nameLabel: "Nome do contractor",
+      selectLabel: "Contractor",
+      selectHint: "De qual contractor é este cliente?",
+      selectPlaceholder: "Selecione o contractor…",
+      required: "Selecione o contractor deste cliente",
+      empty: "Nenhum contractor cadastrado — adicione em Admin → Contractors.",
     },
   },
   os: {
@@ -422,6 +456,10 @@ export const ptBR = {
       finishing: "Finalizando…",
       saved: "Anotações salvas",
       noMaps: "Endereço sem link de rota",
+      clientNameLabel: "Nome do cliente",
+      clientNamePlaceholder: "Nome correto confirmado no local",
+      clientNameHint:
+        "No telefone o nome pode ser aproximado — corrija aqui somente na visita.",
       confirmFinish:
         "Finalizar visita e enviar OS para Financeiro? Esta ação segue o fluxo oficial.",
     },
@@ -474,6 +512,10 @@ export const ptBR = {
         credit_card: "Cartão de crédito",
         zelle: "Zelle",
       },
+    },
+    couting: {
+      label: "Couting",
+      yes: "Sim",
     },
     financing: {
       paymentMethod: "Financiamento",

@@ -67,6 +67,7 @@ export type Cliente = {
   telefone: string;
   email: string | null;
   tipo_cliente: TipoCliente;
+  contractor_id: string | null;
   endereco_formatado: string;
   endereco_linha1: string | null;
   cidade: string | null;
@@ -78,6 +79,9 @@ export type Cliente = {
   longitude: number | null;
   google_maps_url: string | null;
   observacoes: string | null;
+  /** Origem do lead (qualificação Sales). */
+  origem_lead: string | null;
+  origem_lead_outro: string | null;
   equipe_id: string | null;
   criado_por: string | null;
   ativo: boolean;
@@ -87,6 +91,17 @@ export type Cliente = {
 
 export type ClienteWithRelations = Cliente & {
   equipe: Pick<Equipe, "id" | "nome" | "cor_primaria" | "cor_secundaria"> | null;
+  contractor?: Pick<Contractor, "id" | "nome"> | null;
+};
+
+export type Contractor = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  email: string | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
 };
 
 export type OrdemServicoStatus =
@@ -110,6 +125,8 @@ export type OrdemServico = {
   responsavel_id: string | null;
   valor_previsto: number | null;
   valor_comercial: number | null;
+  /** Couting (checkbox) definido na visita comercial (Sales). */
+  couting: boolean;
   valor_projeto: number | null;
   valor_final: number | null;
   financial_decision: string;

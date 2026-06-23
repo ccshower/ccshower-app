@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { CampoPageFrame } from "@/components/layout/campo-page-frame";
 import { getCurrentUsuario, isAdmin } from "@/lib/auth/get-current-usuario";
+import { loadContractorsAtivos } from "@/lib/clientes/load-contractors";
 import { loadOsPorCliente } from "@/lib/ordens-servico/load-os-por-cliente";
 import { pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +27,7 @@ export default async function ClientesPage() {
     { data: equipes, error: e2 },
     { data: usuarios, error: e3 },
     { osPorCliente, error: e4 },
+    { contractors, error: e5 },
   ] = await Promise.all([
       supabase.from("clientes").select("*").order("criado_em", { ascending: false }),
       supabase
@@ -42,14 +44,15 @@ export default async function ClientesPage() {
         .eq("ativo", true)
         .order("nome", { ascending: true }),
     loadOsPorCliente(),
+    loadContractorsAtivos(supabase),
   ]);
 
-  if (e1 || e2 || e3) {
+  if (e1 || e2 || e3 || e5) {
     return (
       <CampoPageFrame tab="clientes">
         <div className="rounded-sm border border-cc-red-soft bg-cc-red-soft p-4 text-sm font-medium text-cc-red">
           Error loading customers:{" "}
-          {e1?.message ?? e2?.message ?? e3?.message}
+          {e1?.message ?? e2?.message ?? e3?.message ?? e5}
         </div>
       </CampoPageFrame>
     );
@@ -81,6 +84,7 @@ export default async function ClientesPage() {
         initial={merged}
         equipes={eqList}
         usuarios={userList}
+        contractors={contractors}
         initialOsPorCliente={osPorCliente}
         osLoadWarning={e4}
         googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}

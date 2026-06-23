@@ -21,6 +21,7 @@ import {
   mapVisitaInicialResumo,
 } from "@/lib/ordens-servico/agenda-evento-query";
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
+import { buildInitialCommercialOsTitulo } from "@/lib/ordens-servico/os-operational-title";
 import {
   buildFinanciamentoUpdate,
   type FinanciamentoCapture,
@@ -235,6 +236,13 @@ function mapDbErrorFinanciamento(message: string): string {
   return message;
 }
 
+function mapDbErrorCouting(message: string): string {
+  if (message.includes("couting") || message.includes("coating")) {
+    return "Database out of date: apply migration supabase/migrations/20250625120000_os_coating.sql in Supabase.";
+  }
+  return message;
+}
+
 /** Persiste forma de pagamento e dados de financiamento (somente etapa comercial). */
 export async function salvarFormaPagamentoComercial(
   osId: string,
@@ -267,6 +275,97 @@ export async function salvarFormaPagamentoComercial(
       ok: false,
       message:
         e instanceof Error ? e.message : "Error saving payment method",
+    };
+  }
+}
+
+/** Atualiza nome do cliente durante a visita comercial (Sales). */
+export async function salvarNomeClienteVisitaComercial(
+  osId: string,
+  nomeRaw: string,
+): Promise<ActionResult> {
+  try {
+    const nome = String(nomeRaw ?? "").trim();
+    if (!nome) {
+      return { ok: false, message: "Customer name is required" };
+    }
+
+    const { supabase } = await requireAuth();
+    const { os, error } = await loadOsParaVisita(supabase, osId);
+    if (error || !os) return { ok: false, message: error ?? "Work order not found" };
+
+    if (!isVisitaComercialExecucao(os)) {
+      return {
+        ok: false,
+        message: "Customer name can only be edited during the visit",
+      };
+    }
+
+    const { error: cliErr } = await supabase
+      .from("clientes")
+      .update({ nome })
+      .eq("id", os.cliente_id);
+
+    if (cliErr) {
+      return {
+        ok: false,
+        message: cliErr.message.includes("policy")
+          ? "Not allowed to update customer name for this visit"
+          : cliErr.message,
+      };
+    }
+
+    const titulo = buildInitialCommercialOsTitulo(nome);
+    const { error: osErr } = await supabase
+      .from("ordens_servico")
+      .update({ titulo })
+      .eq("id", osId);
+
+    if (osErr) return { ok: false, message: osErr.message };
+
+    if (os.visita_inicial?.id) {
+      await supabase
+        .from("agenda_eventos")
+        .update({ titulo })
+        .eq("id", os.visita_inicial.id);
+    }
+
+    revalidateOs(osId);
+    return { ok: true, id: osId };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error saving customer name",
+    };
+  }
+}
+
+/** Persiste couting (checkbox) — somente etapa comercial. */
+export async function salvarCoutingComercial(
+  osId: string,
+  couting: boolean,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAuth();
+    const { os, error } = await loadOsParaVisita(supabase, osId);
+    if (error || !os) return { ok: false, message: error ?? "Work order not found" };
+
+    if (parseOsStage(os.etapa_atual) !== "commercial") {
+      return { ok: false, message: "Couting only in the commercial stage" };
+    }
+
+    const { error: updErr } = await supabase
+      .from("ordens_servico")
+      .update({ couting: Boolean(couting) })
+      .eq("id", osId);
+
+    if (updErr) return { ok: false, message: mapDbErrorCouting(updErr.message) };
+    revalidateOs(osId);
+    return { ok: true, id: osId };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error saving couting",
     };
   }
 }

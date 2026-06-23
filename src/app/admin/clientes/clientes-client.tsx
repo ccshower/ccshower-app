@@ -9,6 +9,13 @@ import {
   useTransition,
 } from "react";
 
+import {
+  ClienteContractorSelect,
+  validateClienteContractorForm,
+} from "@/components/clientes/cliente-contractor-select";
+import { ClienteLeadSourceFields,
+  validateClienteLeadSourceForm,
+} from "@/components/clientes/cliente-lead-source-fields";
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import { AgendarVisitaModal } from "@/components/ordens-servico/agendar-visita-modal";
 import { Field } from "@/components/ui/field";
@@ -17,6 +24,7 @@ import { IconClipboard, IconPencil, IconPower } from "@/components/ui/icons";
 import {
   CLIENT_TYPE,
   parseClientType,
+  type ClientType,
 } from "@/lib/clientes/tipo-cliente";
 import { OsSemEquipeBadge } from "@/components/ordens-servico/os-sem-equipe-badge";
 import { clienteSemEquipe } from "@/lib/equipes/validate-equipe-operacional";
@@ -27,6 +35,7 @@ import type {
   Cliente,
   ClienteOsResumo,
   ClienteWithRelations,
+  Contractor,
   Equipe,
   Usuario,
 } from "@/lib/types/database";
@@ -73,6 +82,7 @@ export function ClienteForm({
   cliente,
   equipes,
   usuarios,
+  contractors,
   apiKey,
   formKey,
   pending,
@@ -84,6 +94,7 @@ export function ClienteForm({
   cliente?: ClienteWithRelations | null;
   equipes: Equipe[];
   usuarios: Usuario[];
+  contractors: Contractor[];
   apiKey: string;
   formKey: string;
   pending: boolean;
@@ -96,6 +107,14 @@ export function ClienteForm({
     googleAddressFromCliente(cliente),
   );
   const [equipeError, setEquipeError] = useState<string | null>(null);
+  const [leadError, setLeadError] = useState<string | null>(null);
+  const [contractorError, setContractorError] = useState<string | null>(null);
+  const [tipoCliente, setTipoCliente] = useState<ClientType>(() =>
+    parseClientType(cliente?.tipo_cliente ?? "residential"),
+  );
+  const [contractorId, setContractorId] = useState(
+    () => cliente?.contractor_id ?? "",
+  );
   const commercialEquipes = useMemo(
     () => filterEquipesForStage(equipes, "commercial"),
     [equipes],
@@ -111,6 +130,8 @@ export function ClienteForm({
 
   useEffect(() => {
     setAddress(googleAddressFromCliente(cliente));
+    setTipoCliente(parseClientType(cliente?.tipo_cliente ?? "residential"));
+    setContractorId(cliente?.contractor_id ?? "");
   }, [cliente, formKey]);
 
   return (
@@ -145,6 +166,21 @@ export function ClienteForm({
         if (!canChooseEquipe) {
           fd.set("equipe_id", equipeId);
         }
+        const leadErr = validateClienteLeadSourceForm(fd, false);
+        if (leadErr) {
+          setLeadError(leadErr);
+          return;
+        }
+        setLeadError(null);
+        const contractorErr = validateClienteContractorForm(
+          String(fd.get("tipo_cliente") ?? ""),
+          fd,
+        );
+        if (contractorErr) {
+          setContractorError(contractorErr);
+          return;
+        }
+        setContractorError(null);
         onSubmit(fd);
       }}
     >
@@ -170,10 +206,12 @@ export function ClienteForm({
         </Field>
       </div>
 
-      <Field label="Email">
+      <Field label="Email" hint="Optional">
         <input
           name="email"
-          type="email"
+          type="text"
+          inputMode="email"
+          autoComplete="email"
           defaultValue={cliente?.email ?? ""}
           className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
         />
@@ -183,16 +221,50 @@ export function ClienteForm({
         <select
           name="tipo_cliente"
           required
-          defaultValue={cliente?.tipo_cliente ?? "residential"}
+          value={tipoCliente}
+          onChange={(e) => {
+            const next = parseClientType(e.target.value);
+            setTipoCliente(next);
+            if (next !== "contractor") setContractorId("");
+            setContractorError(null);
+          }}
           className="w-full rounded-sm border-[1.5px] border-cc-border bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
         >
-          {CLIENT_TYPE.map((t) => (
-            <option key={t} value={t}>
-              {tClientType(t)}
+          {CLIENT_TYPE.map((tipo) => (
+            <option key={tipo} value={tipo}>
+              {tClientType(tipo)}
             </option>
           ))}
         </select>
       </Field>
+
+      {tipoCliente === "contractor" ? (
+        <ClienteContractorSelect
+          contractors={contractors}
+          value={contractorId}
+          disabled={pending}
+          onChange={setContractorId}
+        />
+      ) : (
+        <input type="hidden" name="contractor_id" value="" />
+      )}
+      {contractorError ? (
+        <p className="rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2 text-sm text-cc-red">
+          {contractorError}
+        </p>
+      ) : null}
+
+      <ClienteLeadSourceFields
+        key={`lead-${formKey}`}
+        cliente={cliente}
+        required={false}
+        disabled={pending}
+      />
+      {leadError ? (
+        <p className="rounded-sm border border-cc-red-soft bg-cc-red-soft px-3 py-2 text-sm text-cc-red">
+          {leadError}
+        </p>
+      ) : null}
 
       <GooglePlacesField
         apiKey={apiKey}
@@ -291,6 +363,7 @@ export function ClientesClient({
   initial,
   equipes,
   usuarios,
+  contractors,
   initialOsPorCliente,
   osLoadWarning,
   googleMapsApiKey,
@@ -300,6 +373,7 @@ export function ClientesClient({
   initial: ClienteWithRelations[];
   equipes: Equipe[];
   usuarios: Usuario[];
+  contractors: Contractor[];
   initialOsPorCliente: Record<string, ClienteOsResumo[]>;
   osLoadWarning?: string;
   googleMapsApiKey: string;
@@ -549,6 +623,7 @@ export function ClientesClient({
           formKey={`create-${openCreate}`}
           equipes={equipes}
           usuarios={usuarios}
+          contractors={contractors}
           apiKey={googleMapsApiKey}
           pending={pending}
           canChooseEquipe={canChooseEquipe}
@@ -581,6 +656,7 @@ export function ClientesClient({
             cliente={editing}
             equipes={equipes}
             usuarios={usuarios}
+            contractors={contractors}
             apiKey={googleMapsApiKey}
             pending={pending}
             canChooseEquipe={canChooseEquipe}

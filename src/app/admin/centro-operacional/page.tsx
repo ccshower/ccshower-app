@@ -17,6 +17,7 @@ import { loadFilaRepair } from "@/lib/centro-operacional/load-fila-repair";
 import { loadGargalosOperacionais } from "@/lib/centro-operacional/load-gargalos-operacionais";
 import { loadProducaoMensal } from "@/lib/centro-operacional/load-producao-mensal";
 import { loadSaudeOperacional } from "@/lib/centro-operacional/load-saude-operacional";
+import { loadContractorsAtivos } from "@/lib/clientes/load-contractors";
 import { pickDefaultCommercialEquipeId } from "@/lib/ordens-servico/workflow-equipe";
 import { loadUnidades } from "@/lib/unidades/load-unidades";
 import {
@@ -72,6 +73,7 @@ export default async function CentroOperacionalPage({
     capacidadeOperacional,
     { data: equipes, error: equipesError },
     { data: usuarios, error: usuariosError },
+    { contractors, error: contractorsError },
   ] = await Promise.all([
     loadFilaComercial(unidadeId),
     loadFilaFinanceiro(unidadeId),
@@ -98,6 +100,7 @@ export default async function CentroOperacionalPage({
       )
       .eq("ativo", true)
       .order("nome", { ascending: true }),
+    loadContractorsAtivos(supabase),
   ]);
 
   const eqList = (equipes ?? []) as Equipe[];
@@ -122,7 +125,7 @@ export default async function CentroOperacionalPage({
   return (
     <CentroOperacionalClient
       filaComercial={filaComercial}
-      filaComercialError={filaComercialError ?? equipesError?.message ?? usuariosError?.message ?? null}
+      filaComercialError={filaComercialError ?? equipesError?.message ?? usuariosError?.message ?? contractorsError ?? null}
       filaFinanceiro={filaFinanceiro}
       filaFinanceiroError={filaFinanceiroError}
       filaProjeto={filaProjeto}
@@ -141,6 +144,7 @@ export default async function CentroOperacionalPage({
       capacidadeOperacional={capacidadeOperacional}
       equipes={eqList}
       usuarios={(usuarios ?? []) as Usuario[]}
+      contractors={contractors}
       googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
       defaultEquipeId={pickDefaultCommercialEquipeId(eqList, usuario?.equipe_id)}
       canChooseEquipe={isAdminOrManager(usuario) || Boolean(usuario?.pode_ver_todas_equipes)}

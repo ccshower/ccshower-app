@@ -6,7 +6,9 @@ import { salvarAmbientesComercial } from "@/app/ordens-servico/ambientes-actions
 import {
   listarAnexosVisitaComUrls,
   removerAnexoVisitaComercial,
+  salvarCoutingComercial,
 } from "@/app/ordens-servico/visita-comercial-actions";
+import { OsCoutingCheckbox } from "@/components/ordens-servico/os-couting-field";
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsValorEditableField } from "@/components/ordens-servico/os-valores-etapa-fields";
 import {
@@ -16,6 +18,7 @@ import {
   somaValoresAmbientes,
   type OsAmbienteFormRow,
 } from "@/lib/ordens-servico/os-ambientes";
+import { coutingFromOrdem } from "@/lib/ordens-servico/os-couting";
 import { uploadAnexosVisitaViaApi } from "@/lib/ordens-servico/upload-anexos-client";
 import { t } from "@/lib/i18n";
 import type { OrdemServicoWithRelations, OsAnexoComUrl, OsAmbiente } from "@/lib/types/database";
@@ -108,6 +111,7 @@ export function OsAmbientesComercialPanel({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [couting, setCouting] = useState(() => coutingFromOrdem(ordem));
 
   const useMultiAmbiente = rows.some((r) => r.nome.trim().length > 0);
 
@@ -120,6 +124,10 @@ export function OsAmbientesComercialPanel({
     setAnexos(lista);
     return lista;
   }, [ordem.id, onMessage]);
+
+  useEffect(() => {
+    setCouting(coutingFromOrdem(ordem));
+  }, [ordem.couting, ordem.id]);
 
   useEffect(() => {
     setRows(
@@ -137,6 +145,14 @@ export function OsAmbientesComercialPanel({
   }, [rows, onRowsChange]);
 
   const somaAmbientes = useMemo(() => somaValoresAmbientes(rows), [rows]);
+
+  function salvarCouting(checked: boolean) {
+    setCouting(checked);
+    startTransition(async () => {
+      const r = await salvarCoutingComercial(ordem.id, checked);
+      if (!r.ok) onMessage?.(r.message);
+    });
+  }
 
   useEffect(() => {
     if (!useMultiAmbiente) return;
@@ -497,6 +513,14 @@ export function OsAmbientesComercialPanel({
             {t("os.workspace.valores.commercialHint")}
           </p>
         )}
+        <div className="mt-3 border-t border-cc-border/60 pt-3">
+          <OsCoutingCheckbox
+            ordemId={ordem.id}
+            checked={couting}
+            disabled={disabled || pending}
+            onChange={salvarCouting}
+          />
+        </div>
       </section>
 
       {!useMultiAmbiente ? (

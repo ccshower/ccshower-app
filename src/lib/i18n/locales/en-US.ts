@@ -18,6 +18,7 @@ export const enUS = {
   },
   client: {
     type: {
+      contractor: "Contractor",
       residential: "Residential",
       construction_company: "Builder",
       architect: "Architect",
@@ -28,6 +29,39 @@ export const enUS = {
     osList: {
       multiOpen:
         "{name} has multiple open work orders. Select one to open the operations panel or create a new one.",
+    },
+  },
+  clientes: {
+    leadSource: {
+      title: "Lead source",
+      hint: "How did this customer find us? (optional)",
+      selectLabel: "Lead source",
+      selectPlaceholder: "Select source…",
+      required: "Select where the lead came from",
+      otherLabel: "Describe",
+      otherPlaceholder: "E.g. saw truck on the street",
+      otherRequired: "Describe the lead source",
+      option: {
+        google: "Google",
+        facebook: "Facebook",
+        returning_client: "Returning client",
+        referral: "Referral",
+        contractor: "Contractor",
+        instagram: "Instagram",
+        other: "Other",
+      },
+    },
+    contractor: {
+      adminTitle: "Contractors",
+      adminHint: "Register contractors to link contractor-type customers.",
+      add: "New contractor",
+      edit: "Edit contractor",
+      nameLabel: "Contractor name",
+      selectLabel: "Contractor",
+      selectHint: "Which contractor is this customer linked to?",
+      selectPlaceholder: "Select contractor…",
+      required: "Select the contractor for this customer",
+      empty: "No contractors registered — add one in Admin → Contractors.",
     },
   },
   os: {
@@ -423,6 +457,10 @@ export const enUS = {
       finishing: "Finishing…",
       saved: "Notes saved",
       noMaps: "Address without route link",
+      clientNameLabel: "Customer name",
+      clientNamePlaceholder: "Correct name as confirmed on site",
+      clientNameHint:
+        "Phone intake may be approximate — update here during the visit only.",
       confirmFinish:
         "Finish visit and send work order to Financial? This follows the official workflow.",
     },
@@ -475,6 +513,10 @@ export const enUS = {
         credit_card: "Credit card",
         zelle: "Zelle",
       },
+    },
+    couting: {
+      label: "Couting",
+      yes: "Yes",
     },
     financing: {
       paymentMethod: "Financing",

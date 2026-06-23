@@ -4,6 +4,7 @@
  */
 
 export const LEGACY_CLIENT_TYPE: Record<string, string> = {
+  CONTRACTOR: "contractor",
   RESIDENCIAL: "residential",
   CONSTRUTORA: "construction_company",
   ARQUITETO: "architect",

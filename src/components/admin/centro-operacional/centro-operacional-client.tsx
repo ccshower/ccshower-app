@@ -84,7 +84,7 @@ import {
 import { formatFinanceiroValor } from "@/lib/financeiro-operacional/financeiro-operacional";
 import { osWorkspacePathWithUnidade } from "@/lib/unidades/centro-unidade-persist";
 import { t } from "@/lib/i18n";
-import type { Equipe, Unidade, Usuario } from "@/lib/types/database";
+import type { Contractor, Equipe, Unidade, Usuario } from "@/lib/types/database";
 
 type CentroOperacionalClientProps = {
   filaComercial: FilaComercialItem[];
@@ -107,6 +107,7 @@ type CentroOperacionalClientProps = {
   capacidadeOperacional: CapacidadeOperacionalData;
   equipes: Equipe[];
   usuarios: Usuario[];
+  contractors: Contractor[];
   googleMapsApiKey: string;
   defaultEquipeId: string | null;
   canChooseEquipe: boolean;
@@ -138,6 +139,7 @@ export function CentroOperacionalClient({
   capacidadeOperacional,
   equipes,
   usuarios,
+  contractors,
   googleMapsApiKey,
   defaultEquipeId,
   canChooseEquipe,
@@ -223,6 +225,7 @@ export function CentroOperacionalClient({
           loadError={filaComercialError}
           equipes={equipes}
           usuarios={usuarios}
+          contractors={contractors}
           googleMapsApiKey={googleMapsApiKey}
           defaultEquipeId={defaultEquipeId}
           canChooseEquipe={canChooseEquipe}
@@ -497,6 +500,10 @@ function CentroHeader({
     }
     if (item.href === "/admin/financeiro") {
       setCadastroModal("financeiro");
+      return;
+    }
+    if (item.href === "/admin/contractors") {
+      setCadastroModal("contractors");
       return;
     }
     setCadastroModal("usuarios");
@@ -1063,6 +1070,7 @@ function FilaComercialSection({
   loadError,
   equipes,
   usuarios,
+  contractors,
   googleMapsApiKey,
   defaultEquipeId,
   canChooseEquipe,
@@ -1072,6 +1080,7 @@ function FilaComercialSection({
   loadError: string | null;
   equipes: Equipe[];
   usuarios: Usuario[];
+  contractors: Contractor[];
   googleMapsApiKey: string;
   defaultEquipeId: string | null;
   canChooseEquipe: boolean;
@@ -1149,6 +1158,7 @@ function FilaComercialSection({
           formKey={`centro-create-${cadastroOpen}`}
           equipes={equipes}
           usuarios={usuarios}
+          contractors={contractors}
           apiKey={googleMapsApiKey}
           pending={pending}
           canChooseEquipe={canChooseEquipe}

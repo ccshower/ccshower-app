@@ -11,6 +11,7 @@ import {
   salvarPagamentoInstalacao,
 } from "@/app/ordens-servico/instalacao-actions";
 import { salvarValorRepairInstalacao } from "@/app/ordens-servico/repair-actions";
+import { OsCoutingReadonly } from "@/components/ordens-servico/os-couting-field";
 import { OsInstallationChecklistModal } from "@/components/ordens-servico/workspace/os-installation-checklist-modal";
 import { OsAmbientesInstallationPanel } from "@/components/ordens-servico/workspace/os-ambientes-installation-panel";
 import { OsInstallationSeparationCard } from "@/components/ordens-servico/workspace/os-installation-separation-card";
@@ -406,6 +407,8 @@ export function OsWorkspaceInstallation({
           </div>
         </div>
       ) : null}
+
+      <OsCoutingReadonly ordem={ordem} />
 
       {isRepair ? (
         <section className="rounded-sm border border-violet-200/80 bg-white p-3">

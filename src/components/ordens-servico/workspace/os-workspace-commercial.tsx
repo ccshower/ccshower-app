@@ -7,6 +7,10 @@ import {
   salvarFormaPagamentoComercial,
   salvarValorComercial,
 } from "@/app/ordens-servico/visita-comercial-actions";
+import {
+  OsClienteNomeVisitaField,
+  persistirNomeClienteAntesFinalizarVisita,
+} from "@/components/ordens-servico/os-cliente-nome-visita-field";
 import { OsDescontoResumo } from "@/components/ordens-servico/os-desconto-resumo";
 import {
   OsAmbientesComercialPanel,
@@ -43,6 +47,7 @@ export function OsWorkspaceCommercial({
   const [valorComercial, setValorComercial] = useState(initialValorComercialInput(ordem));
   const [financiamento, setFinanciamento] = useFinanciamentoState(ordem);
   const [anotacoes, setAnotacoes] = useState(ordem.anotacoes_tecnicas ?? "");
+  const [clienteNome, setClienteNome] = useState(ordem.cliente?.nome ?? "");
   const [ambienteRows, setAmbienteRows] = useState<OsAmbienteFormRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -50,8 +55,9 @@ export function OsWorkspaceCommercial({
 
   useEffect(() => {
     setAnotacoes(ordem.anotacoes_tecnicas ?? "");
+    setClienteNome(ordem.cliente?.nome ?? "");
     setValorComercial(initialValorComercialInput(ordem));
-  }, [ordem.anotacoes_tecnicas, ordem.valor_comercial, ordem.id]);
+  }, [ordem.anotacoes_tecnicas, ordem.cliente?.nome, ordem.valor_comercial, ordem.id]);
 
   const handleRowsChange = useCallback((rows: OsAmbienteFormRow[]) => {
     setAmbienteRows(rows);
@@ -79,6 +85,15 @@ export function OsWorkspaceCommercial({
     if (!confirm(t("os.visit.confirmFinish"))) return;
     startTransition(async () => {
       setMsg(null);
+      const nomeOk = await persistirNomeClienteAntesFinalizarVisita(
+        ordem.id,
+        clienteNome,
+        ordem.cliente?.nome ?? "",
+      );
+      if (!nomeOk.ok) {
+        setMsg(nomeOk.message);
+        return;
+      }
       const persist = await persistAmbientesBeforeFinish(ordem.id, ambienteRows);
       if (!persist.ok) {
         setMsg(persist.message);
@@ -117,6 +132,16 @@ export function OsWorkspaceCommercial({
 
   return (
     <div className="space-y-4">
+      <OsClienteNomeVisitaField
+        ordemId={ordem.id}
+        value={clienteNome}
+        nomeSalvo={ordem.cliente?.nome ?? ""}
+        disabled={pending || fluxoBloqueado}
+        onChange={setClienteNome}
+        onSaved={() => onAtualizado()}
+        onError={setMsg}
+      />
+
       <OsDescontoResumo ordem={ordem} />
 
       <OsAmbientesComercialPanel

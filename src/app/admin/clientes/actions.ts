@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  mapDbErrorContractor,
+  parseClienteContractorFromForm,
+} from "@/lib/clientes/cliente-contractor";
 import { parseClientType } from "@/lib/clientes/tipo-cliente";
+import {
+  mapDbErrorLeadSource,
+  parseLeadSourceFromForm,
+} from "@/lib/clientes/lead-source";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
 import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
@@ -122,6 +130,12 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
+    const lead = parseLeadSourceFromForm(formData, { required: false });
+    if (!lead.ok) return lead;
+
+    const contractorParsed = parseClienteContractorFromForm(tipo_cliente, formData);
+    if (!contractorParsed.ok) return contractorParsed;
+
     const equipeResolved = await resolveClienteEquipeId(supabase, formData, usuario);
     if (!equipeResolved.ok) return equipeResolved;
 
@@ -155,6 +169,9 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
         longitude: readNumber(formData.get("longitude")),
         google_maps_url: emptyToNull(formData.get("google_maps_url")),
         observacoes: emptyToNull(formData.get("observacoes")),
+        origem_lead: lead.origem_lead,
+        origem_lead_outro: lead.origem_lead_outro,
+        contractor_id: contractorParsed.contractor_id,
         equipe_id: equipeWorkOrder,
         empresa_id,
         ...(unidade_id ? { unidade_id } : {}),
@@ -164,7 +181,12 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
       .select("id, nome, equipe_id")
       .single();
 
-    if (error) return { ok: false, message: error.message };
+    if (error) {
+      return {
+        ok: false,
+        message: mapDbErrorLeadSource(mapDbErrorContractor(error.message)),
+      };
+    }
 
     // Work order inicial (fluxo vivo) — nasce automaticamente ao salvar cliente.
     const snapshot = buildOperationalSnapshot(
@@ -225,6 +247,12 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
+    const lead = parseLeadSourceFromForm(formData, { required: false });
+    if (!lead.ok) return lead;
+
+    const contractorParsed = parseClienteContractorFromForm(tipo_cliente, formData);
+    if (!contractorParsed.ok) return contractorParsed;
+
     const equipeResolved = await resolveClienteEquipeId(supabase, formData, usuario);
     if (!equipeResolved.ok) return equipeResolved;
 
@@ -251,12 +279,20 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
         longitude: readNumber(formData.get("longitude")),
         google_maps_url: emptyToNull(formData.get("google_maps_url")),
         observacoes: emptyToNull(formData.get("observacoes")),
+        origem_lead: lead.origem_lead,
+        origem_lead_outro: lead.origem_lead_outro,
+        contractor_id: contractorParsed.contractor_id,
         equipe_id: equipeResolved.equipeId,
         ...(unidade_id ? { unidade_id } : {}),
       })
       .eq("id", id);
 
-    if (error) return { ok: false, message: error.message };
+    if (error) {
+      return {
+        ok: false,
+        message: mapDbErrorLeadSource(mapDbErrorContractor(error.message)),
+      };
+    }
 
     await syncUnidadeOperacionalCliente(supabase, id, unidade_id);
 
