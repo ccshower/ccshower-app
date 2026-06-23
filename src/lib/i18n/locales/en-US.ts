@@ -736,6 +736,15 @@ export const enUS = {
         "Installed: {installed} · Blocked: {blocked}",
       partialInstallStillMissing: "Still missing in project: {items}",
     },
+    installScheduleQueue: {
+      title: "Install Schedule Queue",
+      empty: "No OS awaiting installation scheduling.",
+      loadError: "Could not load install schedule queue",
+      missingSchedule: "Missing: Schedule",
+      readyToConfirm: "Ready to confirm",
+      materialEta: "Material ETA: {date}",
+      scheduledFor: "Scheduled: {when}",
+    },
     repair: {
       queueTitle: "Repairs",
       addRepair: "Add repair",

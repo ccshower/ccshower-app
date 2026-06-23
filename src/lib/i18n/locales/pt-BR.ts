@@ -670,6 +670,15 @@ export const ptBR = {
         "Instalados: {installed} · Bloqueados: {blocked}",
       partialInstallStillMissing: "Ainda falta no projeto: {items}",
     },
+    installScheduleQueue: {
+      title: "Fila agendar instalação",
+      empty: "Nenhuma OS aguardando agendamento da instalação.",
+      loadError: "Não foi possível carregar a fila de agendamento",
+      missingSchedule: "Falta: Agendamento",
+      readyToConfirm: "Pronta para confirmar",
+      materialEta: "Previsão material: {date}",
+      scheduledFor: "Agendada: {when}",
+    },
     repair: {
       queueTitle: "Reparos",
       addRepair: "Adicionar reparo",

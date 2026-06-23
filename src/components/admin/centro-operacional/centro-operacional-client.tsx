@@ -73,6 +73,10 @@ import {
   type FilaFinanceiroItem,
 } from "@/lib/centro-operacional/fila-financeiro";
 import {
+  filaInstallScheduleStatusBadge,
+  type FilaInstallScheduleItem,
+} from "@/lib/centro-operacional/fila-install-schedule";
+import {
   filaInstalacaoStatusBadge,
   type FilaInstalacaoItem,
 } from "@/lib/centro-operacional/fila-instalacao";
@@ -93,6 +97,8 @@ type CentroOperacionalClientProps = {
   filaFinanceiroError: string | null;
   filaProjeto: FilaProjetoItem[];
   filaProjetoError: string | null;
+  filaInstallSchedule: FilaInstallScheduleItem[];
+  filaInstallScheduleError: string | null;
   filaInstalacao: FilaInstalacaoItem[];
   filaInstalacaoError: string | null;
   filaRepair: FilaRepairItem[];
@@ -125,6 +131,8 @@ export function CentroOperacionalClient({
   filaFinanceiroError,
   filaProjeto,
   filaProjetoError,
+  filaInstallSchedule,
+  filaInstallScheduleError,
   filaInstalacao,
   filaInstalacaoError,
   filaRepair,
@@ -241,6 +249,12 @@ export function CentroOperacionalClient({
         <FilaProjetoSection
           fila={filaProjeto}
           loadError={filaProjetoError}
+          unidadeId={unidadeSelecionadaId}
+        />
+
+        <FilaInstallScheduleSection
+          fila={filaInstallSchedule}
+          loadError={filaInstallScheduleError}
           unidadeId={unidadeSelecionadaId}
         />
 
@@ -1526,6 +1540,127 @@ function FilaRepairSection({
         </ul>
       </div>
     </section>
+  );
+}
+
+function FilaInstallScheduleSection({
+  fila,
+  loadError,
+  unidadeId,
+}: {
+  fila: FilaInstallScheduleItem[];
+  loadError: string | null;
+  unidadeId: string | null;
+}) {
+  const router = useRouter();
+
+  return (
+    <section className="mt-3 sm:mt-4">
+      <div className="overflow-hidden rounded-ds-xl border border-cc-border bg-cc-surface shadow-sheet">
+        <div className="flex items-center justify-between gap-3 border-b border-cc-border bg-cc-canvas/80 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cc-muted">
+            <CentroIcon id="clock" className="h-3.5 w-3.5 text-indigo-600" />
+            {t("centro.installScheduleQueue.title")}
+          </div>
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-800">
+            {fila.length} OS
+          </span>
+        </div>
+        {loadError ? (
+          <p className="border-b border-cc-border px-4 py-3 text-sm text-cc-red sm:px-5">
+            {t("centro.installScheduleQueue.loadError")}: {loadError}
+          </p>
+        ) : null}
+        <ul>
+          {fila.length === 0 ? (
+            <li className="px-4 py-6 text-center text-sm text-cc-muted sm:px-5">
+              {t("centro.installScheduleQueue.empty")}
+            </li>
+          ) : (
+            fila.map((item, i) => (
+              <FilaInstallScheduleRow
+                key={item.osId}
+                item={item}
+                last={i === fila.length - 1}
+                onOpen={() =>
+                  router.push(osWorkspacePathWithUnidade(item.osId, unidadeId))
+                }
+              />
+            ))
+          )}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function FilaInstallScheduleRow({
+  item,
+  last,
+  onOpen,
+}: {
+  item: FilaInstallScheduleItem;
+  last: boolean;
+  onOpen: () => void;
+}) {
+  const status = filaInstallScheduleStatusBadge(item.statusAtual);
+
+  return (
+    <li className={last ? "" : "border-b border-cc-border"}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-cc-canvas/80 sm:gap-4 sm:px-5 sm:py-3"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-cc-ink">{item.clienteNome}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            {item.equipeNome ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-cc-muted">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full border border-cc-border"
+                  style={{ background: item.equipeCorPrimaria ?? undefined }}
+                  aria-hidden
+                />
+                {item.equipeNome}
+              </span>
+            ) : (
+              <span className="text-xs text-cc-muted">No team</span>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 rounded-ds px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.dot}`} aria-hidden />
+              {status.label}
+            </span>
+            {!item.instalacaoAgendada ? (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                {t("centro.installScheduleQueue.missingSchedule")}
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                {t("centro.installScheduleQueue.readyToConfirm")}
+              </span>
+            )}
+          </div>
+          {item.dataPrevistaMaterial ? (
+            <p className="mt-1 text-[10px] text-cc-muted">
+              {t("centro.installScheduleQueue.materialEta", {
+                date: item.dataPrevistaMaterial,
+              })}
+            </p>
+          ) : null}
+          {item.instalacaoQuando ? (
+            <p className="mt-0.5 text-[10px] font-medium text-sky-800">
+              {t("centro.installScheduleQueue.scheduledFor", {
+                when: item.instalacaoQuando,
+              })}
+            </p>
+          ) : null}
+        </div>
+        <IconChevronRight className="h-4 w-4 shrink-0 text-cc-border-strong group-hover:text-cc-muted" />
+      </button>
+    </li>
   );
 }
 

@@ -12,6 +12,7 @@ import { loadCapacidadeOperacional } from "@/lib/centro-operacional/load-capacid
 import { loadFilaComercial } from "@/lib/centro-operacional/load-fila-comercial";
 import { loadFilaFinanceiro } from "@/lib/centro-operacional/load-fila-financeiro";
 import { loadFilaInstalacao } from "@/lib/centro-operacional/load-fila-instalacao";
+import { loadFilaInstallSchedule } from "@/lib/centro-operacional/load-fila-install-schedule";
 import { loadFilaProjeto } from "@/lib/centro-operacional/load-fila-projeto";
 import { loadFilaRepair } from "@/lib/centro-operacional/load-fila-repair";
 import { loadGargalosOperacionais } from "@/lib/centro-operacional/load-gargalos-operacionais";
@@ -62,6 +63,7 @@ export default async function CentroOperacionalPage({
     { fila: filaComercial, error: filaComercialError },
     { fila: filaFinanceiro, error: filaFinanceiroError },
     { fila: filaProjeto, error: filaProjetoError },
+    { fila: filaInstallSchedule, error: filaInstallScheduleError },
     { fila: filaInstalacao, error: filaInstalacaoError },
     { fila: filaRepair, error: filaRepairError },
     agendaGlobal,
@@ -78,6 +80,7 @@ export default async function CentroOperacionalPage({
     loadFilaComercial(unidadeId),
     loadFilaFinanceiro(unidadeId),
     loadFilaProjeto(unidadeId),
+    loadFilaInstallSchedule(unidadeId),
     loadFilaInstalacao(unidadeId),
     loadFilaRepair(unidadeId),
     loadAgendaGlobal(unidadeId),
@@ -130,6 +133,8 @@ export default async function CentroOperacionalPage({
       filaFinanceiroError={filaFinanceiroError}
       filaProjeto={filaProjeto}
       filaProjetoError={filaProjetoError}
+      filaInstallSchedule={filaInstallSchedule}
+      filaInstallScheduleError={filaInstallScheduleError}
       filaInstalacao={filaInstalacao}
       filaInstalacaoError={filaInstalacaoError}
       filaRepair={filaRepair}
