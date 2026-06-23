@@ -1352,7 +1352,6 @@ function filaProjetoPendencias(item: FilaProjetoItem): string[] {
   if (!item.temDataMaterial) out.push("Material");
   if (!item.temCnc) out.push("CNC");
   if (!item.temListaSeparacao) out.push("List");
-  if (!item.temInstalacaoAgendada) out.push("Installation");
   return out;
 }
 

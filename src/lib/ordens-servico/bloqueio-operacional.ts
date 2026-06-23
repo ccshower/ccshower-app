@@ -75,6 +75,12 @@ export const BLOQUEIO_OPCOES_POR_ETAPA: Record<
       motivos: ["Project under review"],
     },
   ],
+  install_schedule: [
+    {
+      categoria: "Scheduling",
+      motivos: ["Awaiting client confirmation", "Material not ready yet"],
+    },
+  ],
   installation: [
     {
       categoria: BLOQUEIO_CATEGORIA_MATERIAL,

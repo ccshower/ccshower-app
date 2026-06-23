@@ -20,7 +20,6 @@ export const ptBR = {
     type: {
       contractor: "Contractor",
       residential: "Residencial",
-      construction_company: "Construtora",
       architect: "Arquiteto",
       partner: "Parceiro",
       commercial: "Comercial",
@@ -69,6 +68,7 @@ export const ptBR = {
       commercial: "Comercial",
       financial_review: "Financeiro",
       project: "Projeto",
+      install_schedule: "Agendar instalação",
       installation: "Instalação",
       blocked: "Bloqueado",
       completed: "Concluída",
@@ -90,6 +90,8 @@ export const ptBR = {
       financial_blocked: "Financeiro bloqueado",
       project_pending: "Projeto pendente",
       project_in_progress: "Projeto em andamento",
+      install_schedule_pending: "Agendamento pendente",
+      install_schedule_in_progress: "Agendamento em andamento",
       installation_scheduled: "Instalação agendada",
       installation_in_progress: "Instalação em andamento",
       installation_pending: "Instalação pendente",
@@ -250,7 +252,8 @@ export const ptBR = {
         finishProject: "Finalizar projeto",
         finishingProject: "Finalizando…",
         confirmFinish:
-          "Finalizar projeto e enviar OS para Instalação? Esta ação segue o fluxo oficial.",
+          "Finalizar projeto técnico e enviar OS para Agendar instalação?",
+        glassOrderTitle: "Pedido de vidro",
         supplierTitle: "Fornecedor",
         supplierPlaceholder: "Selecione o fornecedor…",
         supplierLoading: "Carregando fornecedores…",
@@ -276,6 +279,12 @@ export const ptBR = {
         ambienteInstaladoLocked: "Ambiente já instalado",
         ambienteInstaladoVisitPhotos:
           "Já instalado na obra. Fotos da visita comercial são apenas referência.",
+      },
+      installSchedule: {
+        finish: "Confirmar agendamento e enviar para instalação",
+        finishing: "Avançando…",
+        confirmFinish:
+          "Confirmar agendamento da instalação e enviar OS para Instalação?",
       },
       installation: {
         financialTitle: "Status financeiro",

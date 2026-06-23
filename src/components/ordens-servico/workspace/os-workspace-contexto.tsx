@@ -50,6 +50,7 @@ export function OsWorkspaceContextoOperacional({ ordem }: Props) {
   const shouldShow =
     etapa === "financial_review" ||
     etapa === "project" ||
+    etapa === "install_schedule" ||
     etapa === "installation" ||
     etapa === "completed";
 

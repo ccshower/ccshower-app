@@ -2,7 +2,7 @@
  * Máquina de estados operacional da OS.
  * Chaves persistidas em inglês (snake_case).
  *
- * Pipeline: commercial → financial_review → project → installation → completed
+ * Pipeline: commercial → financial_review → project → install_schedule → installation → completed
  * Ramificação: financial_review → blocked
  */
 
@@ -17,6 +17,7 @@ export const OS_WORKFLOW_STAGES = [
   "commercial",
   "financial_review",
   "project",
+  "install_schedule",
   "installation",
   "blocked",
   "completed",
@@ -34,6 +35,7 @@ export const OS_ACTIVE_STAGES: OsWorkflowStage[] = [
   "commercial",
   "financial_review",
   "project",
+  "install_schedule",
   "installation",
   "blocked",
 ];
@@ -46,6 +48,7 @@ export const OS_STAGE_TEAM_CODE: Record<
   commercial: "commercial",
   financial_review: "financial_review",
   project: "project",
+  install_schedule: "installation",
   installation: "installation",
 };
 
@@ -58,7 +61,8 @@ export const OS_WORKFLOW_TRANSITIONS: Record<
 > = {
   commercial: ["financial_review"],
   financial_review: ["project", "blocked"],
-  project: ["installation"],
+  project: ["install_schedule"],
+  install_schedule: ["installation"],
   installation: ["completed"],
   blocked: ["financial_review"],
   completed: [],
@@ -127,6 +131,7 @@ export function orderStatusOnEnterStage(
       return "in_progress";
     case "financial_review":
     case "project":
+    case "install_schedule":
     case "installation":
     case "blocked":
       return "in_progress";

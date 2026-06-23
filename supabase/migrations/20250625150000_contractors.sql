@@ -64,7 +64,6 @@ alter table public.clientes
     tipo_cliente in (
       'contractor',
       'residential',
-      'construction_company',
       'architect',
       'partner',
       'commercial',

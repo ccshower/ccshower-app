@@ -1,49 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import {
-  agendarInstalacaoProjeto,
   finalizarProjeto,
   listarCatalogoItens,
-  listarEquipesInstalacaoProjeto,
   listarFornecedores,
   salvarDataPrevistaMaterial,
   salvarFornecedorProjeto,
   salvarObservacoesInstalacao,
   salvarValorProjeto,
 } from "@/app/ordens-servico/projeto-actions";
-import { validarSlotVisitaDisponivel } from "@/app/ordens-servico/agenda-disponibilidade";
 import { OsDescontoResumo } from "@/components/ordens-servico/os-desconto-resumo";
-import {
-  OsAgendaSlotConflictModal,
-  type OsAgendaSlotConflictDraft,
-} from "@/components/ordens-servico/os-agenda-slot-conflict-modal";
 import {
   OsValorEditableField,
   OsValorReadonlyRow,
 } from "@/components/ordens-servico/os-valores-etapa-fields";
-import { OsVisitaAgendaPicker } from "@/components/ordens-servico/os-visita-agenda-picker";
 import { Field } from "@/components/ui/field";
 import { initialValorProjetoInput } from "@/lib/ordens-servico/os-valores-etapa";
-import { osTemRetornoInstalacaoParcial, resumoRetornoInstalacaoParcial } from "@/lib/ordens-servico/os-ambiente-instalacao";
+import {
+  osTemRetornoInstalacaoParcial,
+  resumoRetornoInstalacaoParcial,
+} from "@/lib/ordens-servico/os-ambiente-instalacao";
 import { OsAmbientesCncProjectPanel } from "@/components/ordens-servico/workspace/os-ambientes-cnc-project-panel";
 import { OsAmbientesVisitPhotosProject } from "@/components/ordens-servico/workspace/os-ambientes-visit-photos-project";
 import { OsSeparationListProjectPanel } from "@/components/ordens-servico/workspace/os-separation-list-project-panel";
 import { OsSeparationListModal } from "@/components/ordens-servico/workspace/os-separation-list-modal";
-import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
-import {
-  compararYmd,
-  formatIntervaloAgenda,
-  hojeOperacionalYmd,
-  limiteMinimoAgendaYmd,
-  horaFimPadraoParaInicio,
-} from "@/lib/ordens-servico/visita-slots";
-import { filterEquipesForStage } from "@/lib/ordens-servico/workflow-equipe";
+import { hojeOperacionalYmd, compararYmd } from "@/lib/ordens-servico/visita-slots";
 import { t } from "@/lib/i18n";
 import type {
   CatalogoItem,
-  Equipe,
   Fornecedor,
   OrdemServicoWithRelations,
 } from "@/lib/types/database";
@@ -63,63 +49,19 @@ type NotesSaveStatus = "idle" | "saving" | "saved" | "error";
 
 type Props = {
   ordem: OrdemServicoWithRelations;
-  equipes: Equipe[];
   fluxoBloqueado?: boolean;
   onAtualizado: () => void;
   onConcluido: () => void;
 };
 
-function resolveInitialInstalacao(
-  ordem: OrdemServicoWithRelations,
-  installationEquipes: Equipe[],
-) {
-  const agendada = ordem.instalacao_agendada;
-  const parsed = agendada?.data_inicio
-    ? parseVisitaDateTime(agendada.data_inicio)
-    : { data: "", hora: "" };
-  const parsedFim = agendada?.data_fim
-    ? parseVisitaDateTime(agendada.data_fim)
-    : null;
-  const horaFim =
-    parsedFim?.hora.slice(0, 5) ??
-    (parsed.hora ? horaFimPadraoParaInicio(parsed.hora) : "") ??
-    "";
-  const equipeId =
-    agendada?.equipe_id &&
-    installationEquipes.some((e) => e.id === agendada.equipe_id)
-      ? agendada.equipe_id
-      : installationEquipes[0]?.id ?? "";
-
-  return {
-    equipeId,
-    data: parsed.data,
-    hora: parsed.hora,
-    horaFim,
-    agendada: Boolean(agendada?.id && parsed.data && parsed.hora && horaFim),
-  };
-}
-
-/** Execução etapa Projeto — CNC, lista de separação, observações. */
+/** Parte 1 — Projeto técnico: desenho, pedido de vidro, previsão e observações. */
 export function OsWorkspaceProject({
   ordem,
-  equipes,
   fluxoBloqueado = false,
   onAtualizado,
   onConcluido,
 }: Props) {
   const [valorProjeto, setValorProjeto] = useState(initialValorProjetoInput(ordem));
-  const [installationEquipes, setInstallationEquipes] = useState<Equipe[]>(() =>
-    filterEquipesForStage(equipes, "installation"),
-  );
-  const [installationEquipesLoading, setInstallationEquipesLoading] =
-    useState(true);
-  const [installationEquipesError, setInstallationEquipesError] = useState<
-    string | null
-  >(null);
-  const initialInstalacao = useMemo(
-    () => resolveInitialInstalacao(ordem, installationEquipes),
-    [ordem, installationEquipes],
-  );
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [fornecedoresLoading, setFornecedoresLoading] = useState(true);
   const [fornecedoresError, setFornecedoresError] = useState<string | null>(
@@ -130,21 +72,6 @@ export function OsWorkspaceProject({
   );
   const [dataPrevistaMaterial, setDataPrevistaMaterial] = useState(
     () => ordem.data_prevista_material?.slice(0, 10) ?? "",
-  );
-  const [equipeInstalacaoId, setEquipeInstalacaoId] = useState(
-    () => initialInstalacao.equipeId,
-  );
-  const [dataInstalacao, setDataInstalacao] = useState(
-    () => initialInstalacao.data,
-  );
-  const [horaInstalacao, setHoraInstalacao] = useState(
-    () => initialInstalacao.hora,
-  );
-  const [horaFimInstalacao, setHoraFimInstalacao] = useState(
-    () => initialInstalacao.horaFim,
-  );
-  const [instalacaoAgendada, setInstalacaoAgendada] = useState(
-    () => initialInstalacao.agendada,
   );
   const [installationNotes, setInstallationNotes] = useState(
     ordem.installation_notes ?? "",
@@ -157,9 +84,6 @@ export function OsWorkspaceProject({
   const [finalizePending, startFinalizeTransition] = useTransition();
   const [fornecedorPending, startFornecedorTransition] = useTransition();
   const [materialPending, startMaterialTransition] = useTransition();
-  const [instalacaoPending, startInstalacaoTransition] = useTransition();
-  const [conflictDraft, setConflictDraft] =
-    useState<OsAgendaSlotConflictDraft | null>(null);
   const savedNotesRef = useRef(ordem.installation_notes ?? "");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,12 +100,6 @@ export function OsWorkspaceProject({
     setValorProjeto(initialValorProjetoInput(ordem));
     setFornecedorId(ordem.fornecedor_id ?? "");
     setDataPrevistaMaterial(ordem.data_prevista_material?.slice(0, 10) ?? "");
-    const nextInst = resolveInitialInstalacao(ordem, installationEquipes);
-    setEquipeInstalacaoId(nextInst.equipeId);
-    setDataInstalacao(nextInst.data);
-    setHoraInstalacao(nextInst.hora);
-    setHoraFimInstalacao(nextInst.horaFim);
-    setInstalacaoAgendada(nextInst.agendada);
     const next = ordem.installation_notes ?? "";
     setInstallationNotes((prev) => {
       if (prev.trim() === next.trim()) return prev;
@@ -195,25 +113,8 @@ export function OsWorkspaceProject({
     ordem.valor_projeto,
     ordem.fornecedor_id,
     ordem.data_prevista_material,
-    ordem.instalacao_agendada,
     ordem.id,
-    installationEquipes,
   ]);
-
-  useEffect(() => {
-    if (!dataInstalacao) return;
-    const retroMin = limiteMinimoAgendaYmd();
-    const limiteMinimo =
-      dataPrevistaMaterial &&
-      /^\d{4}-\d{2}-\d{2}$/.test(dataPrevistaMaterial) &&
-      compararYmd(dataPrevistaMaterial, retroMin) > 0
-        ? dataPrevistaMaterial
-        : retroMin;
-    if (compararYmd(dataInstalacao, limiteMinimo) < 0) {
-      setDataInstalacao("");
-      setHoraInstalacao("");
-    }
-  }, [dataPrevistaMaterial, dataInstalacao]);
 
   function salvarValor() {
     startValorTransition(async () => {
@@ -242,49 +143,10 @@ export function OsWorkspaceProject({
     setFornecedores(itens);
   }, []);
 
-  const carregarEquipesInstalacao = useCallback(async () => {
-    setInstallationEquipesLoading(true);
-    setInstallationEquipesError(null);
-    const { equipes: loaded, error, debug } = await listarEquipesInstalacaoProjeto();
-    setInstallationEquipesLoading(false);
-
-    if (debug) {
-      console.info("[OsWorkspaceProject] equipes instalação:", {
-        totalDb: debug.inputTotal,
-        totalFiltradas: debug.matchedTotal,
-        filtro: `codigo_operacional=${debug.expectedCode} ou nome≈instal*`,
-        rows: debug.rows,
-      });
-    }
-
-    if (error) {
-      setInstallationEquipesError(error);
-      setInstallationEquipes([]);
-      return;
-    }
-
-    setInstallationEquipes(loaded);
-    if (loaded.length === 0 && debug && debug.inputTotal > 0) {
-      setInstallationEquipesError(
-        "Teams are visible in the database, but none are classified as installation. Check codigo_operacional or name (e.g. Installation A).",
-      );
-    }
-  }, []);
-
   useEffect(() => {
     void carregarCatalogo();
     void carregarFornecedores();
-    void carregarEquipesInstalacao();
-  }, [carregarCatalogo, carregarFornecedores, carregarEquipesInstalacao]);
-
-  useEffect(() => {
-    setEquipeInstalacaoId((current) => {
-      if (current && installationEquipes.some((e) => e.id === current)) {
-        return current;
-      }
-      return resolveInitialInstalacao(ordem, installationEquipes).equipeId;
-    });
-  }, [installationEquipes, ordem]);
+  }, [carregarCatalogo, carregarFornecedores]);
 
   useEffect(() => {
     const current = installationNotes.trim();
@@ -373,20 +235,6 @@ export function OsWorkspaceProject({
         }
       }
 
-      if (equipeInstalacaoId && dataInstalacao && horaInstalacao && horaFimInstalacao) {
-        const saveInstalacao = await agendarInstalacaoProjeto(
-          ordem.id,
-          equipeInstalacaoId,
-          dataInstalacao,
-          horaInstalacao,
-          horaFimInstalacao,
-        );
-        if (!saveInstalacao.ok) {
-          setMsg(saveInstalacao.message);
-          return;
-        }
-      }
-
       const r = await finalizarProjeto(ordem.id);
       if (!r.ok) {
         setMsg(r.message);
@@ -422,106 +270,12 @@ export function OsWorkspaceProject({
     });
   }
 
-  async function persistirAgendamentoInstalacao(
-    data: string,
-    hora: string,
-    horaFim: string,
-  ): Promise<boolean> {
-    const r = await agendarInstalacaoProjeto(
-      ordem.id,
-      equipeInstalacaoId,
-      data,
-      hora,
-      horaFim,
-    );
-    if (!r.ok) {
-      setMsg(r.message);
-      return false;
-    }
-    setInstalacaoAgendada(true);
-    onAtualizadoRef.current();
-    return true;
-  }
-
-  function salvarAgendamentoInstalacao(
-    horaOverride?: string,
-    horaFimOverride?: string,
-  ) {
-    const hora = horaOverride ?? horaInstalacao;
-    const horaFim = horaFimOverride ?? horaFimInstalacao;
-    startInstalacaoTransition(async () => {
-      setMsg(null);
-      setConflictDraft(null);
-
-      if (
-        dataPrevistaMaterial &&
-        compararYmd(dataInstalacao, dataPrevistaMaterial) < 0
-      ) {
-        setMsg(t("os.workspace.project.installationBeforeMaterial"));
-        return;
-      }
-
-      const slotOk = await validarSlotVisitaDisponivel(
-        equipeInstalacaoId,
-        dataInstalacao,
-        hora,
-        horaFim,
-        ordem.instalacao_agendada?.id ?? null,
-      );
-
-      if (!slotOk.ok) {
-        if ("conflito" in slotOk && slotOk.conflito) {
-          const equipeNome =
-            installationEquipes.find((e) => e.id === equipeInstalacaoId)
-              ?.nome ?? "Team";
-          setConflictDraft({
-            equipeNome,
-            dataYmd: dataInstalacao,
-            horaSolicitada: formatIntervaloAgenda(
-              slotOk.horaSolicitada,
-              slotOk.horaFimSolicitada,
-            ),
-            sugestoes: slotOk.sugestoes.map((s) =>
-              formatIntervaloAgenda(s.hora, s.horaFim),
-            ),
-            alreadyBookedMessage: t(
-              "os.workspace.project.installationConflictAlreadyBooked",
-            ),
-          });
-          return;
-        }
-        setMsg(slotOk.message);
-        return;
-      }
-
-      if (horaOverride) {
-        setHoraInstalacao(horaOverride);
-      }
-      if (horaFimOverride) {
-        setHoraFimInstalacao(horaFimOverride);
-      }
-
-      await persistirAgendamentoInstalacao(dataInstalacao, hora, horaFim);
-    });
-  }
-
-  function onInstalacaoConflictPickSlot(slot: string) {
-    setConflictDraft(null);
-    const parts = slot.split("–").map((part) => part.trim());
-    if (parts.length === 2 && parts[0] && parts[1]) {
-      salvarAgendamentoInstalacao(parts[0], parts[1]);
-      return;
-    }
-    salvarAgendamentoInstalacao(slot);
-  }
-
   const busy =
     valorPending ||
     finalizePending ||
     notesStatus === "saving" ||
     fornecedorPending ||
-    materialPending ||
-    instalacaoPending;
+    materialPending;
 
   const retornoParcialInstalacao = osTemRetornoInstalacaoParcial(ordem.ambientes ?? []);
   const resumoRetornoParcial = resumoRetornoInstalacaoParcial(ordem.ambientes ?? []);
@@ -557,6 +311,7 @@ export function OsWorkspaceProject({
           </ul>
         </div>
       ) : null}
+
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
         <OsValorReadonlyRow
           label={t("os.workspace.valores.commercial")}
@@ -575,35 +330,42 @@ export function OsWorkspaceProject({
 
       <OsAmbientesVisitPhotosProject ordem={ordem} />
 
+      <OsAmbientesCncProjectPanel
+        ordem={ordem}
+        disabled={busy}
+        onAtualizado={onAtualizado}
+        onMessage={setMsg}
+      />
+
       <section className="rounded-sm border border-cc-border/80 bg-cc-surface/30 p-3">
-        <p className={sectionLabel}>{t("os.workspace.project.supplierTitle")}</p>
+        <p className={sectionLabel}>{t("os.workspace.project.glassOrderTitle")}</p>
         <div className="mt-3 space-y-3">
           <Field label={t("os.workspace.project.supplierTitle")}>
             <select
-            value={fornecedorId}
-            disabled={busy || fornecedoresLoading || fornecedores.length === 0}
-            onChange={(e) => {
-              const next = e.target.value;
-              setFornecedorId(next);
-              if (next) salvarFornecedor(next);
-            }}
-            className={inputClass}
-          >
-            <option value="" disabled>
-              {fornecedoresLoading
-                ? t("os.workspace.project.supplierLoading")
-                : fornecedoresError
-                  ? fornecedoresError
-                  : fornecedores.length === 0
-                    ? t("os.workspace.project.supplierNone")
-                    : t("os.workspace.project.supplierPlaceholder")}
-            </option>
-            {fornecedores.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nome}
+              value={fornecedorId}
+              disabled={busy || fornecedoresLoading || fornecedores.length === 0}
+              onChange={(e) => {
+                const next = e.target.value;
+                setFornecedorId(next);
+                if (next) salvarFornecedor(next);
+              }}
+              className={inputClass}
+            >
+              <option value="" disabled>
+                {fornecedoresLoading
+                  ? t("os.workspace.project.supplierLoading")
+                  : fornecedoresError
+                    ? fornecedoresError
+                    : fornecedores.length === 0
+                      ? t("os.workspace.project.supplierNone")
+                      : t("os.workspace.project.supplierPlaceholder")}
               </option>
-            ))}
-          </select>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ))}
+            </select>
           </Field>
           {fornecedoresError ? (
             <p className="text-xs text-cc-red">{fornecedoresError}</p>
@@ -622,94 +384,6 @@ export function OsWorkspaceProject({
           </Field>
         </div>
       </section>
-
-      <section className="rounded-sm border border-cc-border/80 bg-white p-3">
-        <p className={sectionLabel}>
-          {t("os.workspace.project.installationSchedulingTitle")}
-        </p>
-
-        <div className="mt-3 space-y-3">
-          <Field label={t("os.workspace.project.installationTeamLabel")}>
-            <select
-              value={equipeInstalacaoId}
-              disabled={
-                busy ||
-                installationEquipesLoading ||
-                installationEquipes.length === 0
-              }
-              onChange={(e) => {
-                setEquipeInstalacaoId(e.target.value);
-                setHoraInstalacao("");
-              }}
-              className={inputClass}
-            >
-              <option value="" disabled>
-                {installationEquipesLoading
-                  ? "Loading installation teams…"
-                  : installationEquipesError
-                    ? installationEquipesError
-                    : installationEquipes.length === 0
-                      ? "No installation teams available"
-                      : t("os.workspace.project.installationTeamPlaceholder")}
-              </option>
-              {installationEquipes.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {installationEquipesError && !installationEquipesLoading ? (
-            <p className="text-xs text-cc-red">{installationEquipesError}</p>
-          ) : null}
-
-          <OsVisitaAgendaPicker
-            equipes={installationEquipes}
-            equipeId={equipeInstalacaoId}
-            dataVisita={dataInstalacao}
-            horaVisita={horaInstalacao}
-            horaFimVisita={horaFimInstalacao}
-            onDataChange={setDataInstalacao}
-            onHoraChange={setHoraInstalacao}
-            onHoraFimChange={setHoraFimInstalacao}
-            excluirEventoId={ordem.instalacao_agendada?.id ?? null}
-            fieldLabel={t("os.workspace.project.installationDateTimeLabel")}
-            dataMinimaYmd={dataPrevistaMaterial || null}
-          />
-
-          {instalacaoAgendada ? (
-            <p className="text-xs font-light text-cc-muted">
-              {t("os.workspace.project.installationScheduled")}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            disabled={
-              busy ||
-              fluxoBloqueado ||
-              !equipeInstalacaoId ||
-              !dataInstalacao ||
-              !horaInstalacao ||
-              !horaFimInstalacao ||
-              installationEquipes.length === 0
-            }
-            onClick={() => salvarAgendamentoInstalacao()}
-            className="w-full rounded-sm border border-cc-border bg-white py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light disabled:opacity-40"
-          >
-            {instalacaoPending
-              ? t("os.workspace.project.savingInstallationSchedule")
-              : t("os.workspace.project.saveInstallationSchedule")}
-          </button>
-        </div>
-      </section>
-
-      <OsAmbientesCncProjectPanel
-        ordem={ordem}
-        disabled={busy}
-        onAtualizado={onAtualizado}
-        onMessage={setMsg}
-      />
 
       <OsSeparationListProjectPanel
         ordem={ordem}
@@ -768,12 +442,6 @@ export function OsWorkspaceProject({
         mode={listaMode ?? "view"}
         onClose={() => setListaMode(null)}
         onSalvo={onAtualizado}
-      />
-
-      <OsAgendaSlotConflictModal
-        draft={conflictDraft}
-        onClose={() => setConflictDraft(null)}
-        onPickSlot={onInstalacaoConflictPickSlot}
       />
     </div>
   );

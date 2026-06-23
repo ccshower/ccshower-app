@@ -4,7 +4,6 @@ import { normalizeLegacyKey, LEGACY_CLIENT_TYPE } from "@/lib/operational/legacy
 export const CLIENT_TYPE = [
   "contractor",
   "residential",
-  "construction_company",
   "architect",
   "partner",
   "commercial",
@@ -23,7 +22,6 @@ const DEFAULT_TYPE: ClientType = "residential";
 
 const TYPE_NO_DEFAULT_INSTALLATION: ClientType[] = [
   "contractor",
-  "construction_company",
   "architect",
   "partner",
 ];

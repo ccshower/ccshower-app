@@ -6,6 +6,7 @@ import { OsBloqueioFluxoAviso } from "@/components/ordens-servico/os-bloqueio-fl
 import { OsWorkspaceCommercial } from "@/components/ordens-servico/workspace/os-workspace-commercial";
 import { OsWorkspaceFinancial } from "@/components/ordens-servico/workspace/os-workspace-financial";
 import { OsWorkspaceInstallation } from "@/components/ordens-servico/workspace/os-workspace-installation";
+import { OsWorkspaceInstallSchedule } from "@/components/ordens-servico/workspace/os-workspace-install-schedule";
 import { OsWorkspaceProject } from "@/components/ordens-servico/workspace/os-workspace-project";
 import { OsWorkspaceScheduling } from "@/components/ordens-servico/workspace/os-workspace-scheduling";
 import { t, tOsStage } from "@/lib/i18n";
@@ -78,6 +79,17 @@ export function OsWorkspaceEtapa({
   if (etapa === "project") {
     return comAvisoFluxo(
       <OsWorkspaceProject
+        ordem={ordem}
+        fluxoBloqueado={fluxoBloqueado}
+        onAtualizado={onAtualizado}
+        onConcluido={onConcluido}
+      />,
+    );
+  }
+
+  if (etapa === "install_schedule") {
+    return comAvisoFluxo(
+      <OsWorkspaceInstallSchedule
         ordem={ordem}
         equipes={equipes}
         fluxoBloqueado={fluxoBloqueado}

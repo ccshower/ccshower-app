@@ -96,6 +96,32 @@ async function loadOsProjectStage(
   };
 }
 
+async function loadOsInstallScheduleStage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  osId: string,
+): Promise<LoadOsProjectStageResult> {
+  const { data, error } = await supabase
+    .from("ordens_servico")
+    .select("id, etapa_atual, empresa_id")
+    .eq("id", osId)
+    .single();
+
+  if (error || !data) {
+    return { error: error?.message ?? "Work order not found" };
+  }
+
+  if (parseOsStage(data.etapa_atual as string) !== "install_schedule") {
+    return { error: "Work order is not in the Install Schedule stage" };
+  }
+
+  return {
+    os: {
+      id: data.id as string,
+      empresa_id: data.empresa_id as string | null,
+    },
+  };
+}
+
 function mapDbErrorValores(message: string): string {
   if (
     message.includes("valor_comercial") ||
@@ -308,7 +334,7 @@ export async function agendarInstalacaoProjeto(
 ): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireAuth();
-    const loaded = await loadOsProjectStage(supabase, osId);
+    const loaded = await loadOsInstallScheduleStage(supabase, osId);
     if ("error" in loaded) return { ok: false, message: loaded.error };
 
     const equipe_id = String(equipeId ?? "").trim();
@@ -407,6 +433,23 @@ export async function agendarInstalacaoProjeto(
         .insert(payload);
       if (insErr) return { ok: false, message: insErr.message };
     }
+
+    const snapshot = buildOperationalSnapshot(
+      equipe_id,
+      "install_schedule",
+      "scheduled",
+    );
+    const { error: syncErr } = await supabase
+      .from("ordens_servico")
+      .update({
+        equipe_id,
+        equipe_atual_id: snapshot.equipe_atual_id,
+        status: "scheduled",
+        status_atual: snapshot.status_atual,
+        etapa_atual: snapshot.etapa_atual,
+      })
+      .eq("id", osId);
+    if (syncErr) return { ok: false, message: syncErr.message };
 
     revalidateOs(osId);
     return { ok: true, id: osId };
@@ -700,6 +743,118 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
     });
     if (!ev.ok) return ev;
 
+    const trans = await transicionarEtapaOrdemServico(osId, "install_schedule");
+    if (!trans.ok) return trans;
+
+    if (osTemRetornoInstalacaoParcial(ambientesList)) {
+      const prep = await prepararAmbientesBloqueadosParaNovaInstalacao(
+        supabase,
+        osId,
+        ambientesList,
+      );
+      if (prep.error) return { ok: false, message: prep.error };
+    }
+
+    revalidateOs(osId);
+    return { ok: true, id: osId };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error completing project",
+    };
+  }
+}
+
+type LoadOsParaFinalizarInstallScheduleResult =
+  | { error: string }
+  | {
+      os: {
+        id: string;
+        cliente_id: string;
+        equipe_id: string;
+        responsavel_id: string | null;
+      };
+    };
+
+async function loadOsParaFinalizarInstallSchedule(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  osId: string,
+): Promise<LoadOsParaFinalizarInstallScheduleResult> {
+  const { data, error } = await supabase
+    .from("ordens_servico")
+    .select(
+      "id, cliente_id, etapa_atual, equipe_atual_id, equipe_id, responsavel_id",
+    )
+    .eq("id", osId)
+    .single();
+
+  if (error || !data) {
+    return { error: error?.message ?? "Work order not found" };
+  }
+
+  if (parseOsStage(data.etapa_atual as string) !== "install_schedule") {
+    return { error: "Work order is not in the Install Schedule stage" };
+  }
+
+  const equipe_id =
+    (data.equipe_atual_id as string | null) ??
+    (data.equipe_id as string | null);
+
+  if (!equipe_id) {
+    return { error: "Work order has no team to advance to installation" };
+  }
+
+  return {
+    os: {
+      id: data.id as string,
+      cliente_id: data.cliente_id as string,
+      equipe_id,
+      responsavel_id: data.responsavel_id as string | null,
+    },
+  };
+}
+
+export async function finalizarAgendamentoInstalacao(
+  osId: string,
+): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireAuth();
+    const bloqueioFluxo = await verificarOsFluxoLiberado(supabase, osId);
+    if (bloqueioFluxo) return bloqueioFluxo;
+
+    const loaded = await loadOsParaFinalizarInstallSchedule(supabase, osId);
+    if ("error" in loaded) return { ok: false, message: loaded.error };
+
+    const { os } = loaded;
+
+    const { data: evInst, error: evErr } = await supabase
+      .from("agenda_eventos")
+      .select("id, equipe_id")
+      .eq("ordem_servico_id", osId)
+      .eq("tipo_evento", "installation")
+      .eq("status", "scheduled")
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (evErr) return { ok: false, message: evErr.message };
+    if (!evInst?.id) {
+      return {
+        ok: false,
+        message: "Schedule the installation before advancing to Installation.",
+      };
+    }
+
+    const { data: ambientes, error: ambErr } = await supabase
+      .from("os_ambientes")
+      .select("*")
+      .eq("ordem_servico_id", osId)
+      .eq("ativo", true);
+
+    if (ambErr) return { ok: false, message: ambErr.message };
+
+    const ambientesList = (ambientes ?? []) as OsAmbiente[];
+
     const trans = await transicionarEtapaOrdemServico(osId, "installation");
     if (!trans.ok) return trans;
 
@@ -712,42 +867,32 @@ export async function finalizarProjeto(osId: string): Promise<ActionResult> {
       if (prep.error) return { ok: false, message: prep.error };
     }
 
-    const { data: evInst } = await supabase
-      .from("agenda_eventos")
-      .select("equipe_id")
-      .eq("ordem_servico_id", osId)
-      .eq("tipo_evento", "installation")
-      .eq("status", "scheduled")
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (evInst?.equipe_id) {
-      const equipeInstalacao = evInst.equipe_id as string;
-      const snapshot = buildOperationalSnapshot(
-        equipeInstalacao,
-        "installation",
-        "scheduled",
-      );
-      const { error: syncErr } = await supabase
-        .from("ordens_servico")
-        .update({
-          equipe_id: equipeInstalacao,
-          equipe_atual_id: snapshot.equipe_atual_id,
-          status: "scheduled",
-          status_atual: snapshot.status_atual,
-          etapa_atual: snapshot.etapa_atual,
-        })
-        .eq("id", osId);
-      if (syncErr) return { ok: false, message: syncErr.message };
-    }
+    const equipeInstalacao = evInst.equipe_id as string;
+    const snapshot = buildOperationalSnapshot(
+      equipeInstalacao,
+      "installation",
+      "scheduled",
+    );
+    const { error: syncErr } = await supabase
+      .from("ordens_servico")
+      .update({
+        equipe_id: equipeInstalacao,
+        equipe_atual_id: snapshot.equipe_atual_id,
+        status: "scheduled",
+        status_atual: snapshot.status_atual,
+        etapa_atual: snapshot.etapa_atual,
+        responsavel_id: userId,
+      })
+      .eq("id", osId);
+    if (syncErr) return { ok: false, message: syncErr.message };
 
     revalidateOs(osId);
     return { ok: true, id: osId };
   } catch (e) {
     return {
       ok: false,
-      message: e instanceof Error ? e.message : "Error completing project",
+      message:
+        e instanceof Error ? e.message : "Error completing install schedule",
     };
   }
 }

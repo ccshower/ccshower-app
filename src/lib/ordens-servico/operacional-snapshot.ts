@@ -23,6 +23,8 @@ export const OS_OPERATIONAL_STATUS = [
   "financial_blocked",
   "project_pending",
   "project_in_progress",
+  "install_schedule_pending",
+  "install_schedule_in_progress",
   "installation_scheduled",
   "installation_in_progress",
   "installation_pending",
@@ -82,6 +84,11 @@ export function resolveOperationalStatus(
       return orderStatus === "in_progress"
         ? "project_in_progress"
         : "project_pending";
+    case "install_schedule":
+      if (orderStatus === "scheduled") return "installation_scheduled";
+      return orderStatus === "in_progress"
+        ? "install_schedule_in_progress"
+        : "install_schedule_pending";
     case "installation":
       if (orderStatus === "scheduled") return "installation_scheduled";
       if (orderStatus === "in_progress") return "installation_in_progress";

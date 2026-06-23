@@ -6,7 +6,8 @@
 export const LEGACY_CLIENT_TYPE: Record<string, string> = {
   CONTRACTOR: "contractor",
   RESIDENCIAL: "residential",
-  CONSTRUTORA: "construction_company",
+  CONSTRUTORA: "contractor",
+  construction_company: "contractor",
   ARQUITETO: "architect",
   PARCEIRO: "partner",
   COMERCIAL: "commercial",
@@ -17,6 +18,8 @@ export const LEGACY_OS_STAGE: Record<string, string> = {
   comercial: "commercial",
   financeiro: "financial_review",
   projeto: "project",
+  agendamento_instalacao: "install_schedule",
+  install_schedule: "install_schedule",
   instalacao: "installation",
   bloqueado: "blocked",
   concluida: "completed",

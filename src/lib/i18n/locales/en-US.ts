@@ -20,7 +20,6 @@ export const enUS = {
     type: {
       contractor: "Contractor",
       residential: "Residential",
-      construction_company: "Builder",
       architect: "Architect",
       partner: "Partner",
       commercial: "Commercial",
@@ -69,6 +68,7 @@ export const enUS = {
       commercial: "Commercial",
       financial_review: "Financial",
       project: "Project",
+      install_schedule: "Install schedule",
       installation: "Installation",
       blocked: "Blocked",
       completed: "Completed",
@@ -90,6 +90,8 @@ export const enUS = {
       financial_blocked: "Financial blocked",
       project_pending: "Project pending",
       project_in_progress: "Project in progress",
+      install_schedule_pending: "Install schedule pending",
+      install_schedule_in_progress: "Install schedule in progress",
       installation_scheduled: "Installation scheduled",
       installation_in_progress: "Installation in progress",
       installation_pending: "Installation pending",
@@ -250,7 +252,8 @@ export const enUS = {
         finishProject: "Finish project",
         finishingProject: "Finishing…",
         confirmFinish:
-          "Finish project and send work order to Installation? This follows the official workflow.",
+          "Finish technical project and send work order to Install Schedule?",
+        glassOrderTitle: "Glass order",
         supplierTitle: "Supplier",
         supplierPlaceholder: "Select supplier…",
         supplierLoading: "Loading suppliers…",
@@ -276,6 +279,12 @@ export const enUS = {
         ambienteInstaladoLocked: "Environment already installed",
         ambienteInstaladoVisitPhotos:
           "Already installed on site. Commercial visit photos are reference only.",
+      },
+      installSchedule: {
+        finish: "Confirm schedule and send to installation",
+        finishing: "Advancing…",
+        confirmFinish:
+          "Confirm installation schedule and send work order to Installation?",
       },
       installation: {
         financialTitle: "Financial status",
