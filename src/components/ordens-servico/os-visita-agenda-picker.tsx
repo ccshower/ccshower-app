@@ -17,7 +17,7 @@ import {
   formatIntervaloAgenda,
   horaFimPadraoParaInicio,
   horariosFimParaInicio,
-  hojeOperacionalYmd,
+  limiteMinimoAgendaYmd,
   slotFimIndisponivelParaData,
   slotInicioIndisponivelParaData,
   type AgendaIntervaloOcupado,
@@ -201,13 +201,13 @@ export function OsVisitaAgendaPicker({
     return () => document.removeEventListener("mousedown", onPointer);
   }, [open]);
 
-  const hoje = hojeOperacionalYmd();
+  const retroMin = limiteMinimoAgendaYmd();
   const limiteMinimo = useMemo(() => {
     if (!dataMinimaYmd || !/^\d{4}-\d{2}-\d{2}$/.test(dataMinimaYmd)) {
-      return hoje;
+      return retroMin;
     }
-    return compararYmd(dataMinimaYmd, hoje) > 0 ? dataMinimaYmd : hoje;
-  }, [dataMinimaYmd, hoje]);
+    return compararYmd(dataMinimaYmd, retroMin) > 0 ? dataMinimaYmd : retroMin;
+  }, [dataMinimaYmd, retroMin]);
 
   const monthLabel = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     month: "long",

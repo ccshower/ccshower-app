@@ -8,6 +8,7 @@ import {
   isoRangeDiaOperacional,
   OPERATIONAL_TZ,
   parseVisitaDateTime,
+  zonedWallClockToUtcIso,
 } from "@/lib/ordens-servico/datetime";
 
 /** Intervalo entre marcos de horário na agenda (visitas e instalações). */
@@ -62,6 +63,24 @@ export const VISITA_SLOTS_HORARIOS = gerarHorariosAgenda() as readonly VisitaSlo
 
 export function hojeOperacionalYmd(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: OPERATIONAL_TZ });
+}
+
+/** Dias corridos aceitos para lançamento retroativo na agenda (1 = ontem). */
+export const AGENDA_RETRO_DIAS = 1;
+
+/** Data mínima selecionável na agenda (hoje − {@link AGENDA_RETRO_DIAS}). */
+export function limiteMinimoAgendaYmd(): string {
+  const hoje = hojeOperacionalYmd();
+  const iso = zonedWallClockToUtcIso(hoje, "12:00");
+  if (!iso) return hoje;
+  const limite = new Date(
+    new Date(iso).getTime() - AGENDA_RETRO_DIAS * 86_400_000,
+  );
+  return limite.toLocaleDateString("en-CA", { timeZone: OPERATIONAL_TZ });
+}
+
+export function dataAgendaAntesDoPermitido(ymd: string): boolean {
+  return compararYmd(ymd, limiteMinimoAgendaYmd()) < 0;
 }
 
 export { isoRangeDiaOperacional };

@@ -36,6 +36,7 @@ import {
   compararYmd,
   formatIntervaloAgenda,
   hojeOperacionalYmd,
+  limiteMinimoAgendaYmd,
   horaFimPadraoParaInicio,
 } from "@/lib/ordens-servico/visita-slots";
 import { filterEquipesForStage } from "@/lib/ordens-servico/workflow-equipe";
@@ -201,13 +202,13 @@ export function OsWorkspaceProject({
 
   useEffect(() => {
     if (!dataInstalacao) return;
-    const hoje = hojeOperacionalYmd();
+    const retroMin = limiteMinimoAgendaYmd();
     const limiteMinimo =
       dataPrevistaMaterial &&
       /^\d{4}-\d{2}-\d{2}$/.test(dataPrevistaMaterial) &&
-      compararYmd(dataPrevistaMaterial, hoje) > 0
+      compararYmd(dataPrevistaMaterial, retroMin) > 0
         ? dataPrevistaMaterial
-        : hoje;
+        : retroMin;
     if (compararYmd(dataInstalacao, limiteMinimo) < 0) {
       setDataInstalacao("");
       setHoraInstalacao("");

@@ -21,6 +21,7 @@ import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import {
   formatIntervaloAgenda,
   horaFimPadraoParaInicio,
+  dataAgendaAntesDoPermitido,
   horarioOperacionalJaPassou,
   hojeOperacionalYmd,
   intervaloTemConflito,
@@ -254,6 +255,13 @@ export async function validarSlotVisitaDisponivel(
   horaFimOuExcluir?: string | null,
   excluirEventoId?: string | null,
 ): Promise<ValidarSlotVisitaResult> {
+  if (dataAgendaAntesDoPermitido(dataVisita)) {
+    return {
+      ok: false,
+      message: "Appointment date is too far in the past",
+    };
+  }
+
   let horaFim: string | null | undefined = horaFimOuExcluir;
   let excluirId = excluirEventoId ?? null;
 
@@ -314,6 +322,13 @@ export async function avaliarSlotReagendamentoCalendario(
     parseVisitaDateTime(isoInicio).hora.slice(0, 5);
   if (!hmInicio) {
     return { ok: false, message: "Invalid appointment date or time" };
+  }
+
+  if (dataAgendaAntesDoPermitido(dataVisita)) {
+    return {
+      ok: false,
+      message: "Appointment date is too far in the past",
+    };
   }
 
   const hmFim =
