@@ -125,8 +125,8 @@ export type OrdemServico = {
   responsavel_id: string | null;
   valor_previsto: number | null;
   valor_comercial: number | null;
-  /** Couting (checkbox) definido na visita comercial (Sales). */
-  couting: boolean;
+  /** Coating (checkbox) definido na visita comercial (Sales). */
+  coating: boolean;
   valor_projeto: number | null;
   valor_final: number | null;
   financial_decision: string;

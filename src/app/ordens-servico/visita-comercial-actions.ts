@@ -236,9 +236,12 @@ function mapDbErrorFinanciamento(message: string): string {
   return message;
 }
 
-function mapDbErrorCouting(message: string): string {
-  if (message.includes("couting") || message.includes("coating")) {
-    return "Database out of date: apply migration supabase/migrations/20250625120000_os_coating.sql in Supabase.";
+function mapDbErrorCoating(message: string): string {
+  if (
+    message.includes("coating") ||
+    message.includes("couting")
+  ) {
+    return "Database out of date: apply migrations supabase/migrations/20250625120000_os_coating.sql and 20250627120000_rename_couting_to_coating.sql in Supabase.";
   }
   return message;
 }
@@ -340,10 +343,10 @@ export async function salvarNomeClienteVisitaComercial(
   }
 }
 
-/** Persiste couting (checkbox) — somente etapa comercial. */
-export async function salvarCoutingComercial(
+/** Persiste coating (checkbox) — somente etapa comercial. */
+export async function salvarCoatingComercial(
   osId: string,
-  couting: boolean,
+  coating: boolean,
 ): Promise<ActionResult> {
   try {
     const { supabase } = await requireAuth();
@@ -351,21 +354,21 @@ export async function salvarCoutingComercial(
     if (error || !os) return { ok: false, message: error ?? "Work order not found" };
 
     if (parseOsStage(os.etapa_atual) !== "commercial") {
-      return { ok: false, message: "Couting only in the commercial stage" };
+      return { ok: false, message: "Coating only in the commercial stage" };
     }
 
     const { error: updErr } = await supabase
       .from("ordens_servico")
-      .update({ couting: Boolean(couting) })
+      .update({ coating: Boolean(coating) })
       .eq("id", osId);
 
-    if (updErr) return { ok: false, message: mapDbErrorCouting(updErr.message) };
+    if (updErr) return { ok: false, message: mapDbErrorCoating(updErr.message) };
     revalidateOs(osId);
     return { ok: true, id: osId };
   } catch (e) {
     return {
       ok: false,
-      message: e instanceof Error ? e.message : "Error saving couting",
+      message: e instanceof Error ? e.message : "Error saving coating",
     };
   }
 }

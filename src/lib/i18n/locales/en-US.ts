@@ -523,8 +523,8 @@ export const enUS = {
         zelle: "Zelle",
       },
     },
-    couting: {
-      label: "Couting",
+    coating: {
+      label: "Coating",
       yes: "Yes",
     },
     financing: {

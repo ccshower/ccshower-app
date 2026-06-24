@@ -6,9 +6,9 @@ import { salvarAmbientesComercial } from "@/app/ordens-servico/ambientes-actions
 import {
   listarAnexosVisitaComUrls,
   removerAnexoVisitaComercial,
-  salvarCoutingComercial,
+  salvarCoatingComercial,
 } from "@/app/ordens-servico/visita-comercial-actions";
-import { OsCoutingCheckbox } from "@/components/ordens-servico/os-couting-field";
+import { OsCoatingCheckbox } from "@/components/ordens-servico/os-coating-field";
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsValorEditableField } from "@/components/ordens-servico/os-valores-etapa-fields";
 import {
@@ -18,7 +18,7 @@ import {
   somaValoresAmbientes,
   type OsAmbienteFormRow,
 } from "@/lib/ordens-servico/os-ambientes";
-import { coutingFromOrdem } from "@/lib/ordens-servico/os-couting";
+import { coatingFromOrdem } from "@/lib/ordens-servico/os-coating";
 import { uploadAnexosVisitaViaApi } from "@/lib/ordens-servico/upload-anexos-client";
 import { t } from "@/lib/i18n";
 import type { OrdemServicoWithRelations, OsAnexoComUrl, OsAmbiente } from "@/lib/types/database";
@@ -111,7 +111,7 @@ export function OsAmbientesComercialPanel({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [couting, setCouting] = useState(() => coutingFromOrdem(ordem));
+  const [coating, setCoating] = useState(() => coatingFromOrdem(ordem));
 
   const useMultiAmbiente = rows.some((r) => r.nome.trim().length > 0);
 
@@ -126,8 +126,8 @@ export function OsAmbientesComercialPanel({
   }, [ordem.id, onMessage]);
 
   useEffect(() => {
-    setCouting(coutingFromOrdem(ordem));
-  }, [ordem.couting, ordem.id]);
+    setCoating(coatingFromOrdem(ordem));
+  }, [ordem.coating, ordem.id]);
 
   useEffect(() => {
     setRows(
@@ -146,10 +146,10 @@ export function OsAmbientesComercialPanel({
 
   const somaAmbientes = useMemo(() => somaValoresAmbientes(rows), [rows]);
 
-  function salvarCouting(checked: boolean) {
-    setCouting(checked);
+  function salvarCoating(checked: boolean) {
+    setCoating(checked);
     startTransition(async () => {
-      const r = await salvarCoutingComercial(ordem.id, checked);
+      const r = await salvarCoatingComercial(ordem.id, checked);
       if (!r.ok) onMessage?.(r.message);
     });
   }
@@ -514,11 +514,11 @@ export function OsAmbientesComercialPanel({
           </p>
         )}
         <div className="mt-3 border-t border-cc-border/60 pt-3">
-          <OsCoutingCheckbox
+          <OsCoatingCheckbox
             ordemId={ordem.id}
-            checked={couting}
+            checked={coating}
             disabled={disabled || pending}
-            onChange={salvarCouting}
+            onChange={salvarCoating}
           />
         </div>
       </section>

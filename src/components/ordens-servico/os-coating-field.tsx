@@ -1,7 +1,7 @@
 "use client";
 
 import { t } from "@/lib/i18n";
-import { coutingFromOrdem, tCoutingSim } from "@/lib/ordens-servico/os-couting";
+import { coatingFromOrdem, tCoatingYes } from "@/lib/ordens-servico/os-coating";
 import type { OrdemServicoWithRelations } from "@/lib/types/database";
 
 const labelClass =
@@ -14,7 +14,7 @@ type CheckboxProps = {
   onChange: (checked: boolean) => void;
 };
 
-export function OsCoutingCheckbox({
+export function OsCoatingCheckbox({
   ordemId,
   checked,
   disabled,
@@ -22,11 +22,11 @@ export function OsCoutingCheckbox({
 }: CheckboxProps) {
   return (
     <label
-      htmlFor={`os-couting-${ordemId}`}
+      htmlFor={`os-coating-${ordemId}`}
       className="flex cursor-pointer items-center gap-2.5"
     >
       <input
-        id={`os-couting-${ordemId}`}
+        id={`os-coating-${ordemId}`}
         type="checkbox"
         disabled={disabled}
         checked={checked}
@@ -34,19 +34,19 @@ export function OsCoutingCheckbox({
         className="h-4 w-4 rounded-sm border-cc-border text-cc-ink focus:ring-cc-blue-focus disabled:cursor-not-allowed"
       />
       <span className={`${labelClass} normal-case tracking-[0.06em] text-cc-ink`}>
-        {t("os.couting.label")}
+        {t("os.coating.label")}
       </span>
     </label>
   );
 }
 
-export function OsCoutingReadonly({ ordem }: { ordem: OrdemServicoWithRelations }) {
-  if (!coutingFromOrdem(ordem)) return null;
+export function OsCoatingReadonly({ ordem }: { ordem: OrdemServicoWithRelations }) {
+  if (!coatingFromOrdem(ordem)) return null;
 
   return (
     <div className="rounded-sm border border-cc-border/80 bg-cc-surface/40 px-3 py-2.5">
-      <p className={labelClass}>{t("os.couting.label")}</p>
-      <p className="mt-1 text-sm font-medium text-cc-ink">{tCoutingSim()}</p>
+      <p className={labelClass}>{t("os.coating.label")}</p>
+      <p className="mt-1 text-sm font-medium text-cc-ink">{tCoatingYes()}</p>
     </div>
   );
 }

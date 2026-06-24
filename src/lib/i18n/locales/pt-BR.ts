@@ -522,8 +522,8 @@ export const ptBR = {
         zelle: "Zelle",
       },
     },
-    couting: {
-      label: "Couting",
+    coating: {
+      label: "Coating",
       yes: "Sim",
     },
     financing: {

@@ -167,6 +167,8 @@ Uso obrigatório:
 - abertura Google Maps
 - cálculo rotas
 
+**Planejado (não implementado):** ETA no clique **Open route** → webhook n8n → SMS Twilio. Ver `docs/OPEN_ROUTE_ETA_SMS.md`.
+
 ---
 
 # EVENTOS
@@ -255,6 +257,8 @@ Uma etapa só libera próxima após:
 - atualização status
 - envio SMS
 - auditoria
+
+**Planejado:** SMS de ETA quando instalador clica **Open route** (Installation). Especificação: `docs/OPEN_ROUTE_ETA_SMS.md`.
 
 ---
 
