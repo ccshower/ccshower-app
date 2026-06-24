@@ -2,12 +2,7 @@
 
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import { t } from "@/lib/i18n";
-
-function formatConflictDateYmd(ymd: string): string {
-  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return ymd;
-  return `${m[3]}/${m[2]}/${m[1]}`;
-}
+import { formatYmdAmerican } from "@/lib/ordens-servico/datetime";
 
 export type OsAgendaSlotConflictDraft = {
   equipeNome: string;
@@ -54,7 +49,7 @@ export function OsAgendaSlotConflictModal({
             />
             <DetailRow
               label={t("calendar.conflict.date")}
-              value={formatConflictDateYmd(draft.dataYmd)}
+              value={formatYmdAmerican(draft.dataYmd)}
             />
             <DetailRow
               label={t("calendar.conflict.requestedTime")}

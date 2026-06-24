@@ -683,6 +683,7 @@ export const enUS = {
     nextWeek: "Next week",
     today: "Today",
     noEvents: "No events",
+    openSlot: "Open",
     dayEventCount: "({count})",
     eventsCountOne: "1 event",
     eventsCountMany: "{count} events",

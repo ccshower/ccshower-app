@@ -617,6 +617,7 @@ export const ptBR = {
     nextWeek: "Próxima semana",
     today: "Hoje",
     noEvents: "Sem eventos",
+    openSlot: "Livre",
     dayEventCount: "({count})",
     eventsCountOne: "1 evento",
     eventsCountMany: "{count} eventos",

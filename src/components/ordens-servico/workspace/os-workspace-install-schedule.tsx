@@ -14,7 +14,7 @@ import {
 } from "@/components/ordens-servico/os-agenda-slot-conflict-modal";
 import { OsVisitaAgendaPicker } from "@/components/ordens-servico/os-visita-agenda-picker";
 import { Field } from "@/components/ui/field";
-import { parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import { formatYmdAmerican, parseVisitaDateTime } from "@/lib/ordens-servico/datetime";
 import {
   compararYmd,
   formatIntervaloAgenda,
@@ -259,7 +259,9 @@ export function OsWorkspaceInstallSchedule({
           <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cc-muted">
             {t("os.workspace.project.materialDateTitle")}
           </span>
-          <p className="mt-1 font-medium text-cc-ink">{dataPrevistaMaterial}</p>
+          <p className="mt-1 font-medium text-cc-ink">
+            {formatYmdAmerican(dataPrevistaMaterial)}
+          </p>
         </section>
       ) : null}
 

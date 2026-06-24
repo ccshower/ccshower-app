@@ -3,14 +3,9 @@
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import type { CalendarEvento } from "@/lib/calendar/operational-calendar";
 import type { AgendaSlotSugestao } from "@/lib/ordens-servico/visita-slots";
+import { formatYmdAmerican } from "@/lib/ordens-servico/datetime";
 import { formatIntervaloAgenda } from "@/lib/ordens-servico/visita-slots";
 import { t } from "@/lib/i18n";
-
-function formatConflictDateYmd(ymd: string): string {
-  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return ymd;
-  return `${m[3]}/${m[2]}/${m[1]}`;
-}
 
 function formatSugestaoLabel(
   sugestao: AgendaSlotSugestao,
@@ -18,7 +13,7 @@ function formatSugestaoLabel(
 ): string {
   const intervalo = formatIntervaloAgenda(sugestao.hora, sugestao.horaFim);
   if (sugestao.dataYmd === targetYmd) return intervalo;
-  return `${formatConflictDateYmd(sugestao.dataYmd)} ${intervalo}`;
+  return `${formatYmdAmerican(sugestao.dataYmd)} ${intervalo}`;
 }
 
 export type CalendarConflictDraft = {
@@ -73,7 +68,7 @@ export function CalendarConflictModal({
             />
             <DetailRow
               label={t("calendar.conflict.date")}
-              value={formatConflictDateYmd(draft.targetYmd)}
+              value={formatYmdAmerican(draft.targetYmd)}
             />
             <DetailRow
               label={t("calendar.conflict.requestedTime")}
@@ -137,7 +132,7 @@ export function CalendarConflictModal({
                           ),
                         })
                       : t("calendar.conflict.scheduleAtDate", {
-                          date: formatConflictDateYmd(sugestao.dataYmd),
+                          date: formatYmdAmerican(sugestao.dataYmd),
                           time: formatIntervaloAgenda(
                             sugestao.hora,
                             sugestao.horaFim,

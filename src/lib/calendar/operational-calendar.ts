@@ -11,7 +11,13 @@ import {
   parseOsWorkflowStage,
   type OsWorkflowStage,
 } from "@/lib/ordens-servico/workflow";
-import { hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
+import {
+  AGENDA_SLOT_INTERVALO_MINUTOS,
+  hojeOperacionalYmd,
+  normalizarSlotHora,
+  VISITA_SLOTS_HORARIOS,
+  type VisitaSlotHora,
+} from "@/lib/ordens-servico/visita-slots";
 
 /** Tipos de auditoria — não aparecem no calendário operacional de campo. */
 export const AGENDA_AUDIT_EVENT_TYPES = new Set([
@@ -172,6 +178,55 @@ export function operationalWallClockHm(iso: string): string | null {
   const h = parts.find((p) => p.type === "hour")?.value ?? "00";
   const m = parts.find((p) => p.type === "minute")?.value ?? "00";
   return `${h.padStart(2, "0")}:${m}`;
+}
+
+/** Maps wall-clock start to the agenda row (floors to 30 min). */
+export function agendaSlotForWallClockHm(hm: string): VisitaSlotHora | null {
+  const exact = normalizarSlotHora(hm);
+  if (exact) return exact;
+
+  const match = hm.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+
+  const total = Number(match[1]) * 60 + Number(match[2]);
+  const floored = total - (total % AGENDA_SLOT_INTERVALO_MINUTOS);
+  const slot = `${String(Math.floor(floored / 60)).padStart(2, "0")}:${String(floored % 60).padStart(2, "0")}`;
+  return VISITA_SLOTS_HORARIOS.includes(slot as VisitaSlotHora)
+    ? (slot as VisitaSlotHora)
+    : null;
+}
+
+/** Groups day events by official agenda slot (08:00 … 20:00). */
+export function groupCalendarEventosByAgendaSlot(
+  eventos: CalendarEvento[],
+): Map<VisitaSlotHora, CalendarEvento[]> {
+  const map = new Map<VisitaSlotHora, CalendarEvento[]>();
+  for (const slot of VISITA_SLOTS_HORARIOS) {
+    map.set(slot, []);
+  }
+
+  const sorted = [...eventos].sort((a, b) => a.startIso.localeCompare(b.startIso));
+  for (const ev of sorted) {
+    const hm = operationalWallClockHm(ev.startIso);
+    if (!hm) continue;
+    const slot = agendaSlotForWallClockHm(hm);
+    if (!slot) continue;
+    map.get(slot)!.push(ev);
+  }
+
+  return map;
+}
+
+/** 12h label for an agenda slot on a given day. */
+export function formatAgendaSlotTimeLabel(ymd: string, slot: string): string {
+  const iso = zonedWallClockToUtcIso(ymd, slot);
+  if (!iso) return slot;
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: OPERATIONAL_TZ,
+  }).format(new Date(iso));
 }
 
 /** Reagenda mantendo horário operacional — altera apenas o dia. */

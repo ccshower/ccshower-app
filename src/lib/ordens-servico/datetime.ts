@@ -2,6 +2,18 @@ import { DISPLAY_LOCALE, t } from "@/lib/i18n";
 
 /** CCSHOWER operational timezone (Florida). */
 export const OPERATIONAL_TZ = "America/New_York";
+
+/** US mini-calendar column headers (Sun–Sat), aligned with `diasDoMesCalendario`. */
+export const US_CALENDAR_WEEKDAY_INITIALS = [
+  "S",
+  "M",
+  "T",
+  "W",
+  "T",
+  "F",
+  "S",
+] as const;
+
 const DATE_YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_HM = /^(\d{1,2}):(\d{2})$/;
 
@@ -157,7 +169,15 @@ export function formatOperacionalVisitaCard(iso: string | undefined | null): str
   return `${datePart} • ${timePart}`;
 }
 
-/** Data/hora da timeline operacional — ex.: "28/05/2026 • 08:00 AM". */
+/** YYYY-MM-DD → MM/DD/YYYY for display. */
+export function formatYmdAmerican(ymd: string | null | undefined): string {
+  if (!ymd) return "";
+  const m = String(ymd).trim().match(DATE_YMD);
+  if (!m) return ymd;
+  return `${m[2]}/${m[3]}/${m[1]}`;
+}
+
+/** Data/hora da timeline operacional — ex.: "05/28/2026 • 08:00 AM". */
 export function formatTimelineDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
 

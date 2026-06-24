@@ -7,7 +7,10 @@ import { DISPLAY_LOCALE } from "@/lib/i18n";
 import { EquipeCompromissosDia } from "@/components/ordens-servico/equipe-compromissos-dia";
 import { buscarAgendaEquipeNoDia } from "@/app/ordens-servico/agenda-disponibilidade";
 import type { CompromissoEquipeDia } from "@/lib/ordens-servico/agenda-equipe-dia";
-import { defaultVisitaDateTime } from "@/lib/ordens-servico/datetime";
+import {
+  defaultVisitaDateTime,
+  US_CALENDAR_WEEKDAY_INITIALS,
+} from "@/lib/ordens-servico/datetime";
 import { useOperationalClock } from "@/lib/ordens-servico/use-operational-clock";
 import { hexToRgba } from "@/lib/ui/equipe-color";
 import {
@@ -40,8 +43,6 @@ type Props = {
   /** YYYY-MM-DD — dias anteriores ficam desabilitados (ex.: data prevista do material). */
   dataMinimaYmd?: string | null;
 };
-
-const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 export function OsVisitaAgendaPicker({
   equipes,
@@ -355,7 +356,7 @@ export function OsVisitaAgendaPicker({
           </div>
 
           <div className="mb-1 grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-cc-muted">
-            {WEEKDAYS.map((d, i) => (
+            {US_CALENDAR_WEEKDAY_INITIALS.map((d, i) => (
               <span key={`${d}-${i}`}>{d}</span>
             ))}
           </div>

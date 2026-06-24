@@ -1,13 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { CalendarEventCard } from "@/components/calendar/calendar-event-card";
 import {
   CALENDAR_DRAG_MIME,
+  formatAgendaSlotTimeLabel,
   formatCalendarDayHeader,
+  groupCalendarEventosByAgendaSlot,
   isTodayOperational,
   type CalendarEvento,
 } from "@/lib/calendar/operational-calendar";
 import { t } from "@/lib/i18n";
+import { VISITA_SLOTS_HORARIOS } from "@/lib/ordens-servico/visita-slots";
 
 type Props = {
   ymd: string;
@@ -36,6 +41,10 @@ export function CalendarDayView({
 }: Props) {
   const today = isTodayOperational(ymd);
   const isDropTarget = dragOverYmd === ymd && draggingEventId != null;
+  const eventosPorSlot = useMemo(
+    () => groupCalendarEventosByAgendaSlot(eventos),
+    [eventos],
+  );
 
   return (
     <section
@@ -66,10 +75,8 @@ export function CalendarDayView({
         </p>
       </header>
 
-      <ul
-        className={`min-h-[12rem] space-y-3 p-3 sm:space-y-4 sm:p-4 transition-colors ${
-          isDropTarget ? "bg-cc-border-light/40" : ""
-        }`}
+      <div
+        className={`transition-colors ${isDropTarget ? "bg-cc-border-light/40" : ""}`}
         onDragOver={(event) => {
           if (!dragEnabled || !draggingEventId) return;
           event.preventDefault();
@@ -88,26 +95,48 @@ export function CalendarDayView({
           onDrop(ymd, raw);
         }}
       >
-        {eventos.length === 0 ? (
-          <li className="rounded-sm border border-dashed border-cc-border/70 px-4 py-12 text-center text-sm font-light text-cc-subtle">
-            {t("calendar.noEvents")}
-          </li>
-        ) : (
-          eventos.map((ev) => (
-            <li key={ev.id}>
-              <CalendarEventCard
-                ev={ev}
-                sourceYmd={ymd}
-                variant="expanded"
-                dragEnabled={dragEnabled}
-                isDragging={draggingEventId === ev.id}
-                onDragStart={() => onDragStart(ev.id)}
-                onDragEnd={onDragEnd}
-              />
-            </li>
-          ))
-        )}
-      </ul>
+        <ol className="divide-y divide-cc-border/60">
+          {VISITA_SLOTS_HORARIOS.map((slot) => {
+            const slotEvents = eventosPorSlot.get(slot) ?? [];
+            const slotLabel = formatAgendaSlotTimeLabel(ymd, slot);
+
+            return (
+              <li
+                key={slot}
+                className="flex min-h-[3.25rem] gap-3 px-3 py-2 sm:gap-4 sm:px-4 sm:py-2.5"
+              >
+                <time
+                  dateTime={`${ymd}T${slot}`}
+                  className="w-[4.5rem] shrink-0 pt-0.5 text-right text-xs font-semibold tabular-nums text-cc-muted sm:w-20"
+                >
+                  {slotLabel}
+                </time>
+                <div className="min-w-0 flex-1 space-y-2">
+                  {slotEvents.length === 0 ? (
+                    <div
+                      className="min-h-8 rounded-sm border border-dashed border-cc-border/50 bg-cc-surface/20"
+                      aria-label={t("calendar.openSlot")}
+                    />
+                  ) : (
+                    slotEvents.map((ev) => (
+                      <CalendarEventCard
+                        key={ev.id}
+                        ev={ev}
+                        sourceYmd={ymd}
+                        variant="expanded"
+                        dragEnabled={dragEnabled}
+                        isDragging={draggingEventId === ev.id}
+                        onDragStart={() => onDragStart(ev.id)}
+                        onDragEnd={onDragEnd}
+                      />
+                    ))
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }

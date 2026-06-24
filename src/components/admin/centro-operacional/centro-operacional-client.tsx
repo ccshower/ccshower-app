@@ -62,6 +62,7 @@ import type {
   BloqueiosOperacionaisData,
 } from "@/lib/centro-operacional/bloqueios-operacionais";
 import { formatCentroHeaderDate } from "@/lib/centro-operacional/centro-header-date";
+import { formatYmdAmerican } from "@/lib/ordens-servico/datetime";
 import {
   filaComercialStatusConfig,
   formatDataCadastro,
@@ -1646,7 +1647,7 @@ function FilaInstallScheduleRow({
           {item.dataPrevistaMaterial ? (
             <p className="mt-1 text-[10px] text-cc-muted">
               {t("centro.installScheduleQueue.materialEta", {
-                date: item.dataPrevistaMaterial,
+                date: formatYmdAmerican(item.dataPrevistaMaterial),
               })}
             </p>
           ) : null}
