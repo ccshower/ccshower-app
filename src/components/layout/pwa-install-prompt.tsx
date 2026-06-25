@@ -25,19 +25,12 @@ function isStandalone(): boolean {
   );
 }
 
-function registerServiceWorker() {
-  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-  void navigator.serviceWorker.register("/sw.js").catch(() => {});
-}
-
 export function PwaInstallPrompt() {
   const [visible, setVisible] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [ios, setIos] = useState(false);
 
   useEffect(() => {
-    registerServiceWorker();
-
     if (isStandalone()) return;
     if (localStorage.getItem(DISMISS_KEY) === "1") return;
 
@@ -80,7 +73,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-cc-border bg-cc-surface px-4 py-3 shadow-lift sm:mx-auto sm:mb-4 sm:max-w-md sm:rounded-ds-xl sm:border"
+      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-50 border-t border-cc-border bg-cc-surface px-4 py-3 shadow-lift sm:bottom-4 sm:mx-auto sm:max-w-md sm:rounded-ds-xl sm:border md:bottom-4"
       role="dialog"
       aria-label="Install app"
     >

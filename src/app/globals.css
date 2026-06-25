@@ -12,6 +12,18 @@ html {
 
 body {
   @apply bg-cc-canvas text-cc-ink antialiased;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.pb-bottom-nav {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@supports (padding: max(0px)) {
+  .pb-bottom-nav {
+    padding-bottom: max(4.5rem, calc(4.5rem + env(safe-area-inset-bottom)));
+  }
 }
 
 /* foco visível — alinhado ao design system (anel azul suave) */

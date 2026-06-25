@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { CentroMobileNav } from "@/components/admin/centro-operacional/centro-mobile-nav";
 import { CentroRepairModal } from "@/components/admin/centro-operacional/centro-repair-modal";
 import { CentroAdminMenu } from "@/components/admin/centro-operacional/centro-admin-menu";
 import {
@@ -216,8 +217,8 @@ export function CentroOperacionalClient({
         unidadeSelecionadaId={unidadeSelecionadaId}
       />
 
-      <div className="px-3 pb-16 pt-5">
-        <section>
+      <div className="px-3 pb-bottom-nav pt-3 sm:pb-16 sm:pt-5">
+        <section id="centro-overview" className="scroll-mt-[4.5rem]">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {pulseMetrics.map((m) => (
               <PulseCard key={m.label} {...m} />
@@ -229,6 +230,7 @@ export function CentroOperacionalClient({
           </div>
         </section>
 
+        <div id="centro-queues" className="scroll-mt-[4.5rem]">
         <FilaComercialSection
           fila={filaComercial}
           loadError={filaComercialError}
@@ -272,8 +274,9 @@ export function CentroOperacionalClient({
           podeAbrirRepair={podeAbrirRepair}
           onAddRepair={() => setRepairModalOpen(true)}
         />
+        </div>
 
-        <section className="mt-10">
+        <section id="centro-attention" className="mt-10 scroll-mt-[4.5rem]">
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <SectionLabel critical>Attention Now</SectionLabel>
@@ -348,7 +351,7 @@ export function CentroOperacionalClient({
           )}
         </section>
 
-        <section className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <section id="centro-agenda" className="mt-14 scroll-mt-[4.5rem] grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <SectionLabel>Global Schedule</SectionLabel>
             <div className="mb-5 mt-1 flex items-end justify-between gap-4">
@@ -472,6 +475,8 @@ export function CentroOperacionalClient({
         </section>
       </div>
 
+      <CentroMobileNav />
+
       <CentroRepairModal
         open={repairModalOpen}
         onClose={() => setRepairModalOpen(false)}
@@ -526,7 +531,7 @@ function CentroHeader({
   }
 
   return (
-    <header className="relative bg-cc-ink text-white">
+    <header className="sticky top-0 z-30 bg-cc-ink text-white shadow-sheet">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div
             className="absolute -right-20 -top-20 h-[280px] w-[280px] rounded-full"
@@ -543,9 +548,12 @@ function CentroHeader({
             }}
           />
         </div>
-        <div className="relative z-10 overflow-visible px-3 py-4 sm:px-4">
-          <div className="flex items-center gap-4">
-            <div className="flex min-w-0 shrink-0 items-center gap-4">
+        <div
+          className="relative z-10 overflow-visible px-3 py-3 sm:px-4 sm:py-4"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-4">
               <div className="rounded-ds bg-white px-2.5 py-1.5 shadow-sheet">
                 <Image
                   src="/logo.png"
@@ -556,8 +564,11 @@ function CentroHeader({
                 />
               </div>
               <div className="hidden h-9 w-px bg-white/10 sm:block" />
-              <h1 className="font-display text-2xl font-light leading-tight tracking-tight sm:text-[2rem]">
+              <h1 className="hidden font-display text-2xl font-light leading-tight tracking-tight sm:block sm:text-[2rem]">
                 Operational <em className="italic text-cc-rose">Center</em>
+              </h1>
+              <h1 className="font-display text-xl font-light leading-tight tracking-tight sm:hidden">
+                Ops <em className="italic text-cc-rose">Center</em>
               </h1>
             </div>
 
@@ -568,7 +579,7 @@ function CentroHeader({
               <IconActivity className="h-[1.35rem] w-[1.35rem] text-cc-rose/30" />
             </div>
 
-            <div className="relative z-20 ml-auto flex flex-wrap items-center justify-end gap-4 sm:gap-6">
+            <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 sm:ml-auto sm:justify-end sm:gap-4 md:gap-6">
               {canSelectUnidade && unidades.length > 0 ? (
                 <CentroUnidadeSelect
                   unidades={unidades}

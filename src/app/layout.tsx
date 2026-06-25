@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost } from "next/font/google";
 
+import { PwaProvider } from "@/components/layout/pwa-provider";
+
 import "./globals.css";
 
 const jost = Jost({
@@ -22,13 +24,14 @@ export const metadata: Metadata = {
   title: "CCSHOWER",
   description: "CCSHOWER operational system",
   applicationName: "CCSHOWER",
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [{ url: "/icon", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "CCSHOWER",
   },
   formatDetection: {
@@ -39,7 +42,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  viewportFit: "cover",
   themeColor: "#1a1f2e",
 };
 
@@ -55,6 +58,7 @@ export default function RootLayout({
     >
       <body className="min-h-dvh font-sans text-base font-light text-cc-ink antialiased">
         {children}
+        <PwaProvider />
       </body>
     </html>
   );
