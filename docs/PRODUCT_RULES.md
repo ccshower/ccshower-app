@@ -217,6 +217,19 @@ Toda Work Order pertence a uma equipe (`equipe_id`, `equipe_atual_id`).
 
 ---
 
+# DATAS RETROATIVAS (ADMIN)
+
+Usuários **comum**, **manager** e equipes de campo:
+- agenda com limite de **1 dia** no passado (`AGENDA_RETRO_DIAS`);
+- data prevista de material **não** pode ser anterior a hoje;
+- horários já passados no dia de hoje ficam indisponíveis.
+
+Usuário **admin** (`tipo_usuario = admin`):
+- pode agendar **visitas**, **instalações** e **previsão de material** em **qualquer data passada** (lançamento atrasado);
+- validação no **servidor** (`usuarioPodeLancarDatasRetroativas`) — a UI só libera o calendário; o backend é a fonte de verdade.
+
+---
+
 # FINANCEIRO
 
 Instalação deve visualizar:

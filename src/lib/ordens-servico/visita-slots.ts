@@ -68,6 +68,15 @@ export function hojeOperacionalYmd(): string {
 /** Dias corridos aceitos para lançamento retroativo na agenda (1 = ontem). */
 export const AGENDA_RETRO_DIAS = 1;
 
+export type AgendaRetroativaOpts = {
+  /** Somente admin — ignora limite de dias passados na agenda. */
+  permitirDatasRetroativas?: boolean;
+};
+
+export type AgendaSlotDisponibilidadeOpts = {
+  ignorarHorarioPassado?: boolean;
+};
+
 /** Data mínima selecionável na agenda (hoje − {@link AGENDA_RETRO_DIAS}). */
 export function limiteMinimoAgendaYmd(): string {
   const hoje = hojeOperacionalYmd();
@@ -79,8 +88,31 @@ export function limiteMinimoAgendaYmd(): string {
   return limite.toLocaleDateString("en-CA", { timeZone: OPERATIONAL_TZ });
 }
 
-export function dataAgendaAntesDoPermitido(ymd: string): boolean {
+export function dataAgendaAntesDoPermitido(
+  ymd: string,
+  opts?: AgendaRetroativaOpts,
+): boolean {
+  if (opts?.permitirDatasRetroativas) return false;
   return compararYmd(ymd, limiteMinimoAgendaYmd()) < 0;
+}
+
+/** Limite inferior do mini-calendário (`null` = sem bloqueio de dias passados). */
+export function limiteInferiorCalendarioYmd(
+  dataMinimaYmd: string | null | undefined,
+  opts?: AgendaRetroativaOpts,
+): string | null {
+  const minExtra =
+    dataMinimaYmd && /^\d{4}-\d{2}-\d{2}$/.test(dataMinimaYmd)
+      ? dataMinimaYmd
+      : null;
+
+  if (opts?.permitirDatasRetroativas) {
+    return minExtra;
+  }
+
+  const retroMin = limiteMinimoAgendaYmd();
+  if (!minExtra) return retroMin;
+  return compararYmd(minExtra, retroMin) > 0 ? minExtra : retroMin;
 }
 
 export { isoRangeDiaOperacional };
@@ -325,10 +357,14 @@ export function slotInicioIndisponivelParaData(
   inicio: string,
   ocupados: readonly AgendaIntervaloOcupado[],
   agora?: { ymd: string; hm: string },
+  opts?: AgendaSlotDisponibilidadeOpts,
 ): boolean {
   const agoraYmd = agora?.ymd ?? hojeOperacionalYmd();
   const agoraHm = agora?.hm ?? horaOperacionalAgora();
-  if (horarioOperacionalJaPassouPara(dataVisita, inicio, agoraYmd, agoraHm)) {
+  if (
+    !opts?.ignorarHorarioPassado &&
+    horarioOperacionalJaPassouPara(dataVisita, inicio, agoraYmd, agoraHm)
+  ) {
     return true;
   }
   return inicioIndisponivel(inicio, ocupados);
@@ -341,11 +377,15 @@ export function slotFimIndisponivelParaData(
   fim: string,
   ocupados: readonly AgendaIntervaloOcupado[],
   agora?: { ymd: string; hm: string },
+  opts?: AgendaSlotDisponibilidadeOpts,
 ): boolean {
   if (!inicio) return true;
   const agoraYmd = agora?.ymd ?? hojeOperacionalYmd();
   const agoraHm = agora?.hm ?? horaOperacionalAgora();
-  if (horarioOperacionalJaPassouPara(dataVisita, fim, agoraYmd, agoraHm)) {
+  if (
+    !opts?.ignorarHorarioPassado &&
+    horarioOperacionalJaPassouPara(dataVisita, fim, agoraYmd, agoraHm)
+  ) {
     return true;
   }
   return intervaloTemConflito(inicio, fim, ocupados);

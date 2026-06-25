@@ -20,7 +20,7 @@ import {
   formatIntervaloAgenda,
   horaFimPadraoParaInicio,
   horariosFimParaInicio,
-  limiteMinimoAgendaYmd,
+  limiteInferiorCalendarioYmd,
   slotFimIndisponivelParaData,
   slotInicioIndisponivelParaData,
   type AgendaIntervaloOcupado,
@@ -42,6 +42,8 @@ type Props = {
   fieldLabel?: string;
   /** YYYY-MM-DD — dias anteriores ficam desabilitados (ex.: data prevista do material). */
   dataMinimaYmd?: string | null;
+  /** Admin — permite selecionar qualquer data passada na agenda. */
+  permitirDatasRetroativas?: boolean;
 };
 
 export function OsVisitaAgendaPicker({
@@ -56,6 +58,7 @@ export function OsVisitaAgendaPicker({
   excluirEventoId,
   fieldLabel = "Visit date and time",
   dataMinimaYmd = null,
+  permitirDatasRetroativas = false,
 }: Props) {
   const defaults = useMemo(() => defaultVisitaDateTime(), []);
   const [open, setOpen] = useState(false);
@@ -65,6 +68,21 @@ export function OsVisitaAgendaPicker({
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const operationalClock = useOperationalClock(open);
+
+  const slotOpts = useMemo(
+    () => ({ ignorarHorarioPassado: permitirDatasRetroativas }),
+    [permitirDatasRetroativas],
+  );
+
+  const retroOpts = useMemo(
+    () => ({ permitirDatasRetroativas }),
+    [permitirDatasRetroativas],
+  );
+
+  const limiteMinimo = useMemo(
+    () => limiteInferiorCalendarioYmd(dataMinimaYmd, retroOpts),
+    [dataMinimaYmd, retroOpts],
+  );
 
   const equipe = equipes.find((e) => e.id === equipeId);
   const cor = equipe?.cor_primaria ?? "#7189a8";
@@ -113,7 +131,7 @@ export function OsVisitaAgendaPicker({
 
     if (
       horaVisita &&
-      slotInicioIndisponivelParaData(dataVisita, horaVisita, r.intervalos)
+      slotInicioIndisponivelParaData(dataVisita, horaVisita, r.intervalos, undefined, slotOpts)
     ) {
       onHoraChange("");
       onHoraFimChange("");
@@ -125,6 +143,8 @@ export function OsVisitaAgendaPicker({
         horaVisita,
         horaFimVisita,
         r.intervalos,
+        undefined,
+        slotOpts,
       )
     ) {
       onHoraFimChange("");
@@ -137,6 +157,7 @@ export function OsVisitaAgendaPicker({
     horaFimVisita,
     onHoraChange,
     onHoraFimChange,
+    slotOpts,
   ]);
 
   useEffect(() => {
@@ -147,6 +168,7 @@ export function OsVisitaAgendaPicker({
         horaVisita,
         intervalos,
         operationalClock,
+        slotOpts,
       )
     ) {
       onHoraChange("");
@@ -161,6 +183,7 @@ export function OsVisitaAgendaPicker({
         horaFimVisita,
         intervalos,
         operationalClock,
+        slotOpts,
       )
     ) {
       onHoraFimChange("");
@@ -173,6 +196,7 @@ export function OsVisitaAgendaPicker({
     operationalClock,
     onHoraChange,
     onHoraFimChange,
+    slotOpts,
   ]);
 
   useEffect(() => {
@@ -202,14 +226,6 @@ export function OsVisitaAgendaPicker({
     return () => document.removeEventListener("mousedown", onPointer);
   }, [open]);
 
-  const retroMin = limiteMinimoAgendaYmd();
-  const limiteMinimo = useMemo(() => {
-    if (!dataMinimaYmd || !/^\d{4}-\d{2}-\d{2}$/.test(dataMinimaYmd)) {
-      return retroMin;
-    }
-    return compararYmd(dataMinimaYmd, retroMin) > 0 ? dataMinimaYmd : retroMin;
-  }, [dataMinimaYmd, retroMin]);
-
   const monthLabel = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     month: "long",
     year: "numeric",
@@ -233,6 +249,7 @@ export function OsVisitaAgendaPicker({
         slot,
         intervalos,
         operationalClock,
+        slotOpts,
       )
     ) {
       return;
@@ -247,6 +264,7 @@ export function OsVisitaAgendaPicker({
         fimPadrao,
         intervalos,
         operationalClock,
+        slotOpts,
       )
     ) {
       onHoraFimChange(fimPadrao);
@@ -269,6 +287,7 @@ export function OsVisitaAgendaPicker({
       fim,
       intervalos,
       operationalClock,
+      slotOpts,
     );
   }
 
@@ -366,7 +385,8 @@ export function OsVisitaAgendaPicker({
               if (!ymd) {
                 return <span key={`empty-${idx}`} className="h-8" />;
               }
-              const antesDoLimite = compararYmd(ymd, limiteMinimo) < 0;
+              const antesDoLimite =
+                limiteMinimo != null && compararYmd(ymd, limiteMinimo) < 0;
               const selected = ymd === dataVisita;
               const disabled = antesDoLimite;
               return (
@@ -417,6 +437,7 @@ export function OsVisitaAgendaPicker({
                       slot,
                       intervalos,
                       operationalClock,
+                      slotOpts,
                     );
                     const selected = horaVisita === slot;
                     return (

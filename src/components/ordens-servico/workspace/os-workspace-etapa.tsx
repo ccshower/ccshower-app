@@ -21,6 +21,7 @@ type Props = {
   onAtualizado: () => void;
   onConcluido: () => void;
   viewerCanSeeFinancial?: boolean;
+  permitirDatasRetroativas?: boolean;
 };
 
 /** Área operacional contextual por etapa_atual — página /os/[id]. */
@@ -30,6 +31,7 @@ export function OsWorkspaceEtapa({
   onAtualizado,
   onConcluido,
   viewerCanSeeFinancial = false,
+  permitirDatasRetroativas = false,
 }: Props) {
   const etapa = parseOsStage(ordem.etapa_atual);
   const fluxoBloqueado = isOsFluxoBloqueado(ordem);
@@ -50,6 +52,7 @@ export function OsWorkspaceEtapa({
           ordem={ordem}
           equipes={equipes}
           fluxoBloqueado={fluxoBloqueado}
+          permitirDatasRetroativas={permitirDatasRetroativas}
           onAgendado={onConcluido}
         />,
       );
@@ -81,6 +84,7 @@ export function OsWorkspaceEtapa({
       <OsWorkspaceProject
         ordem={ordem}
         fluxoBloqueado={fluxoBloqueado}
+        permitirDatasRetroativas={permitirDatasRetroativas}
         onAtualizado={onAtualizado}
         onConcluido={onConcluido}
       />,
@@ -93,6 +97,7 @@ export function OsWorkspaceEtapa({
         ordem={ordem}
         equipes={equipes}
         fluxoBloqueado={fluxoBloqueado}
+        permitirDatasRetroativas={permitirDatasRetroativas}
         onAtualizado={onAtualizado}
         onConcluido={onConcluido}
       />,

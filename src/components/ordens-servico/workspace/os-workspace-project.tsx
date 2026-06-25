@@ -50,6 +50,7 @@ type NotesSaveStatus = "idle" | "saving" | "saved" | "error";
 type Props = {
   ordem: OrdemServicoWithRelations;
   fluxoBloqueado?: boolean;
+  permitirDatasRetroativas?: boolean;
   onAtualizado: () => void;
   onConcluido: () => void;
 };
@@ -58,6 +59,7 @@ type Props = {
 export function OsWorkspaceProject({
   ordem,
   fluxoBloqueado = false,
+  permitirDatasRetroativas = false,
   onAtualizado,
   onConcluido,
 }: Props) {
@@ -257,7 +259,10 @@ export function OsWorkspaceProject({
     if (!dataPrevistaMaterial.trim()) return;
 
     const hoje = hojeOperacionalYmd();
-    if (compararYmd(dataPrevistaMaterial, hoje) < 0) {
+    if (
+      !permitirDatasRetroativas &&
+      compararYmd(dataPrevistaMaterial, hoje) < 0
+    ) {
       setMsg(t("os.workspace.project.materialDateBeforeToday"));
       return;
     }
@@ -375,7 +380,7 @@ export function OsWorkspaceProject({
             <input
               type="date"
               value={dataPrevistaMaterial}
-              min={hojeOperacionalYmd()}
+              min={permitirDatasRetroativas ? undefined : hojeOperacionalYmd()}
               disabled={busy}
               onChange={(e) => setDataPrevistaMaterial(e.target.value)}
               onBlur={salvarDataMaterial}

@@ -34,6 +34,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   equipes: Equipe[];
   fluxoBloqueado?: boolean;
+  permitirDatasRetroativas?: boolean;
   onAtualizado: () => void;
   onConcluido: () => void;
 };
@@ -73,6 +74,7 @@ export function OsWorkspaceInstallSchedule({
   ordem,
   equipes,
   fluxoBloqueado = false,
+  permitirDatasRetroativas = false,
   onAtualizado,
   onConcluido,
 }: Props) {
@@ -318,6 +320,7 @@ export function OsWorkspaceInstallSchedule({
             excluirEventoId={ordem.instalacao_agendada?.id ?? null}
             fieldLabel={t("os.workspace.project.installationDateTimeLabel")}
             dataMinimaYmd={dataPrevistaMaterial || null}
+            permitirDatasRetroativas={permitirDatasRetroativas}
           />
 
           {instalacaoAgendada ? (

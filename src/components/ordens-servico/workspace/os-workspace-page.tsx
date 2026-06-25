@@ -107,6 +107,7 @@ export function OsWorkspacePage({
             onAtualizado={recarregar}
             onConcluido={voltarAoPainel}
             viewerCanSeeFinancial={viewerCanSeeFinancial}
+            permitirDatasRetroativas={isAdmin}
           />
         </section>
       </div>

@@ -28,8 +28,10 @@ import {
   validateEquipeIdForStage,
   type EquipeStageFilterDebug,
 } from "@/lib/ordens-servico/workflow-equipe";
-import { createClient } from "@/lib/supabase/server";
+import { usuarioPodeLancarDatasRetroativas } from "@/lib/auth/admin-datas-retroativas";
+import { getCurrentUsuario } from "@/lib/auth/get-current-usuario";
 import type { CatalogoItem, Equipe, Fornecedor, OsAmbiente, OsSeparationListItem } from "@/lib/types/database";
+import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -281,12 +283,18 @@ export async function salvarFornecedorProjeto(
   }
 }
 
-function parseDataPrevistaMaterial(raw: string): { ok: true; value: string } | { ok: false; message: string } {
+function parseDataPrevistaMaterial(
+  raw: string,
+  permitirDatasRetroativas: boolean,
+): { ok: true; value: string } | { ok: false; message: string } {
   const ymd = String(raw ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
     return { ok: false, message: "Enter the expected material date" };
   }
-  if (compararYmd(ymd, hojeOperacionalYmd()) < 0) {
+  if (
+    !permitirDatasRetroativas &&
+    compararYmd(ymd, hojeOperacionalYmd()) < 0
+  ) {
     return {
       ok: false,
       message:
@@ -302,10 +310,12 @@ export async function salvarDataPrevistaMaterial(
 ): Promise<ActionResult> {
   try {
     const { supabase } = await requireAuth();
+    const { usuario } = await getCurrentUsuario();
+    const permitirDatasRetroativas = usuarioPodeLancarDatasRetroativas(usuario);
     const loaded = await loadOsProjectStage(supabase, osId);
     if ("error" in loaded) return { ok: false, message: loaded.error };
 
-    const parsed = parseDataPrevistaMaterial(dataRaw);
+    const parsed = parseDataPrevistaMaterial(dataRaw, permitirDatasRetroativas);
     if (!parsed.ok) return parsed;
 
     const { error } = await supabase

@@ -12,6 +12,7 @@ type Props = {
   ordem: OrdemServicoWithRelations;
   equipes: Equipe[];
   fluxoBloqueado?: boolean;
+  permitirDatasRetroativas?: boolean;
   onAgendado: () => void;
 };
 
@@ -20,6 +21,7 @@ export function OsWorkspaceScheduling({
   ordem,
   equipes,
   fluxoBloqueado = false,
+  permitirDatasRetroativas = false,
   onAgendado,
 }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -54,6 +56,7 @@ export function OsWorkspaceScheduling({
         initialEquipeId={defaultEquipeId}
         pending={pending}
         fluxoBloqueado={fluxoBloqueado}
+        permitirDatasRetroativas={permitirDatasRetroativas}
         hideCancel
         onSubmit={(fd) => {
           startTransition(async () => {

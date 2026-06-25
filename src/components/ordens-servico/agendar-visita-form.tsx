@@ -36,6 +36,7 @@ type Props = {
   clienteContato?: ClienteContatoResumo | null;
   pending?: boolean;
   fluxoBloqueado?: boolean;
+  permitirDatasRetroativas?: boolean;
   hideCancel?: boolean;
   onCancel?: () => void;
   onSubmit: (fd: FormData) => void;
@@ -63,6 +64,7 @@ export function AgendarVisitaForm({
   clienteContato,
   pending = false,
   fluxoBloqueado = false,
+  permitirDatasRetroativas = false,
   hideCancel = false,
   onCancel,
   onSubmit,
@@ -194,6 +196,7 @@ export function AgendarVisitaForm({
             onDataChange={setDataVisita}
             onHoraChange={setHoraVisita}
             onHoraFimChange={setHoraFimVisita}
+            permitirDatasRetroativas={permitirDatasRetroativas}
           />
         </div>
       </div>

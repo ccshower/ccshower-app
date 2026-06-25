@@ -476,6 +476,7 @@ export function CentroOperacionalClient({
         open={repairModalOpen}
         onClose={() => setRepairModalOpen(false)}
         unidadeId={unidadeSelecionadaId}
+        permitirDatasRetroativas={isAdmin}
       />
     </div>
   );

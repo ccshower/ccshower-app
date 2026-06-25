@@ -29,9 +29,15 @@ type Props = {
   open: boolean;
   onClose: () => void;
   unidadeId: string | null;
+  permitirDatasRetroativas?: boolean;
 };
 
-export function CentroRepairModal({ open, onClose, unidadeId }: Props) {
+export function CentroRepairModal({
+  open,
+  onClose,
+  unidadeId,
+  permitirDatasRetroativas = false,
+}: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("clientes");
   const [query, setQuery] = useState("");
@@ -277,6 +283,7 @@ export function CentroRepairModal({ open, onClose, unidadeId }: Props) {
               onHoraChange={setHoraInicio}
               onHoraFimChange={setHoraFim}
               fieldLabel={t("os.workspace.project.installationDateTimeLabel")}
+              permitirDatasRetroativas={permitirDatasRetroativas}
             />
 
             <button

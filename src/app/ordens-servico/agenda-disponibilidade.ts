@@ -38,6 +38,8 @@ import {
   type VisitaSlotHora,
 } from "@/lib/ordens-servico/visita-slots";
 import { createClient } from "@/lib/supabase/server";
+import { usuarioPodeLancarDatasRetroativas } from "@/lib/auth/admin-datas-retroativas";
+import { getCurrentUsuario } from "@/lib/auth/get-current-usuario";
 
 const AGENDA_STATUS_CANCELADOS = new Set(["cancelled", "cancelado"]);
 
@@ -157,6 +159,12 @@ async function requireAuthSupabase() {
   return supabase;
 }
 
+async function loadAgendaRetroativaOpts() {
+  const { usuario } = await getCurrentUsuario();
+  const permitirDatasRetroativas = usuarioPodeLancarDatasRetroativas(usuario);
+  return { permitirDatasRetroativas };
+}
+
 export type BuscarAgendaEquipeNoDiaResult = AgendaEquipeDiaResumo & {
   ocupados: VisitaSlotHora[];
   intervalos: AgendaIntervaloOcupado[];
@@ -255,7 +263,10 @@ export async function validarSlotVisitaDisponivel(
   horaFimOuExcluir?: string | null,
   excluirEventoId?: string | null,
 ): Promise<ValidarSlotVisitaResult> {
-  if (dataAgendaAntesDoPermitido(dataVisita)) {
+  const { permitirDatasRetroativas } = await loadAgendaRetroativaOpts();
+  const retroOpts = { permitirDatasRetroativas };
+
+  if (dataAgendaAntesDoPermitido(dataVisita, retroOpts)) {
     return {
       ok: false,
       message: "Appointment date is too far in the past",
@@ -317,6 +328,9 @@ export async function avaliarSlotReagendamentoCalendario(
   isoFim: string | null | undefined,
   excluirEventoId?: string | null,
 ): Promise<ValidarSlotVisitaResult> {
+  const { permitirDatasRetroativas } = await loadAgendaRetroativaOpts();
+  const retroOpts = { permitirDatasRetroativas };
+
   const hmInicio =
     operationalWallClockHm(isoInicio) ??
     parseVisitaDateTime(isoInicio).hora.slice(0, 5);
@@ -324,7 +338,7 @@ export async function avaliarSlotReagendamentoCalendario(
     return { ok: false, message: "Invalid appointment date or time" };
   }
 
-  if (dataAgendaAntesDoPermitido(dataVisita)) {
+  if (dataAgendaAntesDoPermitido(dataVisita, retroOpts)) {
     return {
       ok: false,
       message: "Appointment date is too far in the past",
@@ -340,7 +354,7 @@ export async function avaliarSlotReagendamentoCalendario(
     return { ok: false, message: "Invalid appointment end time" };
   }
 
-  if (horarioOperacionalJaPassou(dataVisita, hmInicio)) {
+  if (!permitirDatasRetroativas && horarioOperacionalJaPassou(dataVisita, hmInicio)) {
     const sugestoes = await buscarProximasSugestoesAgenda(
       equipeId,
       dataVisita,
