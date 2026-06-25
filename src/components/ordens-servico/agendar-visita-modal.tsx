@@ -25,6 +25,7 @@ type Props = {
   clienteContato?: ClienteContatoResumo | null;
   errorMessage?: string | null;
   pending?: boolean;
+  permitirDatasRetroativas?: boolean;
   onClose: () => void;
   onSubmit: (fd: FormData) => void;
 };
@@ -42,6 +43,7 @@ export function AgendarVisitaModal({
   clienteContato,
   errorMessage,
   pending = false,
+  permitirDatasRetroativas = false,
   onClose,
   onSubmit,
 }: Props) {
@@ -63,6 +65,7 @@ export function AgendarVisitaModal({
         osId={osId}
         clienteContato={clienteContato}
         pending={pending}
+        permitirDatasRetroativas={permitirDatasRetroativas}
         onCancel={onClose}
         onSubmit={onSubmit}
       />

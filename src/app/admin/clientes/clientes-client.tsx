@@ -369,6 +369,7 @@ export function ClientesClient({
   googleMapsApiKey,
   defaultEquipeId,
   canChooseEquipe = false,
+  permitirDatasRetroativas = false,
 }: {
   initial: ClienteWithRelations[];
   equipes: Equipe[];
@@ -379,6 +380,7 @@ export function ClientesClient({
   googleMapsApiKey: string;
   defaultEquipeId: string | null;
   canChooseEquipe?: boolean;
+  permitirDatasRetroativas?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<ClienteWithRelations[]>(initial);
@@ -682,6 +684,7 @@ export function ClientesClient({
           equipes={equipes}
           defaultEquipeId={defaultEquipeId}
           initialEquipeId={agendarCliente.equipe_id}
+          permitirDatasRetroativas={permitirDatasRetroativas}
           pending={pending}
           onClose={() => setAgendarCliente(null)}
           onSubmit={(fd) => {

@@ -84,6 +84,7 @@ export default async function AdminClientesPage() {
       canChooseEquipe={
         isAdmin(usuario) || Boolean(usuario?.pode_ver_todas_equipes)
       }
+      permitirDatasRetroativas={isAdmin(usuario)}
     />
   );
 }
