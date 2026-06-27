@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
@@ -11,6 +12,7 @@ import {
 } from "@/lib/calendar/calendar-equipe-filter";
 import { t } from "@/lib/i18n";
 import { tituloOperacionalCard } from "@/lib/ordens-servico/os-operational-title";
+import { ordensServicoListPath } from "@/lib/ordens-servico/os-routes";
 import type { OrdemServicoWithRelations } from "@/lib/types/database";
 
 type Props = {
@@ -75,6 +77,12 @@ export function OperacaoClient({
           <p className="mt-1 text-sm font-light text-cc-muted">
             Daily operational flow — tap a card to work the OS.
           </p>
+          <Link
+            href={ordensServicoListPath()}
+            className="mt-3 inline-flex min-h-[2.75rem] items-center rounded-sm border border-cc-border bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep transition hover:border-cc-blue-soft hover:bg-cc-canvas"
+          >
+            All work orders
+          </Link>
         </div>
         {canFilterEquipes && equipes.length > 0 ? (
           <label className="flex min-w-[10rem] flex-col gap-1">

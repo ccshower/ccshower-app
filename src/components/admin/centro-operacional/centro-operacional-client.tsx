@@ -89,6 +89,7 @@ import {
 } from "@/lib/centro-operacional/fila-projeto";
 import { formatFinanceiroValor } from "@/lib/financeiro-operacional/financeiro-operacional";
 import { osWorkspacePathWithUnidade } from "@/lib/unidades/centro-unidade-persist";
+import { ordensServicoListPath } from "@/lib/ordens-servico/os-routes";
 import { t } from "@/lib/i18n";
 import type { Contractor, Equipe, Unidade, Usuario } from "@/lib/types/database";
 
@@ -590,6 +591,13 @@ function CentroHeader({
                   {unidadeAtual.nome}
                 </span>
               ) : null}
+
+              <Link
+                href={ordensServicoListPath()}
+                className="inline-flex min-h-[2.25rem] items-center rounded-ds border border-white/10 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/85 transition hover:border-white/25 hover:bg-white/10"
+              >
+                All OS
+              </Link>
 
               <button
                 type="button"
