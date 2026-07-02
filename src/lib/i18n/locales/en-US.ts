@@ -47,6 +47,7 @@ export const enUS = {
         referral: "Referral",
         contractor: "Contractor",
         instagram: "Instagram",
+        call: "Call",
         other: "Other",
       },
     },

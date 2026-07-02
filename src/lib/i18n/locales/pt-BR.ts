@@ -47,6 +47,7 @@ export const ptBR = {
         referral: "Indicação",
         contractor: "Contractor",
         instagram: "Instagram",
+        call: "Call",
         other: "Outro",
       },
     },

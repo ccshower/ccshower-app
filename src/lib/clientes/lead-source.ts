@@ -8,6 +8,7 @@ export const LEAD_SOURCE_OPTIONS = [
   "referral",
   "contractor",
   "instagram",
+  "call",
   "other",
 ] as const;
 
