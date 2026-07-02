@@ -379,6 +379,11 @@ export const enUS = {
         noPayment: "No payment recorded",
       },
     },
+    delete: {
+      action: "Delete",
+      confirm:
+        "Permanently delete the work order for {name}? This removes schedule events, attachments, and files. This cannot be undone.",
+    },
     panel: {
       operacaoTitle: "Operations",
       loadingTitle: "Loading work order…",

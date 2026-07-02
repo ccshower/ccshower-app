@@ -378,6 +378,11 @@ export const ptBR = {
         noPayment: "Nenhum pagamento registrado",
       },
     },
+    delete: {
+      action: "Excluir",
+      confirm:
+        "Excluir permanentemente a OS de {name}? Remove agenda, anexos e arquivos. Não dá para desfazer.",
+    },
     panel: {
       operacaoTitle: "Operação",
       loadingTitle: "Carregando OS…",

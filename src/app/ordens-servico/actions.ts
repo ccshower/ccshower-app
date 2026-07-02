@@ -41,6 +41,8 @@ import {
 } from "@/lib/ordens-servico/workflow";
 import { parseResponsavelIdFromForm } from "@/lib/ordens-servico/responsavel-equipe";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteOrdemServicoById } from "@/lib/ordens-servico/delete-ordem-servico";
 import { loadOrdemServicoDetalhe } from "@/lib/ordens-servico/load-ordem-servico-detalhe";
 import { resolveEmpresaId } from "@/lib/ordens-servico/resolve-empresa-id";
 import type { OrdemServicoWithRelations } from "@/lib/types/database";
@@ -992,6 +994,28 @@ export async function atualizarOrdemServicoOperacional(
     return {
       ok: false,
       message: e instanceof Error ? e.message : "Error updating work order",
+    };
+  }
+}
+
+/** Admin — exclui OS, agenda, anexos e arquivos no storage. */
+export async function excluirOrdemServico(osId: string): Promise<ActionResult> {
+  try {
+    const { usuario } = await requireActiveSupabase();
+    if (!isAdminUsuario(usuario)) {
+      return { ok: false, message: "Only administrators can delete work orders" };
+    }
+
+    const admin = createAdminClient();
+    const result = await deleteOrdemServicoById(admin, osId);
+    if (!result.ok) return result;
+
+    revalidateOsPaths(osId);
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error deleting work order",
     };
   }
 }

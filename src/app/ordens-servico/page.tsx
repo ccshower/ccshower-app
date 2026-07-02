@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { CampoPageFrame } from "@/components/layout/campo-page-frame";
-import { getCurrentUsuario } from "@/lib/auth/get-current-usuario";
+import { getUsuarioWithEquipe } from "@/lib/auth/get-usuario-with-equipe";
+import { isAdmin } from "@/lib/auth/is-admin";
+import { resolveOsWorkspaceBackPath } from "@/lib/auth/usuario-campo";
 import { loadOrdensServicoList } from "@/lib/ordens-servico/load-ordens-servico-list";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,8 +12,10 @@ import { OrdensServicoClient } from "./ordens-servico-client";
 export const dynamic = "force-dynamic";
 
 export default async function OrdensServicoPage() {
-  const { usuario } = await getCurrentUsuario();
+  const { usuario, equipe } = await getUsuarioWithEquipe();
   if (!usuario?.ativo) redirect("/login");
+
+  const dashboardHref = resolveOsWorkspaceBackPath(usuario, equipe);
 
   const supabase = await createClient();
   const { ordens, error } = await loadOrdensServicoList(supabase);
@@ -35,7 +39,11 @@ export default async function OrdensServicoPage() {
 
   return (
     <CampoPageFrame tab="operacao">
-      <OrdensServicoClient initial={ordens} />
+      <OrdensServicoClient
+        initial={ordens}
+        canDeleteOs={isAdmin(usuario)}
+        dashboardHref={dashboardHref}
+      />
     </CampoPageFrame>
   );
 }
