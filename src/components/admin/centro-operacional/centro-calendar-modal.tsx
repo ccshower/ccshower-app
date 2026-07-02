@@ -17,6 +17,7 @@ function toWorkspaceQuery(next: CalendarNavigateQuery): CalendarWorkspaceQuery {
     vista: next.vista,
     dia: next.dia,
     semana: next.semana,
+    mes: next.mes,
     equipe: next.equipe ?? undefined,
   };
 }
@@ -132,6 +133,7 @@ export function CentroCalendarModal({
             <CalendarClient
               view={state.view}
               anchorDayYmd={state.anchorDayYmd}
+              anchorMonthYmd={state.anchorMonthYmd}
               initialMondayYmd={state.initialMondayYmd}
               eventos={state.eventos}
               equipes={state.equipes}

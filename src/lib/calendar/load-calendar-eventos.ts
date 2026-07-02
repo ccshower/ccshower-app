@@ -3,6 +3,7 @@ import {
   eventoInWeekRange,
   mapRowToCalendarEvento,
   mondayOfOperationalWeek,
+  monthGridBoundsIso,
   weekBoundsIso,
   type CalendarEvento,
 } from "@/lib/calendar/operational-calendar";
@@ -57,14 +58,23 @@ function normalizeAgendaRow(row: {
 export type LoadCalendarEventosOptions = {
   equipeId?: string | null;
   unidadeId?: string | null;
+  /** Quando "month", carrega a grade completa do mês (6 semanas). */
+  range?: "week" | "month";
 };
 
 export async function loadCalendarEventos(
-  semanaYmd?: string,
+  anchorYmd?: string,
   options?: LoadCalendarEventosOptions,
 ): Promise<{ eventos: CalendarEvento[]; mondayYmd: string; error?: string }> {
-  const mondayYmd = mondayOfOperationalWeek(semanaYmd);
-  const { start, end } = weekBoundsIso(mondayYmd);
+  const range = options?.range ?? "week";
+  const mondayYmd =
+    range === "month"
+      ? monthGridBoundsIso(anchorYmd ?? "").gridStartYmd
+      : mondayOfOperationalWeek(anchorYmd);
+  const { start, end } =
+    range === "month"
+      ? monthGridBoundsIso(anchorYmd ?? mondayYmd)
+      : weekBoundsIso(mondayYmd);
   const equipeId = options?.equipeId?.trim() || null;
   const unidadeId = options?.unidadeId?.trim() || null;
 

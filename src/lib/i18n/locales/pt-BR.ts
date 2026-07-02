@@ -660,6 +660,10 @@ export const ptBR = {
     viewMonth: "Mês",
     prevDay: "Dia anterior",
     nextDay: "Próximo dia",
+    prevMonth: "Mês anterior",
+    nextMonth: "Próximo mês",
+    jumpToDate: "Ir para data",
+    monthMoreEvents: "+{count} mais",
     monthComingSoon: "Visualização mensal em breve.",
     monthComingSoonHint:
       "Use a visualização por dia ou por semana para a operação diária.",

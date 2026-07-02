@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {
 
-  searchParams: Promise<{ vista?: string; dia?: string; semana?: string; equipe?: string }>;
+  searchParams: Promise<{ vista?: string; dia?: string; semana?: string; mes?: string; equipe?: string }>;
 
 };
 
@@ -46,6 +46,7 @@ export default async function CalendarPage({ searchParams }: Props) {
       <CalendarClient
         view={workspace.view}
         anchorDayYmd={workspace.anchorDayYmd}
+        anchorMonthYmd={workspace.anchorMonthYmd}
         initialMondayYmd={workspace.initialMondayYmd}
         eventos={workspace.eventos}
         equipes={workspace.equipes}

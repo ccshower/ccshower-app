@@ -726,6 +726,10 @@ export const enUS = {
     viewMonth: "Month",
     prevDay: "Previous day",
     nextDay: "Next day",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    jumpToDate: "Go to date",
+    monthMoreEvents: "+{count} more",
     monthComingSoon: "Month view coming soon.",
     monthComingSoonHint:
       "Use day or week view for daily operations.",

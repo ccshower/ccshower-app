@@ -18,6 +18,8 @@ type Props = {
 
   mondayYmd: string;
 
+  monthYmd: string;
+
   equipeId: string | null;
 
   /** Quando definido, troca de vista vira callback (uso embutido em modal). */
@@ -46,6 +48,8 @@ export function CalendarViewToggle({
   diaYmd,
 
   mondayYmd,
+
+  monthYmd,
 
   equipeId,
 
@@ -98,6 +102,8 @@ export function CalendarViewToggle({
           dia: mode === "day" ? diaYmd : undefined,
 
           semana: mode === "week" ? mondayYmd : undefined,
+
+          mes: mode === "month" ? monthYmd : undefined,
 
           equipe: equipeId,
 

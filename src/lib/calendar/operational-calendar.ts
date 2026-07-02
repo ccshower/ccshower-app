@@ -94,6 +94,101 @@ export function addDaysOperationalYmd(ymd: string, days: number): string {
   return next.toLocaleDateString("en-CA", { timeZone: OPERATIONAL_TZ });
 }
 
+export function ymdParts(ymd: string): { y: number; m: number; d: number } {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return { y, m, d };
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Primeiro dia do mês operacional (YYYY-MM-01). */
+export function firstDayOfMonthYmd(ymd: string): string {
+  const { y, m } = ymdParts(ymd);
+  return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+
+/** Desloca meses mantendo o dia quando possível. */
+export function addMonthsOperationalYmd(ymd: string, months: number): string {
+  const { y, m, d } = ymdParts(ymd);
+  let newM = m + months;
+  let newY = y;
+  while (newM < 1) {
+    newM += 12;
+    newY -= 1;
+  }
+  while (newM > 12) {
+    newM -= 12;
+    newY += 1;
+  }
+  const maxDay = daysInMonth(newY, newM);
+  const day = Math.min(d, maxDay);
+  return `${newY}-${String(newM).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Grade mensal (6 semanas, início na segunda-feira operacional). */
+export function monthGridDayYmds(monthAnchorYmd: string): string[] {
+  const first = firstDayOfMonthYmd(monthAnchorYmd);
+  const gridStart = mondayOfOperationalWeek(first);
+  return Array.from({ length: 42 }, (_, i) =>
+    addDaysOperationalYmd(gridStart, i),
+  );
+}
+
+export function monthGridBoundsIso(monthAnchorYmd: string): {
+  start: string;
+  end: string;
+  gridStartYmd: string;
+} {
+  const gridStartYmd = mondayOfOperationalWeek(
+    firstDayOfMonthYmd(monthAnchorYmd),
+  );
+  const start = zonedWallClockToUtcIso(gridStartYmd, "00:00");
+  const end = zonedWallClockToUtcIso(
+    addDaysOperationalYmd(gridStartYmd, 42),
+    "00:00",
+  );
+  if (!start || !end) {
+    throw new Error("Intervalo do mês inválido");
+  }
+  return { start, end, gridStartYmd };
+}
+
+export function isSameOperationalMonth(a: string, b: string): boolean {
+  const pa = ymdParts(a);
+  const pb = ymdParts(b);
+  return pa.y === pb.y && pa.m === pb.m;
+}
+
+export function formatCalendarMonthTitle(monthAnchorYmd: string): string {
+  const iso = zonedWallClockToUtcIso(
+    firstDayOfMonthYmd(monthAnchorYmd),
+    "12:00",
+  );
+  if (!iso) return monthAnchorYmd;
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+    month: "long",
+    year: "numeric",
+    timeZone: OPERATIONAL_TZ,
+  }).format(new Date(iso));
+}
+
+export function formatCalendarWeekdayShortLabels(mondayYmd: string): string[] {
+  return weekDayYmds(mondayYmd).map((ymd) => {
+    const iso = zonedWallClockToUtcIso(ymd, "12:00");
+    if (!iso) return ymd;
+    return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+      weekday: "short",
+      timeZone: OPERATIONAL_TZ,
+    }).format(new Date(iso));
+  });
+}
+
+export function formatCalendarMonthDayNumber(ymd: string): string {
+  return String(ymdParts(ymd).d);
+}
+
 /** Segunda-feira da semana operacional que contém `anchorYmd`. */
 export function mondayOfOperationalWeek(anchorYmd?: string): string {
   const ymd = anchorYmd ?? hojeOperacionalYmd();
@@ -389,6 +484,7 @@ export function calendarHref(params: {
   vista?: CalendarViewMode;
   dia?: string;
   semana?: string;
+  mes?: string;
   equipe?: string | null;
 }): string {
   const sp = new URLSearchParams();
@@ -396,6 +492,9 @@ export function calendarHref(params: {
   sp.set("vista", vista);
   if (vista === "day" && params.dia) sp.set("dia", params.dia);
   if (vista === "week" && params.semana) sp.set("semana", params.semana);
+  if (vista === "month" && params.mes) {
+    sp.set("mes", firstDayOfMonthYmd(params.mes));
+  }
   if (params.equipe) sp.set("equipe", params.equipe);
   return `/calendar?${sp.toString()}`;
 }

@@ -13,7 +13,7 @@ import {
   type CalendarWorkspaceQuery,
   type CalendarWorkspaceState,
 } from "@/lib/calendar/resolve-calendar-workspace";
-import { mondayOfOperationalWeek } from "@/lib/calendar/operational-calendar";
+import { mondayOfOperationalWeek, firstDayOfMonthYmd } from "@/lib/calendar/operational-calendar";
 import {
   spreadAgendaEventoDatetime,
   spreadAgendaEventoRange,
@@ -33,6 +33,7 @@ export async function fetchCalendarWorkspace(
     return {
       view: "day",
       anchorDayYmd: hoje,
+      anchorMonthYmd: firstDayOfMonthYmd(hoje),
       initialMondayYmd: mondayOfOperationalWeek(hoje),
       eventos: [],
       equipes: [],

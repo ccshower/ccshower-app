@@ -5,6 +5,7 @@ import {
 } from "@/lib/calendar/calendar-equipe-filter";
 import { loadCalendarEventos } from "@/lib/calendar/load-calendar-eventos";
 import {
+  firstDayOfMonthYmd,
   mondayOfOperationalWeek,
   parseCalendarViewMode,
   type CalendarEvento,
@@ -18,12 +19,14 @@ export type CalendarWorkspaceQuery = {
   vista?: string;
   dia?: string;
   semana?: string;
+  mes?: string;
   equipe?: string;
 };
 
 export type CalendarWorkspaceState = {
   view: CalendarViewMode;
   anchorDayYmd: string;
+  anchorMonthYmd: string;
   initialMondayYmd: string;
   eventos: CalendarEvento[];
   equipes: CalendarEquipeOption[];
@@ -45,15 +48,23 @@ export async function resolveCalendarWorkspace(
 ): Promise<CalendarWorkspaceState> {
   const view = query.vista
     ? parseCalendarViewMode(query.vista)
-    : query.semana?.trim()
-      ? "week"
-      : "day";
+    : query.mes?.trim()
+      ? "month"
+      : query.semana?.trim()
+        ? "week"
+        : "day";
   const hoje = hojeOperacionalYmd();
   const anchorDayYmd = query.dia?.trim() || hoje;
+  const anchorMonthYmd = firstDayOfMonthYmd(
+    query.mes?.trim() || anchorDayYmd,
+  );
   const semanaForLoad =
     view === "week"
       ? query.semana?.trim() || mondayOfOperationalWeek(hoje)
-      : mondayOfOperationalWeek(anchorDayYmd);
+      : view === "month"
+        ? anchorMonthYmd
+        : mondayOfOperationalWeek(anchorDayYmd);
+  const loadRange = view === "month" ? "month" : "week";
 
   const equipeFilterId = resolveCalendarEquipeFilter(usuario, query.equipe);
   const canFilterEquipes = canFilterCalendarByEquipe(usuario);
@@ -67,6 +78,7 @@ export async function resolveCalendarWorkspace(
     loadCalendarEventos(semanaForLoad, {
       equipeId: equipeFilterId,
       unidadeId: unidadeScope,
+      range: loadRange,
     }),
     canFilterEquipes
       ? supabase
@@ -83,6 +95,7 @@ export async function resolveCalendarWorkspace(
   return {
     view,
     anchorDayYmd,
+    anchorMonthYmd,
     initialMondayYmd: mondayYmd,
     eventos,
     equipes,

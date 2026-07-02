@@ -18,9 +18,11 @@ import { CalendarWeekView } from "@/components/calendar/calendar-week-view";
 import type { CalendarEquipeOption } from "@/lib/calendar/calendar-equipe-filter";
 import {
   addDaysOperationalYmd,
+  addMonthsOperationalYmd,
   calendarHref,
   filterEventosForDay,
   formatCalendarDayTitle,
+  formatCalendarMonthTitle,
   formatCalendarWeekRange,
   groupEventsByDay,
   mondayOfOperationalWeek,
@@ -40,12 +42,14 @@ export type CalendarNavigateQuery = {
   vista?: CalendarViewMode;
   dia?: string;
   semana?: string;
+  mes?: string;
   equipe?: string | null;
 };
 
 type Props = {
   view: CalendarViewMode;
   anchorDayYmd: string;
+  anchorMonthYmd: string;
   initialMondayYmd: string;
   eventos: CalendarEvento[];
   equipes: CalendarEquipeOption[];
@@ -74,6 +78,7 @@ function useDesktopDragEnabled(): boolean {
 export function CalendarClient({
   view,
   anchorDayYmd,
+  anchorMonthYmd,
   initialMondayYmd,
   eventos,
   equipes,
@@ -159,11 +164,13 @@ export function CalendarClient({
     vista?: CalendarViewMode;
     dia?: string;
     semana?: string;
+    mes?: string;
   }) {
     const target: CalendarNavigateQuery = {
       vista: next.vista ?? view,
       dia: next.dia,
       semana: next.semana,
+      mes: next.mes,
       equipe: selectedEquipeId,
     };
     if (embedded && onEmbeddedNavigate) {
@@ -178,6 +185,7 @@ export function CalendarClient({
       vista: view,
       dia: view === "day" ? anchorDayYmd : undefined,
       semana: view === "week" ? initialMondayYmd : undefined,
+      mes: view === "month" ? anchorMonthYmd : undefined,
       equipe: nextEquipeId || null,
     };
     if (embedded && onEmbeddedNavigate) {
@@ -306,7 +314,7 @@ export function CalendarClient({
       ? formatCalendarDayTitle(anchorDayYmd)
       : view === "week"
         ? formatCalendarWeekRange(initialMondayYmd)
-        : formatCalendarWeekRange(initialMondayYmd);
+        : formatCalendarMonthTitle(anchorMonthYmd);
 
   const dragHandlers = {
     onDragStart: setDraggingEventId,
@@ -363,6 +371,7 @@ export function CalendarClient({
             view={view}
             diaYmd={anchorDayYmd}
             mondayYmd={initialMondayYmd}
+            monthYmd={anchorMonthYmd}
             equipeId={selectedEquipeId}
             onViewChange={
               embedded && onEmbeddedNavigate
@@ -371,6 +380,7 @@ export function CalendarClient({
                       vista: mode,
                       dia: mode === "day" ? anchorDayYmd : undefined,
                       semana: mode === "week" ? initialMondayYmd : undefined,
+                      mes: mode === "month" ? anchorMonthYmd : undefined,
                       equipe: selectedEquipeId,
                     })
                 : undefined
@@ -394,6 +404,21 @@ export function CalendarClient({
 
           {view === "day" ? (
             <>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+                  {t("calendar.jumpToDate")}
+                </span>
+                <input
+                  type="date"
+                  value={anchorDayYmd}
+                  onChange={(event) => {
+                    const next = event.target.value.trim();
+                    if (!next) return;
+                    navigateHref({ dia: next });
+                  }}
+                  className="rounded-sm border border-cc-border bg-white px-3 py-2 text-sm font-light text-cc-deep"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() =>
@@ -462,7 +487,64 @@ export function CalendarClient({
                 {t("calendar.nextWeek")}
               </button>
             </>
-          ) : null}
+          ) : (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-muted">
+                  {t("calendar.jumpToDate")}
+                </span>
+                <input
+                  type="month"
+                  value={anchorMonthYmd.slice(0, 7)}
+                  onChange={(event) => {
+                    const next = event.target.value.trim();
+                    if (!next) return;
+                    navigateHref({
+                      vista: "month",
+                      mes: `${next}-01`,
+                    });
+                  }}
+                  className="rounded-sm border border-cc-border bg-white px-3 py-2 text-sm font-light text-cc-deep"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  navigateHref({
+                    vista: "month",
+                    mes: addMonthsOperationalYmd(anchorMonthYmd, -1),
+                  })
+                }
+                className="rounded-sm border border-cc-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
+              >
+                {t("calendar.prevMonth")}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  navigateHref({
+                    vista: "month",
+                    mes: hojeOperacionalYmd(),
+                  })
+                }
+                className="rounded-sm border border-cc-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
+              >
+                {t("calendar.today")}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  navigateHref({
+                    vista: "month",
+                    mes: addMonthsOperationalYmd(anchorMonthYmd, 1),
+                  })
+                }
+                className="rounded-sm border border-cc-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
+              >
+                {t("calendar.nextMonth")}
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -488,7 +570,18 @@ export function CalendarClient({
         />
       ) : null}
 
-      {view === "month" ? <CalendarMonthView /> : null}
+      {view === "month" ? (
+        <CalendarMonthView
+          monthAnchorYmd={anchorMonthYmd}
+          eventos={eventos}
+          onSelectDay={(ymd) =>
+            navigateHref({
+              vista: "day",
+              dia: ymd,
+            })
+          }
+        />
+      ) : null}
 
       <CalendarRescheduleModal
         draft={rescheduleDraft}
