@@ -1,4 +1,5 @@
 import {
+  addDaysOperationalYmd,
   isActiveCalendarAgendaStatus,
   operationalWallClockHm,
 } from "@/lib/calendar/operational-calendar";
@@ -24,6 +25,7 @@ import type { Priority } from "@/lib/mock/centro-operacional/operational-dashboa
 
 import {
   ATENCAO_OS_DIAS_PARADO,
+  ATENCAO_VISITA_ATRASADA_LOOKBACK_DIAS,
   buildAtencaoFilters,
   compareAtencaoItems,
   formatAbertoHa,
@@ -364,7 +366,14 @@ export async function loadAtencaoAgora(
 ): Promise<AtencaoAgoraData> {
   const nowMs = Date.now();
   const hoje = hojeOperacionalYmd();
-  const rangeVisitas = isoRangeDiaOperacional(hoje);
+  const lookbackYmd = addDaysOperationalYmd(
+    hoje,
+    -ATENCAO_VISITA_ATRASADA_LOOKBACK_DIAS,
+  );
+  const rangeStart = isoRangeDiaOperacional(lookbackYmd)?.start;
+  const rangeEnd = isoRangeDiaOperacional(hoje)?.end;
+  const rangeVisitas =
+    rangeStart && rangeEnd ? { start: rangeStart, end: rangeEnd } : null;
 
   const supabase = await createClient();
 
@@ -406,6 +415,7 @@ export async function loadAtencaoAgora(
     .eq("ativo", true);
   if (unidadeId) osQuery = osQuery.eq("unidade_id", unidadeId);
 
+  // Prefer data_inicio; data_evento-only legacy rows still covered with null data_inicio.
   let visitasQuery = rangeVisitas
     ? supabase
         .from("agenda_eventos")
@@ -419,7 +429,7 @@ export async function loadAtencaoAgora(
         )
         .eq("tipo_evento", "technical_visit")
         .or(
-          `and(data_inicio.gte.${rangeVisitas.start},data_inicio.lte.${rangeVisitas.end}),and(data_evento.gte.${rangeVisitas.start},data_evento.lte.${rangeVisitas.end})`,
+          `and(data_inicio.gte.${rangeVisitas.start},data_inicio.lte.${rangeVisitas.end}),and(data_inicio.is.null,data_evento.gte.${rangeVisitas.start},data_evento.lte.${rangeVisitas.end})`,
         )
     : null;
   if (visitasQuery && unidadeId) {

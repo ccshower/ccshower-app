@@ -57,6 +57,12 @@ export const ATENCAO_OS_DIAS_PARADO: Partial<
 /** Visita futura sem confirmação — janela em horas. */
 export const ATENCAO_VISITA_NAO_CONFIRMADA_HORAS = 48;
 
+/**
+ * Quantos dias atrás buscar visitas técnicas ainda abertas (scheduled/confirmed)
+ * para detectar atraso. Sem lookback, visitas de ontem somem do radar.
+ */
+export const ATENCAO_VISITA_ATRASADA_LOOKBACK_DIAS = 14;
+
 export type AtencaoSortMeta = {
   sortGroup: 1 | 2 | 3;
   sortDias: number;
