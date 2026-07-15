@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  eventDayYmd,
   isCalendarAgendaEvent,
   operationalWallClockHm,
   addDaysOperationalYmd,
@@ -9,6 +10,7 @@ import {
   agendaEventoEndIso,
   agendaEventoStartIso,
   AGENDA_EVENTO_DATETIME_COLUMNS,
+  type AgendaEventoDatetimeFields,
 } from "@/lib/ordens-servico/agenda-evento-query";
 import {
   mapAgendaEquipeDiaResumo,
@@ -47,6 +49,20 @@ function isEventoAgendaAtivo(status: string | null | undefined): boolean {
   return !AGENDA_STATUS_CANCELADOS.has(status ?? "");
 }
 
+/**
+ * Keep only events whose effective start falls on the requested operational day.
+ * Needed because `data_evento` may be a `date` (midnight UTC), so the query OR
+ * can pull next-day visits onto the previous America/New_York calendar day.
+ */
+function eventoPertenceAoDiaOperacional(
+  evento: AgendaEventoDatetimeFields,
+  dataYmd: string,
+): boolean {
+  const startIso = agendaEventoStartIso(evento);
+  if (!startIso) return false;
+  return eventDayYmd(startIso) === dataYmd;
+}
+
 export type ValidarSlotVisitaResult =
   | { ok: true }
   | { ok: false; message: string }
@@ -78,12 +94,14 @@ async function listarEventosAgendaEquipeNoDia(
   }
 
   const supabase = await requireAuthSupabase();
+  // Prefer data_inicio (official start). Keep data_evento OR only for legacy
+  // rows without data_inicio — then post-filter by operational day below.
   const { data, error } = await supabase
     .from("agenda_eventos")
     .select(AGENDA_EQUIPE_DIA_SELECT)
     .eq("equipe_id", equipeId)
     .or(
-      `and(data_inicio.gte.${range.start},data_inicio.lte.${range.end}),and(data_evento.gte.${range.start},data_evento.lte.${range.end})`,
+      `and(data_inicio.gte.${range.start},data_inicio.lte.${range.end}),and(data_inicio.is.null,data_evento.gte.${range.start},data_evento.lte.${range.end})`,
     );
 
   if (error) return { eventos: [], error: error.message };
@@ -92,7 +110,8 @@ async function listarEventosAgendaEquipeNoDia(
     (e) =>
       (!excluirEventoId || e.id !== excluirEventoId) &&
       isEventoAgendaAtivo(e.status) &&
-      isCalendarAgendaEvent(e.tipo_evento),
+      isCalendarAgendaEvent(e.tipo_evento) &&
+      eventoPertenceAoDiaOperacional(e, dataVisita),
   ) as AgendaEventoDiaRow[];
 
   return { eventos };
