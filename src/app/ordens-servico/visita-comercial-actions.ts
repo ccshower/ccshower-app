@@ -444,10 +444,11 @@ export async function atualizarClientePrimeiraVisita(
     if (osErr) return { ok: false, message: osErr.message };
 
     if (os.visita_inicial?.id) {
-      await supabase
+      const { error: evErr } = await supabase
         .from("agenda_eventos")
         .update({ titulo })
         .eq("id", os.visita_inicial.id);
+      if (evErr) return { ok: false, message: evErr.message };
     }
 
     revalidateOs(osId);
