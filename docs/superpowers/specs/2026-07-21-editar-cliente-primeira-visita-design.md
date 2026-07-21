@@ -38,6 +38,11 @@ No cadastro por telefone, o atendente às vezes registra o nome do cliente errad
   - A política continua limitada ao escopo comercial da OS vinculada; a trava "só na primeira visita" fica garantida no banco, não apenas na tela.
 - Políticas de admin existentes não mudam.
 
+### Link "Clients" no menu do admin do dashboard
+
+- O menu do admin no Ops Center (`CENTRO_ADMIN_MENU_ITEMS` em `src/components/admin/centro-operacional/centro-admin-menu.tsx`) não possui atalho para a lista de clientes.
+- Adicionar item `{ href: "/admin/clientes", label: "Clients", icon: "users" }` junto de Users, Teams, Contractors, Units, Inventory e Financial.
+
 ### Fluxo de dados
 
 1. Usuário abre `/os/[id]` (fila "Awaiting First Visit" ou visita em execução).
@@ -59,6 +64,7 @@ No cadastro por telefone, o atendente às vezes registra o nome do cliente errad
   - Após concluir a primeira visita — botão ausente e update bloqueado pelo banco.
   - Admin segue editando pela tela de Customers em qualquer estado.
   - Campos equipe/contractor/ativo não aparecem nem são aceitos pela action na primeira visita.
+  - Menu do admin no dashboard exibe "Clients" e navega para `/admin/clientes`.
 
 ## Fora do escopo
 
