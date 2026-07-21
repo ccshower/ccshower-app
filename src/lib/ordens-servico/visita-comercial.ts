@@ -32,6 +32,16 @@ export function isVisitaComercialExecucao(
   );
 }
 
+/** Cliente editável pelo time de campo: toda a primeira visita comercial. */
+export function isClienteEditavelPrimeiraVisita(
+  os: Pick<
+    OrdemServicoWithRelations,
+    "etapa_atual" | "status" | "status_atual" | "visita_inicial"
+  >,
+): boolean {
+  return isOsAgendamentoVisita(os) || isVisitaComercialExecucao(os);
+}
+
 export function clienteMapsUrl(
   cliente: Pick<
     Cliente,

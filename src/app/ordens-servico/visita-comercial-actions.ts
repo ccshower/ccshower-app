@@ -6,9 +6,15 @@ import { transicionarEtapaOrdemServico } from "@/app/ordens-servico/actions";
 import { verificarOsFluxoLiberado } from "@/app/ordens-servico/bloqueio-operacional-actions";
 import { validarFotosVisitaObrigatorias } from "@/app/ordens-servico/ambientes-actions";
 import {
+  mapDbErrorLeadSource,
+  parseLeadSourceFromForm,
+} from "@/lib/clientes/lead-source";
+import { parseClientType } from "@/lib/clientes/tipo-cliente";
+import {
   OS_ANEXOS_BUCKET,
   OS_ANEXO_TIPO_PAYMENT_RECEIPT,
   OS_ANEXO_TIPO_VISITA,
+  isClienteEditavelPrimeiraVisita,
   isVisitaComercialExecucao,
 } from "@/lib/ordens-servico/visita-comercial";
 import {
@@ -339,6 +345,117 @@ export async function salvarNomeClienteVisitaComercial(
     return {
       ok: false,
       message: e instanceof Error ? e.message : "Error saving customer name",
+    };
+  }
+}
+
+function emptyToNull(v: FormDataEntryValue | null) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
+}
+
+function readNumber(v: FormDataEntryValue | null) {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Atualiza dados cadastrais do cliente durante a primeira visita (agendamento ou execução). */
+export async function atualizarClientePrimeiraVisita(
+  osId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAuth();
+    const { os, error } = await loadOsParaVisita(supabase, osId);
+    if (error || !os) return { ok: false, message: error ?? "Work order not found" };
+
+    if (!isClienteEditavelPrimeiraVisita(os)) {
+      return {
+        ok: false,
+        message: "Editing is only available until the first visit is completed",
+      };
+    }
+
+    const nome = String(formData.get("nome") ?? "").trim();
+    const telefone = String(formData.get("telefone") ?? "").trim();
+    const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
+    if (!nome || !telefone || !endereco_formatado) {
+      return { ok: false, message: "Name, phone and address are required" };
+    }
+
+    const lead = parseLeadSourceFromForm(formData, { required: false });
+    if (!lead.ok) return lead;
+
+    // Contractor está fora do escopo da primeira visita: tipo não muda de/para contractor.
+    const { data: atual, error: cliLoadErr } = await supabase
+      .from("clientes")
+      .select("tipo_cliente")
+      .eq("id", os.cliente_id)
+      .single();
+    if (cliLoadErr) return { ok: false, message: cliLoadErr.message };
+
+    const tipoAtual = parseClientType(String(atual?.tipo_cliente ?? "residential"));
+    let tipo_cliente = tipoAtual;
+    if (tipoAtual !== "contractor") {
+      const requested = parseClientType(String(formData.get("tipo_cliente") ?? ""));
+      if (requested !== "contractor") tipo_cliente = requested;
+    }
+
+    const { error: cliErr } = await supabase
+      .from("clientes")
+      .update({
+        nome,
+        telefone,
+        tipo_cliente,
+        email: emptyToNull(formData.get("email")),
+        endereco_formatado,
+        endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        cidade: emptyToNull(formData.get("cidade")),
+        estado: emptyToNull(formData.get("estado")),
+        cep: emptyToNull(formData.get("cep")),
+        pais: emptyToNull(formData.get("pais")) ?? "US",
+        google_place_id: emptyToNull(formData.get("google_place_id")),
+        latitude: readNumber(formData.get("latitude")),
+        longitude: readNumber(formData.get("longitude")),
+        google_maps_url: emptyToNull(formData.get("google_maps_url")),
+        observacoes: emptyToNull(formData.get("observacoes")),
+        origem_lead: lead.origem_lead,
+        origem_lead_outro: lead.origem_lead_outro,
+      })
+      .eq("id", os.cliente_id);
+
+    if (cliErr) {
+      return {
+        ok: false,
+        message: cliErr.message.includes("policy")
+          ? "Not allowed to edit this customer for this visit"
+          : mapDbErrorLeadSource(cliErr.message),
+      };
+    }
+
+    // Mantém título da OS e do evento de agenda em sincronia com o nome.
+    const titulo = buildInitialCommercialOsTitulo(nome);
+    const { error: osErr } = await supabase
+      .from("ordens_servico")
+      .update({ titulo })
+      .eq("id", osId);
+    if (osErr) return { ok: false, message: osErr.message };
+
+    if (os.visita_inicial?.id) {
+      await supabase
+        .from("agenda_eventos")
+        .update({ titulo })
+        .eq("id", os.visita_inicial.id);
+    }
+
+    revalidateOs(osId);
+    return { ok: true, id: osId };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Error updating customer",
     };
   }
 }
