@@ -301,23 +301,31 @@ export type OsRepairEpisode = {
 };
 
 export type OrdemServicoWithRelations = OrdemServico & {
-  cliente: Pick<
-    Cliente,
-    | "id"
-    | "nome"
-    | "telefone"
-    | "email"
-    | "endereco_formatado"
-    | "endereco_linha1"
-    | "cidade"
-    | "estado"
-    | "cep"
-    | "tipo_cliente"
-    | "observacoes"
-    | "google_maps_url"
-    | "latitude"
-    | "longitude"
-  > | null;
+  cliente:
+    | (Pick<
+        Cliente,
+        | "id"
+        | "nome"
+        | "telefone"
+        | "email"
+        | "endereco_formatado"
+        | "endereco_linha1"
+        | "cidade"
+        | "estado"
+        | "cep"
+        | "tipo_cliente"
+        | "observacoes"
+        | "google_maps_url"
+        | "latitude"
+        | "longitude"
+      > &
+        Partial<
+          Pick<
+            Cliente,
+            "pais" | "google_place_id" | "origem_lead" | "origem_lead_outro"
+          >
+        >)
+    | null;
   equipe: Pick<Equipe, "id" | "nome" | "cor_primaria" | "cor_secundaria"> | null;
   responsavel: Pick<Usuario, "id" | "nome"> | null;
   /** Visita técnica — data_inicio/data_fim são a fonte oficial de data/hora. */
