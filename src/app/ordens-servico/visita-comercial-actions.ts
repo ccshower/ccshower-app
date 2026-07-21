@@ -288,67 +288,6 @@ export async function salvarFormaPagamentoComercial(
   }
 }
 
-/** Atualiza nome do cliente durante a visita comercial (Sales). */
-export async function salvarNomeClienteVisitaComercial(
-  osId: string,
-  nomeRaw: string,
-): Promise<ActionResult> {
-  try {
-    const nome = String(nomeRaw ?? "").trim();
-    if (!nome) {
-      return { ok: false, message: "Customer name is required" };
-    }
-
-    const { supabase } = await requireAuth();
-    const { os, error } = await loadOsParaVisita(supabase, osId);
-    if (error || !os) return { ok: false, message: error ?? "Work order not found" };
-
-    if (!isVisitaComercialExecucao(os)) {
-      return {
-        ok: false,
-        message: "Customer name can only be edited during the visit",
-      };
-    }
-
-    const { error: cliErr } = await supabase
-      .from("clientes")
-      .update({ nome })
-      .eq("id", os.cliente_id);
-
-    if (cliErr) {
-      return {
-        ok: false,
-        message: cliErr.message.includes("policy")
-          ? "Not allowed to update customer name for this visit"
-          : cliErr.message,
-      };
-    }
-
-    const titulo = buildInitialCommercialOsTitulo(nome);
-    const { error: osErr } = await supabase
-      .from("ordens_servico")
-      .update({ titulo })
-      .eq("id", osId);
-
-    if (osErr) return { ok: false, message: osErr.message };
-
-    if (os.visita_inicial?.id) {
-      await supabase
-        .from("agenda_eventos")
-        .update({ titulo })
-        .eq("id", os.visita_inicial.id);
-    }
-
-    revalidateOs(osId);
-    return { ok: true, id: osId };
-  } catch (e) {
-    return {
-      ok: false,
-      message: e instanceof Error ? e.message : "Error saving customer name",
-    };
-  }
-}
-
 function emptyToNull(v: FormDataEntryValue | null) {
   const s = String(v ?? "").trim();
   return s.length ? s : null;

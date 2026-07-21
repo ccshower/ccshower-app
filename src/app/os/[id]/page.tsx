@@ -59,6 +59,7 @@ export default async function OsWorkspaceRoutePage({ params, searchParams }: Pro
         viewerCanSeeFinancial={viewerCanSeeFinancial}
         isAdmin={isAdmin(usuario)}
         backHref={backHref}
+        googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
       />
     </CampoPageFrame>
   );

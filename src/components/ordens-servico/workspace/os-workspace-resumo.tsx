@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { OsClienteEditarPrimeiraVisita } from "@/components/ordens-servico/os-cliente-editar-primeira-visita";
 import { OsDescontoModal } from "@/components/ordens-servico/os-desconto-modal";
 import { OsWorkspaceDetalhesSheet } from "@/components/ordens-servico/workspace/os-workspace-detalhes-sheet";
 import { resumirEndereco } from "@/components/ordens-servico/workspace/os-workspace-utils";
@@ -15,6 +16,7 @@ import type { OrdemServicoWithRelations } from "@/lib/types/database";
 type Props = {
   ordem: OrdemServicoWithRelations;
   isAdmin?: boolean;
+  googleMapsApiKey?: string;
   onAtualizado?: () => void;
 };
 
@@ -26,6 +28,7 @@ function osPodeReceberDesconto(ordem: OrdemServicoWithRelations): boolean {
 export function OsWorkspaceResumo({
   ordem,
   isAdmin = false,
+  googleMapsApiKey,
   onAtualizado,
 }: Props) {
   const [detalhesOpen, setDetalhesOpen] = useState(false);
@@ -71,6 +74,11 @@ export function OsWorkspaceResumo({
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-2">
+            <OsClienteEditarPrimeiraVisita
+              ordem={ordem}
+              googleMapsApiKey={googleMapsApiKey ?? ""}
+              onSaved={() => onAtualizado?.()}
+            />
             {isAdmin && osPodeReceberDesconto(ordem) ? (
               <button
                 type="button"

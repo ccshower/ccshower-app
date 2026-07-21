@@ -22,6 +22,7 @@ type Props = {
   viewerCanSeeFinancial?: boolean;
   isAdmin?: boolean;
   backHref: string;
+  googleMapsApiKey?: string;
 };
 
 /**
@@ -33,6 +34,7 @@ export function OsWorkspacePage({
   viewerCanSeeFinancial = false,
   isAdmin = false,
   backHref,
+  googleMapsApiKey = "",
 }: Props) {
   const router = useRouter();
   const [ordem, setOrdem] = useState(initial);
@@ -79,6 +81,7 @@ export function OsWorkspacePage({
       <OsWorkspaceResumo
         ordem={ordem}
         isAdmin={isAdmin}
+        googleMapsApiKey={googleMapsApiKey}
         onAtualizado={recarregar}
       />
 
