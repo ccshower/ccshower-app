@@ -17,6 +17,7 @@ export type CentroAdminMenuItem = {
 
 /** Itens ativos do menu administrativo do Centro Operacional. */
 export const CENTRO_ADMIN_MENU_ITEMS: CentroAdminMenuItem[] = [
+  { href: "/admin/clientes", label: "Clients", icon: "users" },
   { href: "/admin/usuarios", label: "Users", icon: "users" },
   { href: "/admin/equipes", label: "Teams", icon: "clipboard" },
   { href: "/admin/contractors", label: "Contractors", icon: "wrench" },
