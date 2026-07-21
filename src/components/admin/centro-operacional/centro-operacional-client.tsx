@@ -20,7 +20,7 @@ import {
   AgendaRow,
   AgendaTabSwitch,
 } from "@/components/admin/centro-operacional/centro-agenda-ui";
-import { ClienteForm } from "@/app/admin/clientes/clientes-client";
+import { ClienteForm } from "@/components/clientes/cliente-form";
 import { criarCliente } from "@/app/admin/clientes/actions";
 import { OperationalModal } from "@/components/operacional/operational-modal";
 import {
