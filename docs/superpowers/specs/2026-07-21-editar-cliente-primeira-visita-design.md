@@ -9,6 +9,8 @@ No cadastro por telefone, o atendente às vezes registra o nome do cliente errad
 
 ## Decisões de escopo (confirmadas com o usuário)
 
+> **Revisão 2026-07-21 (tarde):** o usuário restringiu a regra — a edição é permitida SOMENTE enquanto a OS não possui visita agendada (`NO VISIT`, sem evento `technical_visit` na agenda). Após agendar, edição bloqueada para o time de campo (UI, action e RLS). O item 1 abaixo reflete a decisão original e foi substituído por esta regra.
+
 1. **Quando editar:** nos dois momentos da primeira visita — agendamento (OS comercial em `NO VISIT`) e execução (`VISIT SCHEDULED` / `VISIT IN PROGRESS`). Depois que a primeira visita termina, a edição some do workspace.
 2. **Admin:** não é afetado pela trava — continua editando tudo, a qualquer momento, pela tela de Customers.
 3. **Campos editáveis na primeira visita:** somente dados cadastrais — nome, telefone, email, tipo de cliente, endereço (com busca Google Places), origem do lead e observações. **Fora do escopo:** equipe, contractor e status ativo/inativo.

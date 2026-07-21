@@ -14,7 +14,7 @@ type Props = {
   onSaved: () => void;
 };
 
-/** Botão + modal de edição completa do cliente — visível só na primeira visita comercial. */
+/** Botão + modal de edição completa do cliente — visível só antes de a visita ser agendada. */
 export function OsClienteEditarPrimeiraVisita({
   ordem,
   googleMapsApiKey,

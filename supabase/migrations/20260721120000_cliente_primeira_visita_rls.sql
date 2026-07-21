@@ -1,6 +1,8 @@
--- Amplia a janela de edição do cliente pela equipe comercial para cobrir
--- toda a primeira visita: agendamento (no_visit) + execução
--- (visit_scheduled / visit_in_progress). Antes cobria apenas a execução.
+-- Restringe a janela de edição do cliente pela equipe comercial:
+-- permitida SOMENTE enquanto a OS comercial ainda não tem visita agendada
+-- (status_atual = 'no_visit' e nenhum evento technical_visit na agenda).
+-- Substitui a janela anterior (visit_scheduled / visit_in_progress), que
+-- passava a permitir edição depois do agendamento.
 
 create or replace function public.cliente_em_visita_comercial_editavel(c_id uuid)
 returns boolean
@@ -17,7 +19,13 @@ as $$
     where os.cliente_id = c_id
       and coalesce(os.ativo, true)
       and os.etapa_atual = 'commercial'
-      and os.status_atual in ('no_visit', 'visit_scheduled', 'visit_in_progress')
+      and os.status_atual = 'no_visit'
+      and not exists (
+        select 1
+        from public.agenda_eventos ae
+        where ae.ordem_servico_id = os.id
+          and ae.tipo_evento = 'technical_visit'
+      )
       and public.equipe_is_commercial_stage(e)
       and (
         public.can_view_all_equipes()

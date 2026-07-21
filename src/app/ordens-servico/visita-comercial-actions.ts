@@ -300,7 +300,7 @@ function readNumber(v: FormDataEntryValue | null) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Atualiza dados cadastrais do cliente durante a primeira visita (agendamento ou execução). */
+/** Atualiza dados cadastrais do cliente — somente enquanto a OS não tem visita agendada. */
 export async function atualizarClientePrimeiraVisita(
   osId: string,
   formData: FormData,
@@ -313,7 +313,7 @@ export async function atualizarClientePrimeiraVisita(
     if (!isClienteEditavelPrimeiraVisita(os)) {
       return {
         ok: false,
-        message: "Editing is only available until the first visit is completed",
+        message: "Customer can only be edited before a visit is scheduled",
       };
     }
 
