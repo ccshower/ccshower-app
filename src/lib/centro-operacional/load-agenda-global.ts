@@ -19,6 +19,7 @@ import {
   type AgendaGlobalResumoContadores,
   type AgendaGlobalSemana,
 } from "@/lib/centro-operacional/agenda-global";
+import { BLOQUEIO_STATUS_ATIVO } from "@/lib/ordens-servico/bloqueio-operacional";
 import { OPERATIONAL_TZ } from "@/lib/ordens-servico/datetime";
 import { hojeOperacionalYmd } from "@/lib/ordens-servico/visita-slots";
 import type { AgendaTipo } from "@/lib/mock/centro-operacional/operational-dashboard";
@@ -31,7 +32,8 @@ const AGENDA_GLOBAL_SELECT = `
   titulo,
   descricao,
   clientes!cliente_id ( nome, endereco_formatado ),
-  equipes!equipe_id ( nome )
+  equipes!equipe_id ( nome ),
+  ordens_servico!ordem_servico_id ( etapa_atual, status_atual )
 `;
 
 const FIELD_EVENT_TYPES = new Set(["technical_visit", "measurement", "installation"]);
@@ -51,6 +53,10 @@ type AgendaGlobalRow = {
   hora_evento?: string | null;
   clientes?: { nome?: string | null; endereco_formatado?: string | null } | null;
   equipes?: { nome?: string | null } | null;
+  ordens_servico?: {
+    etapa_atual?: string | null;
+    status_atual?: string | null;
+  } | null;
 };
 
 type ParsedAgendaGlobalEvent = AgendaGlobalEvento & {
@@ -62,26 +68,68 @@ function isCancelledStatus(status: string | null | undefined): boolean {
   return status === "cancelled" || status === "cancelado";
 }
 
+/** Visita/compromisso já executado — não pode receber OVERDUE. */
+function isAgendaEventoExecutado(status: string | null | undefined): boolean {
+  return (
+    status === "on_site" ||
+    status === "em_campo" ||
+    status === "completed" ||
+    status === "concluido"
+  );
+}
+
+function isAgendaEventoAindaPendente(status: string | null | undefined): boolean {
+  return (
+    status === "scheduled" ||
+    status === "confirmed" ||
+    status === "agendado" ||
+    status === "confirmado"
+  );
+}
+
+function isOsBloqueada(
+  row: AgendaGlobalRow,
+  osComBloqueioAtivo: ReadonlySet<string>,
+): boolean {
+  const osEtapa = row.ordens_servico?.etapa_atual ?? "";
+  if (osEtapa === "blocked" || osEtapa === "bloqueado") return true;
+  const osId = row.ordem_servico_id?.trim();
+  return Boolean(osId && osComBloqueioAtivo.has(osId));
+}
+
+/**
+ * OVERDUE só para compromisso ainda pendente com data/hora já passada.
+ * Visita concluída ou OS em BLOCK (crash ativo / etapa blocked) → sem OVERDUE.
+ */
 function resolveBadgeOperacional(
   row: AgendaGlobalRow,
   startMs: number,
   nowMs: number,
+  osComBloqueioAtivo: ReadonlySet<string>,
 ): AgendaGlobalBadgeOperacional | null {
   const status = row.status ?? "";
   if (status === "cancelled" || status === "cancelado") return "cancelado";
 
-  const etapa = row.etapa ?? "";
-  if (etapa === "blocked" || etapa === "bloqueado") return "bloqueado";
+  if (isOsBloqueada(row, osComBloqueioAtivo)) return "bloqueado";
 
   const texto = `${row.descricao ?? ""} ${row.titulo ?? ""}`.toLowerCase();
   if (texto.includes("reagendado")) return "reagendado";
 
-  const aindaPendente =
-    status === "scheduled" ||
-    status === "confirmed" ||
-    status === "agendado" ||
-    status === "confirmado";
-  if (startMs < nowMs && aindaPendente) return "atrasado";
+  if (isAgendaEventoExecutado(status)) return null;
+
+  if (!isAgendaEventoAindaPendente(status)) return null;
+
+  // Visita técnica: se a OS já saiu do comercial, a visita não está pendente.
+  const osEtapa = row.ordens_servico?.etapa_atual ?? "";
+  if (
+    row.tipo_evento === "technical_visit" &&
+    osEtapa &&
+    osEtapa !== "commercial"
+  ) {
+    return null;
+  }
+
+  if (startMs < nowMs) return "atrasado";
 
   return null;
 }
@@ -174,6 +222,7 @@ function buildDiaResumo(
   parsed: ParsedAgendaGlobalEvent[],
   rows: AgendaGlobalRow[],
   nowMs: number,
+  osComBloqueioAtivo: ReadonlySet<string>,
 ): AgendaGlobalDia {
   const contadores: AgendaGlobalResumoContadores = { ...AGENDA_GLOBAL_VAZIO };
 
@@ -195,7 +244,7 @@ function buildDiaResumo(
         ...ev,
         temporal: startMs < nowMs ? "passado" : "futuro",
         badgeOperacional: row
-          ? resolveBadgeOperacional(row, startMs, nowMs)
+          ? resolveBadgeOperacional(row, startMs, nowMs, osComBloqueioAtivo)
           : null,
       };
     });
@@ -212,6 +261,7 @@ function buildSemanaResumo(
   parsed: ParsedAgendaGlobalEvent[],
   rows: AgendaGlobalRow[],
   nowMs: number,
+  osComBloqueioAtivo: ReadonlySet<string>,
 ): AgendaGlobalSemana {
   const weekDays = new Set(weekDayYmds(mondayYmd));
   const fimYmd = addDaysOperationalYmd(mondayYmd, 6);
@@ -236,7 +286,7 @@ function buildSemanaResumo(
         ...ev,
         temporal: startMs < nowMs ? "passado" : "futuro",
         badgeOperacional: row
-          ? resolveBadgeOperacional(row, startMs, nowMs)
+          ? resolveBadgeOperacional(row, startMs, nowMs, osComBloqueioAtivo)
           : null,
       };
     });
@@ -247,6 +297,28 @@ function buildSemanaResumo(
     eventos,
     contadores,
   };
+}
+
+async function loadOsComBloqueioAtivo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  osIds: string[],
+): Promise<Set<string>> {
+  const unique = [...new Set(osIds.filter(Boolean))];
+  if (unique.length === 0) return new Set();
+
+  const { data, error } = await supabase
+    .from("os_crashes")
+    .select("ordem_servico_id")
+    .eq("status", BLOQUEIO_STATUS_ATIVO)
+    .in("ordem_servico_id", unique);
+
+  if (error || !data) return new Set();
+
+  return new Set(
+    data
+      .map((row) => String(row.ordem_servico_id ?? "").trim())
+      .filter(Boolean),
+  );
 }
 
 export async function loadAgendaGlobal(
@@ -296,12 +368,17 @@ export async function loadAgendaGlobal(
     .map(parseAgendaGlobalRow)
     .filter((ev): ev is ParsedAgendaGlobalEvent => ev != null);
 
+  const osComBloqueioAtivo = await loadOsComBloqueioAtivo(
+    supabase,
+    rows.map((row) => row.ordem_servico_id ?? ""),
+  );
+
   const nowMs = Date.now();
 
   return {
-    hoje: buildDiaResumo(hojeYmd, parsed, rows, nowMs),
-    amanha: buildDiaResumo(amanhaYmd, parsed, rows, nowMs),
-    semana: buildSemanaResumo(mondayYmd, parsed, rows, nowMs),
+    hoje: buildDiaResumo(hojeYmd, parsed, rows, nowMs, osComBloqueioAtivo),
+    amanha: buildDiaResumo(amanhaYmd, parsed, rows, nowMs, osComBloqueioAtivo),
+    semana: buildSemanaResumo(mondayYmd, parsed, rows, nowMs, osComBloqueioAtivo),
     error: null,
   };
 }
