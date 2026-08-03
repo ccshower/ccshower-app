@@ -241,9 +241,27 @@ export async function POST(request: Request, context: RouteContext) {
       tecnico_nome: tecnicoResult.data?.nome ?? null,
       timezone: OPERATIONAL_TZ,
     };
-    const webhook = await dispatchOpenRouteWebhook(payload);
 
-    if (!webhook.ok) {
+    const now = new Date().toISOString();
+    const { data: smsClaim, error: claimError } = await supabase
+      .from("agenda_eventos")
+      .insert({
+        ordem_servico_id: os.id,
+        cliente_id: cliente.id,
+        equipe_id: teamId ?? null,
+        responsavel_id: os.responsavel_id ?? user.id,
+        tipo_evento: "other",
+        etapa: stage,
+        status: "completed",
+        titulo: "client_eta_sms",
+        descricao: "client_eta_sms",
+        ...spreadAgendaEventoDatetime(now),
+      })
+      .select("id")
+      .single();
+
+    if (claimError || !smsClaim) {
+      console.error("[open-route] failed to claim SMS dispatch:", claimError);
       return NextResponse.json({
         ok: true,
         mapsUrl,
@@ -253,22 +271,61 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    const now = new Date().toISOString();
-    const { error: eventError } = await supabase.from("agenda_eventos").insert({
-      ordem_servico_id: os.id,
-      cliente_id: cliente.id,
-      equipe_id: teamId ?? null,
-      responsavel_id: os.responsavel_id ?? user.id,
-      tipo_evento: "other",
-      etapa: stage,
-      status: "completed",
-      titulo: "client_eta_sms",
-      descricao: "client_eta_sms",
-      ...spreadAgendaEventoDatetime(now),
-    });
+    const { data: earliestSmsClaim, error: claimVerificationError } = await supabase
+      .from("agenda_eventos")
+      .select("id")
+      .eq("ordem_servico_id", os.id)
+      .or("titulo.eq.client_eta_sms,descricao.ilike.%client_eta_sms%")
+      .gte("criado_em", dedupeSince)
+      .order("criado_em", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
-    if (eventError) {
-      console.error("[open-route] failed to record SMS queue event:", eventError);
+    if (claimVerificationError || !earliestSmsClaim) {
+      console.error(
+        "[open-route] failed to verify SMS dispatch claim:",
+        claimVerificationError,
+      );
+      await supabase.from("agenda_eventos").delete().eq("id", smsClaim.id);
+      return NextResponse.json({
+        ok: true,
+        mapsUrl,
+        etaMinutes: eta?.minutos ?? null,
+        smsQueued: false,
+        message: "Unable to verify customer notification claim",
+      });
+    }
+
+    if (earliestSmsClaim.id !== smsClaim.id) {
+      return NextResponse.json({
+        ok: true,
+        mapsUrl,
+        etaMinutes: eta?.minutos ?? null,
+        smsQueued: false,
+        message: "Customer notification was recently queued",
+      });
+    }
+
+    const webhook = await dispatchOpenRouteWebhook(payload);
+
+    if (!webhook.ok) {
+      const { error: releaseError } = await supabase
+        .from("agenda_eventos")
+        .delete()
+        .eq("id", smsClaim.id);
+
+      if (releaseError) {
+        console.error("[open-route] failed to release SMS dispatch claim:", releaseError);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        mapsUrl,
+        etaMinutes: eta?.minutos ?? null,
+        smsQueued: false,
+        message: "Customer notification could not be queued",
+      });
     }
 
     return NextResponse.json({

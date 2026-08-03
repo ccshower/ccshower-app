@@ -48,6 +48,7 @@ export async function computeDrivingEta({
 
   if (
     durationSeconds == null ||
+    distanciaMetros == null ||
     !Number.isFinite(distanciaMetros) ||
     distanciaMetros < 0
   ) {

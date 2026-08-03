@@ -57,6 +57,7 @@ export async function dispatchOpenRouteWebhook(
       method: "POST",
       headers,
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -74,6 +75,15 @@ export async function dispatchOpenRouteWebhook(
 
     return { ok: true };
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === "TimeoutError" || error.name === "AbortError")
+    ) {
+      const message = "Webhook N8N excedeu o limite de 8 segundos";
+      console.error("[open-route] webhook N8N expirou:", error);
+      return { ok: false, message };
+    }
+
     const message =
       error instanceof Error ? error.message : "Falha ao chamar webhook N8N";
     console.error("[open-route] falha ao chamar webhook N8N:", error);
