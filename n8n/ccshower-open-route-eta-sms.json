@@ -1,0 +1,208 @@
+{
+  "name": "CCSHOWER - Open Route ETA SMS (Cliente)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## CCSHOWER — Open Route ETA SMS\n\n**Destinatário:** somente `cliente.telefone`.\n\nAntes de ativar: selecione `ccshower_twilio` no nó Twilio, substitua `YOUR_TWILIO_FROM_E164` e configure a credencial Header Auth `ccshower_open_route_webhook_auth` para exigir `Authorization: Bearer {N8N_WEBHOOK_SECRET}`.\n\nO app envia somente os eventos `installer_open_route` e `technical_visit_open_route`.",
+        "height": 230,
+        "width": 520
+      },
+      "id": "b6000000-0000-4000-8000-000000000001",
+      "name": "Notas",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ccshower-open-route-eta",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "b6000000-0000-4000-8000-000000000010",
+      "name": "Webhook Open Route",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ccshower-open-route-eta",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "ccshower_open_route_webhook_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json.body ?? $json;\nconst cliente = payload.cliente ?? {};\nconst event = payload.event ?? '';\nconst firstName = String(cliente.nome ?? '').trim().split(/\\s+/)[0] || 'there';\nconst shortAddress = String(cliente.endereco_formatado ?? '').trim() || 'your address';\nconst etaMinutes = Number(payload.eta?.minutos);\nconst etaTime = String(payload.eta?.chegada_local ?? '').trim();\nconst hasEta = Number.isFinite(etaMinutes) && etaMinutes >= 0 && Boolean(etaTime);\nconst isTechnicalVisit = event === 'technical_visit_open_route';\n\nlet smsBody;\nif (hasEta) {\n  smsBody = isTechnicalVisit\n    ? `Hi ${firstName}, our team is on the way for your technical visit at ${shortAddress}. Estimated arrival: about ${etaMinutes} minutes (around ${etaTime}). — CC Shower`\n    : `Hi ${firstName}, our installation team is on the way to ${shortAddress}. Estimated arrival: about ${etaMinutes} minutes (around ${etaTime}). — CC Shower`;\n} else {\n  smsBody = isTechnicalVisit\n    ? `Hi ${firstName}, our team is heading to your address for your technical visit and will arrive shortly. — CC Shower`\n    : `Hi ${firstName}, our installation team is heading to your address and will arrive shortly. — CC Shower`;\n}\n\nreturn [{\n  json: {\n    event,\n    os_id: payload.os_id ?? null,\n    telefone: String(cliente.telefone ?? '').trim(),\n    sms_body: smsBody,\n  },\n}];"
+      },
+      "id": "b6000000-0000-4000-8000-000000000020",
+      "name": "Montar SMS cliente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-client-phone",
+              "leftValue": "={{ $json.telefone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b6000000-0000-4000-8000-000000000030",
+      "name": "Cliente tem telefone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "YOUR_TWILIO_FROM_E164",
+        "to": "={{ $json.telefone }}",
+        "message": "={{ $json.sms_body }}",
+        "options": {}
+      },
+      "id": "b6000000-0000-4000-8000-000000000040",
+      "name": "Twilio - Enviar SMS cliente",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -80
+      ],
+      "credentials": {
+        "twilioApi": {
+          "name": "ccshower_twilio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"sms_sent\": true,\n  \"os_id\": \"{{ $('Montar SMS cliente').item.json.os_id }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b6000000-0000-4000-8000-000000000050",
+      "name": "Responder SMS enviado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"sms_sent\": false,\n  \"reason\": \"cliente_sem_telefone\",\n  \"os_id\": \"{{ $('Montar SMS cliente').item.json.os_id }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b6000000-0000-4000-8000-000000000060",
+      "name": "Responder sem telefone",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Open Route": {
+      "main": [
+        [
+          {
+            "node": "Montar SMS cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar SMS cliente": {
+      "main": [
+        [
+          {
+            "node": "Cliente tem telefone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cliente tem telefone?": {
+      "main": [
+        [
+          {
+            "node": "Twilio - Enviar SMS cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder sem telefone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio - Enviar SMS cliente": {
+      "main": [
+        [
+          {
+            "node": "Responder SMS enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
