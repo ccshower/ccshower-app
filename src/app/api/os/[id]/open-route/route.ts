@@ -5,7 +5,7 @@ import { OPERATIONAL_TZ } from "@/lib/ordens-servico/datetime";
 import { computeDrivingEta } from "@/lib/ordens-servico/google-routes";
 import {
   openRouteEventForStage,
-  stageTriggersClientEtaSms,
+  shouldSendClientEtaSms,
 } from "@/lib/ordens-servico/open-route-policy";
 import {
   dispatchOpenRouteWebhook,
@@ -107,7 +107,7 @@ export async function POST(request: Request, context: RouteContext) {
     const { data: os, error: osError } = await supabase
       .from("ordens_servico")
       .select(
-        "id, empresa_id, cliente_id, etapa_atual, equipe_id, equipe_atual_id, responsavel_id",
+        "id, empresa_id, cliente_id, etapa_atual, status_atual, status, equipe_id, equipe_atual_id, responsavel_id",
       )
       .eq("id", osId)
       .single();
@@ -153,9 +153,21 @@ export async function POST(request: Request, context: RouteContext) {
     const stage = parseOsStage(os.etapa_atual);
 
     if (
-      !stageTriggersClientEtaSms(stage) ||
-      (stage !== "commercial" && stage !== "installation")
+      !shouldSendClientEtaSms({
+        stage,
+        statusAtual: os.status_atual,
+        osStatus: os.status,
+      })
     ) {
+      return NextResponse.json({
+        ok: true,
+        mapsUrl,
+        smsQueued: false,
+        ...(stage === "commercial" ? { message: "Visit not in progress" } : {}),
+      });
+    }
+
+    if (stage !== "commercial" && stage !== "installation") {
       return NextResponse.json({ ok: true, mapsUrl, smsQueued: false });
     }
 

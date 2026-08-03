@@ -93,6 +93,7 @@ export function OsOpenRouteButton({
         throw new Error(result.message);
       }
 
+      setMessage(null);
       const mapsUrl = result.mapsUrl ?? fallbackMapsUrl;
       if (!mapsUrl) {
         setMessage(t("os.workspace.openRouteUnavailable"));
