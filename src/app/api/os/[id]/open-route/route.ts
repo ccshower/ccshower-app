@@ -298,6 +298,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (earliestSmsClaim.id !== smsClaim.id) {
+      await supabase.from("agenda_eventos").delete().eq("id", smsClaim.id);
       return NextResponse.json({
         ok: true,
         mapsUrl,
