@@ -167,7 +167,7 @@ Uso obrigatório:
 - abertura Google Maps
 - cálculo rotas
 
-**Planejado (não implementado):** ETA no clique **Open route** → webhook n8n → SMS Twilio. Ver `docs/OPEN_ROUTE_ETA_SMS.md`.
+**Implementado:** ETA no clique **Open route** (etapas `commercial` e `installation`) → webhook n8n → SMS Twilio **ao cliente**. Ver `docs/OPEN_ROUTE_ETA_SMS.md`.
 
 ---
 
@@ -251,14 +251,13 @@ Cobranças serão geradas via:
 
 # SMS
 
-SMS faz parte obrigatória do fluxo operacional.
+SMS operacional = **Open route → cliente**.
 
-Uma etapa só libera próxima após:
-- atualização status
-- envio SMS
-- auditoria
+Quando o técnico clica **Open route** nas etapas `commercial` (visita técnica) ou `installation`, o sistema calcula ETA e envia SMS ao **cliente** via n8n + Twilio. Especificação: `docs/OPEN_ROUTE_ETA_SMS.md`.
 
-**Planejado:** SMS de ETA quando instalador clica **Open route** (Installation). Especificação: `docs/OPEN_ROUTE_ETA_SMS.md`.
+Transições de etapa **não** dependem de SMS interno entre times — comunicações etapa→etapa e SMS para equipes foram **canceladas** (fora de escopo).
+
+Toda ação relevante gera auditoria.
 
 ---
 
