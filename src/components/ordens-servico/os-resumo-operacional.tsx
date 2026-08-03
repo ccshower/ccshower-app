@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { OsOpenRouteButton } from "@/components/ordens-servico/workspace/os-open-route-button";
 import { formatOperacionalVisita } from "@/lib/ordens-servico/datetime";
 import {
   labelOperationalStatus,
@@ -112,18 +113,11 @@ export function OsResumoOperacional({ ordem }: Props) {
       </dl>
 
       <div className="border-t border-cc-border/60 px-1 py-3">
-        {maps ? (
-          <a
-            href={maps}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center rounded-sm bg-cc-blue-deep px-3 py-2.5 text-xs font-medium uppercase tracking-[0.08em] text-white shadow-sheet hover:opacity-90"
-          >
-            {t("os.visit.openRoute")}
-          </a>
-        ) : (
-          <p className="text-center text-xs text-cc-muted">{t("os.visit.noMaps")}</p>
-        )}
+        <OsOpenRouteButton
+          ordemId={ordem.id}
+          etapaAtual={ordem.etapa_atual}
+          fallbackMapsUrl={maps}
+        />
       </div>
     </section>
   );

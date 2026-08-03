@@ -1,31 +1,35 @@
 # Open Route → ETA → SMS (n8n + Twilio)
 
-**Status:** planejado — **não implementado** (documentação para implantação em breve).
+**Status:** implementado — etapas `commercial` (visita técnica) e `installation`.
 
-**Objetivo:** quando o instalador clicar em **Open route** na etapa **Installation** (workspace `/os/[id]`), o sistema deve:
+**Objetivo:** quando o técnico clicar em **Open route** nas etapas **Commercial** (visita técnica) ou **Installation** (workspace `/os/[id]`), o sistema deve:
 
 1. Calcular tempo estimado de chegada (ETA) até o endereço do cliente.
 2. Disparar webhook para **n8n**.
-3. n8n envia **SMS via Twilio** ao cliente com a estimativa.
-4. Abrir Google Maps com rota de navegação para o instalador.
+3. n8n envia **SMS via Twilio** ao **cliente** com a estimativa.
+4. Abrir Google Maps com rota de navegação para o técnico.
+
+**Destinatário SMS:** exclusivamente o cliente (`clientes.telefone`). Sem SMS para equipes internas, instaladores ou times.
+
+**Fora de escopo (cancelado):** comunicações etapa→etapa, SMS interno entre times, fan-out para equipe, automações de transição de etapa. Não implementar.
 
 Alinhado a `docs/ARCHITECTURE.md` (SMS operacional, Google Routes API, auditoria).
 
 ---
 
-## Comportamento atual (código em produção)
+## Comportamento implementado
 
 | Item | Situação |
 |------|----------|
-| Botão **Open route** | Link `<a href>` — sem JavaScript no clique |
-| Componente | `src/components/ordens-servico/workspace/os-workspace-resumo.tsx` |
-| URL gerada | `clienteMapsUrl()` em `src/lib/ordens-servico/visita-comercial.ts` |
-| Tipo de link | Google Maps **search** (localização), não **directions** (rota com origem) |
-| GPS do instalador | Não capturado |
-| Cálculo de ETA | Não existe |
-| Webhook / SMS | Não existe |
-
-O botão aparece no resumo do workspace em **todas** as etapas (não só Installation). Na implantação, restringir SMS à etapa `installation` (e opcionalmente `commercial` para visita técnica).
+| Botão **Open route** | Componente `OsOpenRouteButton` com handler assíncrono |
+| Componente | `src/components/ordens-servico/workspace/os-open-route-button.tsx` |
+| Etapas com ETA + SMS | `commercial` e `installation` (`open-route-policy.ts`) |
+| Outras etapas | Maps abre sem GPS/ETA/SMS (link simples) |
+| URL gerada | Google Maps **directions** com origem GPS + destino cliente |
+| GPS do técnico | `navigator.geolocation` no clique |
+| Cálculo de ETA | Google Routes API (server-side) |
+| Webhook / SMS | `POST /api/os/[id]/open-route` → n8n → Twilio → cliente |
+| Dedupe SMS | **20 minutos** por OS (segundo clique abre Maps, sem novo SMS) |
 
 ### Prioridade da URL do cliente
 
@@ -35,27 +39,25 @@ O botão aparece no resumo do workspace em **todas** as etapas (não só Install
 
 ---
 
-## Por que não há ETA hoje
+## Por que o ETA exige API server-side
 
 Abrir o Google Maps **não devolve** duração ou horário de chegada para o app. O ETA só existe dentro do app Maps.
 
-Para obter ETA programaticamente é necessário:
+Para obter ETA programaticamente:
 
-- **Origem:** coordenadas do instalador no momento do clique (`navigator.geolocation`).
+- **Origem:** coordenadas do técnico no momento do clique (`navigator.geolocation`).
 - **Destino:** `cliente.latitude` / `cliente.longitude` (ideal) ou geocode do endereço.
-- **API:** Google **Routes API** (Compute Routes) ou **Distance Matrix API** no **servidor**.
+- **API:** Google **Routes API** (Compute Routes) no **servidor**.
 
-Stub existente (sem chamada externa): `src/lib/ordens-servico/route-optimization.ts`.
-
-Padrão de webhook n8n já usado no projeto: `src/lib/ordens-servico/os-ficha-tecnica-webhook.ts` + `N8N_WEBHOOK_*` em `.env`.
+Padrão de webhook n8n: `src/lib/ordens-servico/os-open-route-webhook.ts` + `N8N_WEBHOOK_*` em `.env`.
 
 ---
 
-## Fluxo alvo
+## Fluxo
 
 ```mermaid
 sequenceDiagram
-  participant App as App (instalador)
+  participant App as App (técnico)
   participant API as Next.js API
   participant Google as Google Routes API
   participant N8N as n8n
@@ -65,11 +67,11 @@ sequenceDiagram
   App->>App: Clique Open route
   App->>App: navigator.geolocation (origem)
   App->>API: POST /api/os/{id}/open-route
-  API->>API: Auth + etapa installation + telefone cliente
+  API->>API: Auth + etapa commercial|installation + telefone cliente
   API->>Google: Rota origem → destino (driving)
   Google-->>API: duration / traffic
   API->>N8N: Webhook payload (ETA + cliente + OS)
-  API-->>App: ok + eta resumo
+  API-->>App: ok + mapsUrl + eta resumo
   App->>App: window.open Google Maps directions
   N8N->>Twilio: Enviar SMS
   Twilio->>Cliente: Mensagem com ETA
@@ -77,67 +79,52 @@ sequenceDiagram
 
 ---
 
-## Dados já disponíveis no banco / app
+## Dados disponíveis no banco / app
 
 | Campo | Uso |
 |-------|-----|
-| `clientes.telefone` | Destino do SMS (Twilio) |
+| `clientes.telefone` | Destino do SMS (Twilio) — **único destinatário** |
 | `clientes.nome` | Personalização da mensagem |
 | `clientes.endereco_formatado` | Texto no SMS / fallback destino |
 | `clientes.latitude`, `clientes.longitude` | Destino da rota |
-| `clientes.google_maps_url` | Abrir Maps (melhorar para `dir`) |
+| `clientes.google_maps_url` | Abrir Maps (directions) |
 | `ordens_servico.id`, `etapa_atual` | Validação e auditoria |
 | `equipes.nome` | Contexto no SMS |
-| `usuarios.nome` | Nome do instalador (opcional) |
+| `usuarios.nome` | Nome do técnico → payload `tecnico_nome` |
 
 Timezone operacional: `America/New_York` (`OPERATIONAL_TZ` em `src/lib/ordens-servico/datetime.ts`).
 
 ---
 
-## Alterações previstas no código (checklist)
+## Arquivos principais
 
 ### Frontend
 
-- [ ] Trocar `<a href={mapsUrl}>` por **botão** com handler assíncrono em `os-workspace-resumo.tsx`.
-- [ ] Solicitar `navigator.geolocation.getCurrentPosition` no clique (HTTPS obrigatório).
-- [ ] Chamar API interna antes ou em paralelo à abertura do Maps.
-- [ ] Abrir URL **directions** (não search):
-
-  ```
-  https://www.google.com/maps/dir/?api=1
-    &origin={originLat},{originLng}
-    &destination={destLat},{destLng}
-    &travelmode=driving
-  ```
-
-- [ ] Estados de UI: loading, erro GPS negado, erro sem telefone, sucesso silencioso.
-- [ ] (Opcional) Esconder ou desabilitar SMS fora da etapa `installation`.
+- `src/components/ordens-servico/workspace/os-open-route-button.tsx` — GPS → API → abrir Maps
+- `src/components/ordens-servico/workspace/os-workspace-resumo.tsx` — integração do botão
+- Estados de UI: loading, erro GPS negado, erro sem telefone, sucesso silencioso
 
 ### Backend
 
-- [ ] `POST /api/os/[id]/open-route` (ou server action equivalente).
-- [ ] Validar sessão Supabase + permissão na OS/equipe.
-- [ ] Validar `etapa_atual === 'installation'` (regra de negócio).
-- [ ] Chamar Google Routes API com chave **server-side**.
-- [ ] Disparar webhook n8n (`dispatchInstallerOpenRouteWebhook` — espelhar ficha técnica).
-- [ ] Registrar auditoria / timeline (`installer_en_route` ou tipo dedicado).
-- [ ] **Dedupe:** não reenviar SMS se novo clique em &lt; 15–30 min (mesma OS).
+- `POST /api/os/[id]/open-route` — auth, Routes API, webhook, auditoria, dedupe
+- Valida `etapa_atual === 'commercial' | 'installation'`
+- Dedupe: não reenviar SMS se novo clique em **&lt; 20 min** (mesma OS)
 
-### Lib sugerida
+### Lib
 
-- [ ] `src/lib/ordens-servico/google-routes.ts` — Compute Routes / parse duration.
-- [ ] `src/lib/ordens-servico/os-open-route-webhook.ts` — payload + `fetch` n8n.
-- [ ] Estender `clienteMapsUrl` ou criar `clienteDirectionsUrl(origin, cliente)`.
+- `src/lib/ordens-servico/open-route-policy.ts` — etapas que disparam SMS
+- `src/lib/ordens-servico/google-routes.ts` — Compute Routes / parse duration
+- `src/lib/ordens-servico/os-open-route-webhook.ts` — payload + dispatch n8n
+- `src/lib/ordens-servico/cliente-directions-url.ts` — URL Google Maps `dir`
 
 ### n8n
 
-- [ ] Novo workflow (ex.: `n8n/ccshower-open-route-eta-sms.json`).
-- [ ] README: `n8n/README-open-route-eta.md`.
-- [ ] Trigger: Webhook POST.
-- [ ] Nó Twilio: SMS com template EN (cliente EUA).
-- [ ] Tratamento: telefone inválido, falha Twilio, log.
+- Workflow: `n8n/ccshower-open-route-eta-sms.json`
+- README: `n8n/README-open-route-eta.md`
+- Trigger: Webhook POST
+- Nó Twilio: SMS com template EN (cliente EUA)
 
-### Variáveis de ambiente (futuras)
+### Variáveis de ambiente
 
 ```env
 # Google Routes — somente servidor (não expor ao browser)
@@ -145,18 +132,15 @@ GOOGLE_MAPS_SERVER_API_KEY=AIzaSy...
 
 # n8n — disparo ao clicar Open route
 N8N_WEBHOOK_OPEN_ROUTE_URL=https://seu-n8n.app/webhook/...
-# Reutilizar o mesmo segredo da ficha técnica ou dedicado:
 N8N_WEBHOOK_SECRET=...
 
 # Twilio — configurar como credencial no n8n (não no Next.js)
 # TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER
 ```
 
-Habilitar no Google Cloud: **Routes API** (ou Distance Matrix) + billing. A chave `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` atual cobre Places/JS — **não** substitui a chamada server de rotas.
-
 ---
 
-## Payload sugerido — webhook app → n8n
+## Payload — webhook app → n8n
 
 ```json
 {
@@ -187,12 +171,15 @@ Habilitar no Google Cloud: **Routes API** (ou Distance Matrix) + billing. A chav
     "com_trafego": true
   },
   "equipe_nome": "Design & Projects",
-  "instalador_nome": "John Smith",
+  "tecnico_nome": "John Smith",
   "timezone": "America/New_York"
 }
 ```
 
-Header de autenticação (mesmo padrão ficha técnica): `Authorization: Bearer {N8N_WEBHOOK_SECRET}` ou `x-n8n-webhook-secret`.
+- `event`: `technical_visit_open_route` na etapa `commercial`; `installer_open_route` na etapa `installation`.
+- Campo do técnico: **`tecnico_nome`** (não `instalador_nome`).
+
+Header de autenticação: `Authorization: Bearer {N8N_WEBHOOK_SECRET}`.
 
 ---
 
@@ -202,6 +189,7 @@ Header de autenticação (mesmo padrão ficha técnica): `Authorization: Bearer 
 
 Variações:
 
+- Visita técnica (`commercial`): ajustar copy para "technical visit" quando aplicável.
 - Sem GPS / sem ETA: *"Our team is heading to your address and will arrive shortly."*
 - Sempre usar linguagem aproximada (*about*, *around*) — trânsito muda.
 
@@ -209,35 +197,36 @@ Variações:
 
 ## Casos de borda
 
-| Cenário | Comportamento sugerido |
-|---------|------------------------|
-| GPS negado pelo instalador | Abrir Maps sem origem; SMS genérico sem minutos |
+| Cenário | Comportamento |
+|---------|---------------|
+| GPS negado pelo técnico | Abrir Maps sem origem; SMS genérico sem minutos |
 | Cliente sem `telefone` | Bloquear SMS; toast no app; ainda abrir Maps |
 | Cliente sem lat/lng | Geocoding server-side antes da rota |
-| Clique repetido | Dedupe por janela de tempo |
-| Instalador offline | Fila retry ou falha graciosa |
+| Clique repetido | Dedupe **20 min** — Maps ok, sem segundo SMS |
+| Técnico offline | Falha graciosa; Maps pode abrir via fallback |
 | Endereço fora da Flórida | Mesma lógica; validar unidade operacional |
 
 ---
 
 ## Fases de implementação
 
-### Fase 1 — MVP
+### Fase 1 — MVP (concluída)
 
 - Botão + GPS + API Routes + webhook n8n + SMS Twilio + abrir directions.
-- Apenas etapa `installation`.
+- Etapas **`commercial`** (visita técnica) e **`installation`**.
+- Destinatário: **somente cliente**.
 
 ### Fase 2 — Operação
 
 - Timeline / auditoria obrigatória (`ARCHITECTURE.md`).
-- Dedupe SMS.
+- Dedupe SMS (20 min — implementado).
 - Métricas no Centro Operacional (opcional).
 
 ### Fase 3 — Refino
 
-- ETA com tráfego em tempo real.
+- ETA com tráfego em tempo real (parcialmente via Routes API).
 - Fallback origem = endereço da unidade (depósito).
-- Mesmo fluxo na visita comercial (`commercial`).
+- ~~Mesmo fluxo na visita comercial (`commercial`)~~ — **promovido ao MVP**.
 
 ---
 
@@ -245,24 +234,26 @@ Variações:
 
 | Arquivo | Papel |
 |---------|--------|
-| `src/components/ordens-servico/workspace/os-workspace-resumo.tsx` | Botão Open route (UI) |
-| `src/lib/ordens-servico/visita-comercial.ts` | `clienteMapsUrl()` |
-| `src/lib/ordens-servico/os-ficha-tecnica-webhook.ts` | Modelo de dispatch n8n |
-| `src/lib/ordens-servico/route-optimization.ts` | Stub rotas |
-| `src/lib/ordens-servico/agenda-equipe-dia.ts` | `RotaParadaAgenda` (paradas futuras) |
+| `src/components/ordens-servico/workspace/os-open-route-button.tsx` | Botão Open route (UI) |
+| `src/lib/ordens-servico/open-route-policy.ts` | Etapas `commercial` \| `installation` |
+| `src/lib/ordens-servico/cliente-directions-url.ts` | URL directions |
+| `src/lib/ordens-servico/os-open-route-webhook.ts` | Dispatch n8n |
+| `src/lib/ordens-servico/google-routes.ts` | Compute Routes |
+| `src/app/api/os/[id]/open-route/route.ts` | API route |
+| `n8n/ccshower-open-route-eta-sms.json` | Workflow n8n |
+| `n8n/README-open-route-eta.md` | Credenciais + templates |
 | `docs/ARCHITECTURE.md` | SMS, Google APIs, auditoria |
-| `n8n/README-ficha-tecnica.md` | Padrão credenciais n8n |
 
 ---
 
-## Decisões em aberto (definir antes de codar)
+## Decisões fechadas
 
-1. SMS só em **installation** ou também em **commercial** (visita)?
-2. Janela de **dedupe** (15 vs 30 min)?
-3. ETA com ou sem **tráfego** (custo/latência Google)?
+1. ~~SMS só em **installation** ou também em **commercial**?~~ → **Ambas** (`commercial` + `installation`).
+2. ~~Janela de **dedupe**?~~ → **20 minutos** (default).
+3. ETA com ou sem **tráfego** (custo/latência Google)? — em uso via Routes API; revisar custo se necessário.
 4. Twilio **From** number e opt-in/compliance (TCPA) — revisar com cliente.
-5. Registrar evento em `agenda_eventos` ou tabela de auditoria dedicada?
+5. Registrar evento em `agenda_eventos` ou tabela de auditoria dedicada? — via timeline/auditoria existente.
 
 ---
 
-*Última revisão: jun/2026 — análise feita a partir do workspace OS e botão Open route na etapa Installation.*
+*Última revisão: ago/2026 — commercial + installation, SMS somente cliente, dedupe 20 min.*
