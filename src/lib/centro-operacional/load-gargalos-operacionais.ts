@@ -72,27 +72,27 @@ function buildItems(osRows: OsRow[], crashRows: CrashRow[], nowMs: number): Garg
   if (filaComercial >= GARGALO_LIMIARES.comercialFilaMin) {
     items.push({
       id: "comercial",
-      etapa: "Comercial",
-      descricao: `Fila com ${filaComercial} OS aguardando primeira visita`,
-      impacto: `${filaComercial} OS sem agendamento`,
+      etapa: "Commercial",
+      descricao: `Queue with ${filaComercial} OS waiting for first visit`,
+      impacto: `${filaComercial} OS without scheduling`,
     });
   }
 
   if (financeiroPendentes >= GARGALO_LIMIARES.financeiroPendentesMin) {
     items.push({
       id: "financeiro",
-      etapa: "Financeiro",
-      descricao: `${financeiroPendentes} aprovações pendentes há +${diasGargalo} dias`,
-      impacto: `${financeiroPendentes} OS aguardando`,
+      etapa: "Financial",
+      descricao: `${financeiroPendentes} approvals pending for +${diasGargalo} days`,
+      impacto: `${financeiroPendentes} OS waiting`,
     });
   }
 
   if (projetoPendentes >= GARGALO_LIMIARES.projetoPendentesMin) {
     items.push({
       id: "projeto",
-      etapa: "Projeto",
-      descricao: `Fila de aprovação com ${projetoPendentes} OS paradas`,
-      impacto: `${projetoPendentes} OS afetadas`,
+      etapa: "Project",
+      descricao: `Approval queue with ${projetoPendentes} OS stuck`,
+      impacto: `${projetoPendentes} OS affected`,
     });
   }
 
@@ -100,8 +100,8 @@ function buildItems(osRows: OsRow[], crashRows: CrashRow[], nowMs: number): Garg
     items.push({
       id: "material",
       etapa: "Material",
-      descricao: `${materialCrashes} OS travadas por material`,
-      impacto: "Bloqueios ativos de material/fornecedor",
+      descricao: `${materialCrashes} OS blocked by material`,
+      impacto: "Active material/supplier blocks",
     });
   }
 
