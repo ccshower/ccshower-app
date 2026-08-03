@@ -5,6 +5,7 @@ import { useState } from "react";
 import { OsClienteEditarPrimeiraVisita } from "@/components/ordens-servico/os-cliente-editar-primeira-visita";
 import { OsDescontoModal } from "@/components/ordens-servico/os-desconto-modal";
 import { OsWorkspaceDetalhesSheet } from "@/components/ordens-servico/workspace/os-workspace-detalhes-sheet";
+import { OsOpenRouteButton } from "@/components/ordens-servico/workspace/os-open-route-button";
 import { resumirEndereco } from "@/components/ordens-servico/workspace/os-workspace-utils";
 import { t, tOsStage } from "@/lib/i18n";
 import { ordemTemDesconto } from "@/lib/ordens-servico/os-desconto";
@@ -88,23 +89,11 @@ export function OsWorkspaceResumo({
                 {t("os.desconto.button")}
               </button>
             ) : null}
-            {mapsUrl ? (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light"
-              >
-                {t("os.workspace.openRoute")}
-              </a>
-            ) : (
-              <span
-                className="rounded-sm border border-dashed border-cc-border px-2.5 py-1.5 text-[10px] text-cc-subtle"
-                title={t("os.visit.noMaps")}
-              >
-                {t("os.workspace.openRoute")}
-              </span>
-            )}
+            <OsOpenRouteButton
+              ordemId={ordem.id}
+              etapaAtual={ordem.etapa_atual}
+              fallbackMapsUrl={mapsUrl}
+            />
             <button
               type="button"
               onClick={() => setDetalhesOpen(true)}
