@@ -4,6 +4,7 @@ import { clienteDirectionsUrl } from "@/lib/ordens-servico/cliente-directions-ur
 import { OPERATIONAL_TZ } from "@/lib/ordens-servico/datetime";
 import { computeDrivingEta } from "@/lib/ordens-servico/google-routes";
 import {
+  clientEtaStageAllowsSms,
   openRouteEventForStage,
   shouldSendClientEtaSms,
 } from "@/lib/ordens-servico/open-route-policy";
@@ -124,7 +125,7 @@ export async function POST(request: Request, context: RouteContext) {
       supabase
         .from("clientes")
         .select(
-          "id, nome, telefone, endereco_formatado, latitude, longitude, google_maps_url",
+          "id, nome, telefone, endereco_formatado, latitude, longitude, google_maps_url, sms_autorizado, sms_consentimento_em, sms_opt_out_em",
         )
         .eq("id", os.cliente_id)
         .single(),
@@ -151,19 +152,27 @@ export async function POST(request: Request, context: RouteContext) {
           })
         : null) ?? clienteMapsUrl(cliente);
     const stage = parseOsStage(os.etapa_atual);
+    const smsEligibility = {
+      stage,
+      statusAtual: os.status_atual,
+      osStatus: os.status,
+      smsAutorizado: cliente.sms_autorizado,
+      smsConsentimentoEm: cliente.sms_consentimento_em,
+      smsOptOutEm: cliente.sms_opt_out_em,
+    };
+    const stageAllowsSms = clientEtaStageAllowsSms(smsEligibility);
 
-    if (
-      !shouldSendClientEtaSms({
-        stage,
-        statusAtual: os.status_atual,
-        osStatus: os.status,
-      })
-    ) {
+    if (!shouldSendClientEtaSms(smsEligibility)) {
       return NextResponse.json({
         ok: true,
         mapsUrl,
         smsQueued: false,
-        ...(stage === "commercial" ? { message: "Visit not in progress" } : {}),
+        ...(!stageAllowsSms && stage === "commercial"
+          ? { message: "Visit not in progress" }
+          : {}),
+        ...(stageAllowsSms
+          ? { message: "Customer has not authorized SMS" }
+          : {}),
       });
     }
 

@@ -11,6 +11,7 @@ import {
   mapDbErrorLeadSource,
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
+import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
 import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
@@ -130,6 +131,9 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
+    const smsConsent = resolveSmsConsentFromForm(formData, telefone, null);
+    if (!smsConsent.ok) return smsConsent;
+
     const lead = parseLeadSourceFromForm(formData, { required: false });
     if (!lead.ok) return lead;
 
@@ -177,6 +181,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
         ...(unidade_id ? { unidade_id } : {}),
         criado_por: userId,
         ativo: true,
+        ...smsConsent.fields,
       })
       .select("id, nome, equipe_id")
       .single();
@@ -247,6 +252,27 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
 
+    const { data: atualSms, error: smsLoadError } = await supabase
+      .from("clientes")
+      .select(
+        "telefone, sms_autorizado, sms_consentimento_em, sms_consentimento_metodo, sms_opt_out_em, sms_opt_out_origem",
+      )
+      .eq("id", id)
+      .single();
+    if (smsLoadError || !atualSms) {
+      return { ok: false, message: smsLoadError?.message ?? "Cliente nao encontrado" };
+    }
+
+    const smsConsent = resolveSmsConsentFromForm(formData, telefone, {
+      telefone: atualSms.telefone,
+      sms_autorizado: atualSms.sms_autorizado === true,
+      sms_consentimento_em: atualSms.sms_consentimento_em,
+      sms_consentimento_metodo: atualSms.sms_consentimento_metodo,
+      sms_opt_out_em: atualSms.sms_opt_out_em,
+      sms_opt_out_origem: atualSms.sms_opt_out_origem,
+    });
+    if (!smsConsent.ok) return smsConsent;
+
     const lead = parseLeadSourceFromForm(formData, { required: false });
     if (!lead.ok) return lead;
 
@@ -284,6 +310,7 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
         contractor_id: contractorParsed.contractor_id,
         equipe_id: equipeResolved.equipeId,
         ...(unidade_id ? { unidade_id } : {}),
+        ...smsConsent.fields,
       })
       .eq("id", id);
 

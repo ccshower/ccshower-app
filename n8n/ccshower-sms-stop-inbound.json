@@ -1,0 +1,183 @@
+{
+  "name": "CCSHOWER - SMS STOP inbound",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## CCSHOWER — SMS STOP\n\nNão use este webhook como “A message comes in” do Twilio. O Twilio não envia o segredo do n8n, e a assinatura X-Twilio-Signature só pode ser validada se o POST for direto para o app:\nhttps://YOUR_APP_BASE_URL/api/webhooks/n8n/sms-stop\n\nEste workflow é só um encaminhamento autenticado pelo segredo já existente. Ele não substitui a assinatura.\n\nSe for importar:\n1. No nó HTTP, selecione a credencial Header Auth `ccshower_app_sms_stop_auth`.\n   Header name: `Authorization`\n   Header value: `Bearer <o mesmo N8N_WEBHOOK_SECRET do app>`\n   Não cole o segredo neste arquivo.\n2. Substitua `YOUR_APP_BASE_URL` pela origem pública do app, sem barra no final.\n3. Não ative este webhook como entrada do Twilio.",
+        "height": 280,
+        "width": 560
+      },
+      "id": "c7000000-0000-4000-8000-000000000001",
+      "name": "Notas",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-420, -220]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ccshower-sms-stop",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c7000000-0000-4000-8000-000000000010",
+      "name": "Webhook Twilio inbound",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ccshower-sms-stop"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.body ?? $json;\nconst from = String(raw.From ?? raw.from ?? '').trim();\nconst message = String(raw.Body ?? raw.body ?? '').trim();\nconst first = message.toUpperCase().split(/\\s+/)[0] ?? '';\nconst word = first.replace(/[^A-Z]/g, '');\nconst stopWords = new Set(['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']);\nconst digits = from.replace(/\\D/g, '');\nconst key = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;\nreturn [{\n  json: {\n    forward: stopWords.has(word) && key.length >= 10,\n    From: from,\n    Body: message,\n  },\n}];"
+      },
+      "id": "c7000000-0000-4000-8000-000000000020",
+      "name": "Filtrar STOP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-stop",
+              "leftValue": "={{ $json.forward }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c7000000-0000-4000-8000-000000000030",
+      "name": "E STOP?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_APP_BASE_URL/api/webhooks/n8n/sms-stop",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ From: $json.From, Body: $json.Body }) }}",
+        "options": {}
+      },
+      "id": "c7000000-0000-4000-8000-000000000040",
+      "name": "App - Registrar STOP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, -80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "ccshower_app_sms_stop_auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c7000000-0000-4000-8000-000000000050",
+      "name": "Responder Twilio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [980, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"ignored\": true\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "c7000000-0000-4000-8000-000000000060",
+      "name": "Ignorar outra mensagem",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [740, 120]
+    }
+  ],
+  "connections": {
+    "Webhook Twilio inbound": {
+      "main": [
+        [
+          {
+            "node": "Filtrar STOP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar STOP": {
+      "main": [
+        [
+          {
+            "node": "E STOP?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E STOP?": {
+      "main": [
+        [
+          {
+            "node": "App - Registrar STOP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar outra mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "App - Registrar STOP": {
+      "main": [
+        [
+          {
+            "node": "Responder Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

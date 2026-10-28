@@ -31,7 +31,7 @@ export default function PrivacyPolicyPage() {
           </header>
 
           <div className="space-y-6 p-4 text-sm leading-relaxed text-cc-deep sm:p-6">
-            <p className="text-cc-muted">Last updated October 27, 2026.</p>
+            <p className="text-cc-muted">Last updated October 28, 2026.</p>
 
             <p>
               CC Shower provides shower technical visits and installations and
@@ -98,18 +98,24 @@ export default function PrivacyPolicyPage() {
                 third parties for their marketing purposes.
               </p>
               <p>
-                This policy states the intended messaging process. It does not
-                mean a customer has already consented, and the application does
-                not currently record SMS consent. Saving a phone number on a
-                service record is not an SMS opt-in record.
+                SMS authorization is stored on the customer record. A saved
+                phone number is not that authorization. Changing the phone
+                number turns authorization off until it is recorded again for
+                the new number.
               </p>
               <p>
-                Before this program is used as consented messaging, CC Shower
-                still has to collect and store SMS consent, honor STOP opt-out
-                replies, respond to HELP replies, and include those instructions
-                in the message itself. The current message template does not
-                include STOP or HELP instructions, and neither the application
-                nor the n8n workflow processes those replies.
+                When the application receives STOP, STOPALL, UNSUBSCRIBE,
+                CANCEL, END, or QUIT, it stores that opt-out and blocks later
+                texts. Editing the customer or checking the authorization box
+                again does not remove an opt-out that is still in effect. A
+                reply is recorded only after it reaches the application.
+              </p>
+              <p>
+                HELP replies are not answered automatically. The arrival message
+                prepared by the current workflow does not include STOP or HELP
+                instructions. This page does not certify the program, guarantee
+                that a text will be delivered, or state that a carrier or
+                regulator has approved it.
               </p>
             </section>
 

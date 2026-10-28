@@ -82,6 +82,11 @@ export type Cliente = {
   /** Origem do lead (qualificação Sales). */
   origem_lead: string | null;
   origem_lead_outro: string | null;
+  sms_autorizado: boolean;
+  sms_consentimento_em: string | null;
+  sms_consentimento_metodo: string | null;
+  sms_opt_out_em: string | null;
+  sms_opt_out_origem: string | null;
   equipe_id: string | null;
   criado_por: string | null;
   ativo: boolean;
@@ -322,7 +327,15 @@ export type OrdemServicoWithRelations = OrdemServico & {
         Partial<
           Pick<
             Cliente,
-            "pais" | "google_place_id" | "origem_lead" | "origem_lead_outro"
+            | "pais"
+            | "google_place_id"
+            | "origem_lead"
+            | "origem_lead_outro"
+            | "sms_autorizado"
+            | "sms_consentimento_em"
+            | "sms_consentimento_metodo"
+            | "sms_opt_out_em"
+            | "sms_opt_out_origem"
           >
         >)
     | null;

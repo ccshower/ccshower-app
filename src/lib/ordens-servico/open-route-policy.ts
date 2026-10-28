@@ -1,3 +1,4 @@
+import { hasValidSmsConsent } from "@/lib/clientes/sms-consent";
 import {
   parseOrdemServicoStatus,
 } from "@/lib/ordens-servico/constants";
@@ -23,14 +24,20 @@ type ClientEtaSmsEligibility = {
   stage: OsWorkflowStage | null;
   statusAtual: string | null | undefined;
   osStatus: string | null | undefined;
+  smsAutorizado: boolean | null | undefined;
+  smsConsentimentoEm: string | null | undefined;
+  smsOptOutEm: string | null | undefined;
 };
 
-/** SMS ETA somente para visita comercial ativa ou instalação não encerrada. */
-export function shouldSendClientEtaSms({
+/** Etapa e status permitem ETA, antes da verificação de consentimento. */
+export function clientEtaStageAllowsSms({
   stage,
   statusAtual,
   osStatus,
-}: ClientEtaSmsEligibility): boolean {
+}: Pick<
+  ClientEtaSmsEligibility,
+  "stage" | "statusAtual" | "osStatus"
+>): boolean {
   if (!stageTriggersClientEtaSms(stage)) return false;
 
   const orderStatus = parseOrdemServicoStatus(osStatus);
@@ -44,6 +51,18 @@ export function shouldSendClientEtaSms({
     operationalStatus === "visit_scheduled" ||
     operationalStatus === "visit_in_progress"
   );
+}
+
+/** SMS ETA só com etapa válida e consentimento posterior a qualquer opt-out. */
+export function shouldSendClientEtaSms(
+  eligibility: ClientEtaSmsEligibility,
+): boolean {
+  if (!clientEtaStageAllowsSms(eligibility)) return false;
+  return hasValidSmsConsent({
+    smsAutorizado: eligibility.smsAutorizado,
+    smsConsentimentoEm: eligibility.smsConsentimentoEm,
+    smsOptOutEm: eligibility.smsOptOutEm,
+  });
 }
 
 export type OpenRouteEvent =

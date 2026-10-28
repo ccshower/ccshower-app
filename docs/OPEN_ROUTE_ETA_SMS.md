@@ -134,8 +134,9 @@ GOOGLE_MAPS_SERVER_API_KEY=AIzaSy...
 N8N_WEBHOOK_OPEN_ROUTE_URL=https://seu-n8n.app/webhook/...
 N8N_WEBHOOK_SECRET=...
 
-# Twilio — configurar como credencial no n8n (não no Next.js)
-# TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER
+# Twilio — o envio continua na credencial n8n.
+# TWILIO_AUTH_TOKEN fica só no servidor Next.js para validar X-Twilio-Signature do STOP.
+# Não coloque TWILIO_ACCOUNT_SID nem o número remetente no app.
 ```
 
 ---

@@ -10,6 +10,10 @@ import {
   ClienteLeadSourceFields,
   validateClienteLeadSourceForm,
 } from "@/components/clientes/cliente-lead-source-fields";
+import {
+  hasValidSmsConsent,
+  smsOptOutIsLatest,
+} from "@/lib/clientes/sms-consent";
 import { Field } from "@/components/ui/field";
 import {
   CLIENT_TYPE,
@@ -76,6 +80,14 @@ export function ClienteForm({
   const [contractorId, setContractorId] = useState(
     () => cliente?.contractor_id ?? "",
   );
+  const [phone, setPhone] = useState(() => cliente?.telefone ?? "");
+  const [smsAuthorized, setSmsAuthorized] = useState(() =>
+    hasValidSmsConsent({
+      smsAutorizado: cliente?.sms_autorizado,
+      smsConsentimentoEm: cliente?.sms_consentimento_em,
+      smsOptOutEm: cliente?.sms_opt_out_em,
+    }),
+  );
   const commercialEquipes = useMemo(
     () => filterEquipesForStage(equipes, "commercial"),
     [equipes],
@@ -100,7 +112,38 @@ export function ClienteForm({
     setAddress(googleAddressFromCliente(cliente));
     setTipoCliente(parseClientType(cliente?.tipo_cliente ?? "residential"));
     setContractorId(cliente?.contractor_id ?? "");
+    setPhone(cliente?.telefone ?? "");
+    setSmsAuthorized(
+      hasValidSmsConsent({
+        smsAutorizado: cliente?.sms_autorizado,
+        smsConsentimentoEm: cliente?.sms_consentimento_em,
+        smsOptOutEm: cliente?.sms_opt_out_em,
+      }),
+    );
   }, [cliente, formKey]);
+
+  const savedPhone = cliente?.telefone ?? "";
+  const phoneChanged = Boolean(cliente) && phone.trim() !== savedPhone.trim();
+  const optOutBlocks = smsOptOutIsLatest(
+    cliente?.sms_consentimento_em,
+    cliente?.sms_opt_out_em,
+  );
+
+  function onPhoneChange(value: string) {
+    setPhone(value);
+    if (!cliente) return;
+    if (value.trim() !== savedPhone.trim()) {
+      setSmsAuthorized(false);
+      return;
+    }
+    setSmsAuthorized(
+      hasValidSmsConsent({
+        smsAutorizado: cliente.sms_autorizado,
+        smsConsentimentoEm: cliente.sms_consentimento_em,
+        smsOptOutEm: cliente.sms_opt_out_em,
+      }),
+    );
+  }
 
   return (
     <form
@@ -171,12 +214,35 @@ export function ClienteForm({
           <input
             name="telefone"
             required
-            defaultValue={cliente?.telefone ?? ""}
+            value={phone}
+            onChange={(e) => onPhoneChange(e.target.value)}
             className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
             placeholder="+1"
           />
         </Field>
       </div>
+
+      <label className="flex items-start gap-2 text-sm text-cc-deep">
+        <input
+          type="checkbox"
+          name="sms_autorizado"
+          value="yes"
+          checked={optOutBlocks ? false : smsAuthorized}
+          disabled={optOutBlocks}
+          onChange={(e) => setSmsAuthorized(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          SMS autorizado
+          <span className="mt-1 block text-cc-ink/80">
+            {optOutBlocks
+              ? "A STOP reply is on file. SMS stays off, and this box cannot turn it back on."
+              : phoneChanged
+                ? "The phone number changed. Check this box again to allow SMS for the new number."
+                : "When this is off, no text is sent."}
+          </span>
+        </span>
+      </label>
 
       <Field label="Email" hint="Optional">
         <input

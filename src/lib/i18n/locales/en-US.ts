@@ -141,6 +141,8 @@ export const enUS = {
       openRouteLoading: "Opening route…",
       openRouteGpsDenied: "Location unavailable. Opening route without ETA.",
       openRoutePhoneMissing: "Customer phone missing. Route opened without SMS.",
+      openRouteSmsNotAuthorized:
+        "Customer has not authorized SMS. Route opened without a text.",
       openRouteUnavailable: "Route unavailable.",
       openRouteError: "Unable to open route. Please try again.",
       viewDetails: "View details",

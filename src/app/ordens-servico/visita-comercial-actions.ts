@@ -9,6 +9,7 @@ import {
   mapDbErrorLeadSource,
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
+import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
 import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import {
   OS_ANEXOS_BUCKET,
@@ -330,10 +331,24 @@ export async function atualizarClientePrimeiraVisita(
     // Contractor está fora do escopo da primeira visita: tipo não muda de/para contractor.
     const { data: atual, error: cliLoadErr } = await supabase
       .from("clientes")
-      .select("tipo_cliente")
+      .select(
+        "tipo_cliente, telefone, sms_autorizado, sms_consentimento_em, sms_consentimento_metodo, sms_opt_out_em, sms_opt_out_origem",
+      )
       .eq("id", os.cliente_id)
       .single();
-    if (cliLoadErr) return { ok: false, message: cliLoadErr.message };
+    if (cliLoadErr || !atual) {
+      return { ok: false, message: cliLoadErr?.message ?? "Customer not found" };
+    }
+
+    const smsConsent = resolveSmsConsentFromForm(formData, telefone, {
+      telefone: atual.telefone,
+      sms_autorizado: atual.sms_autorizado === true,
+      sms_consentimento_em: atual.sms_consentimento_em,
+      sms_consentimento_metodo: atual.sms_consentimento_metodo,
+      sms_opt_out_em: atual.sms_opt_out_em,
+      sms_opt_out_origem: atual.sms_opt_out_origem,
+    });
+    if (!smsConsent.ok) return smsConsent;
 
     const tipoAtual = parseClientType(String(atual?.tipo_cliente ?? "residential"));
     let tipo_cliente = tipoAtual;
@@ -362,6 +377,7 @@ export async function atualizarClientePrimeiraVisita(
         observacoes: emptyToNull(formData.get("observacoes")),
         origem_lead: lead.origem_lead,
         origem_lead_outro: lead.origem_lead_outro,
+        ...smsConsent.fields,
       })
       .eq("id", os.cliente_id);
 

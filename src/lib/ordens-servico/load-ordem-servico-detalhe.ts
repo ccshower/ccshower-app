@@ -43,7 +43,7 @@ export async function loadOrdemServicoDetalhe(
       supabase
         .from("clientes")
         .select(
-          "id, nome, telefone, email, endereco_formatado, endereco_linha1, cidade, estado, cep, pais, google_place_id, tipo_cliente, observacoes, origem_lead, origem_lead_outro, google_maps_url, latitude, longitude",
+          "id, nome, telefone, email, endereco_formatado, endereco_linha1, cidade, estado, cep, pais, google_place_id, tipo_cliente, observacoes, origem_lead, origem_lead_outro, sms_autorizado, sms_consentimento_em, sms_consentimento_metodo, sms_opt_out_em, sms_opt_out_origem, google_maps_url, latitude, longitude",
         )
         .eq("id", os.cliente_id)
         .maybeSingle(),

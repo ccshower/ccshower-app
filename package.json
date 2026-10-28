@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:sms-stop": "node --experimental-strip-types --import ./scripts/sms-stop-register.mjs scripts/sms-stop-checks.mts",
     "seed:clientes": "node scripts/seed-clientes.mjs",
     "db:apply-valores-etapa": "node scripts/apply-os-valores-etapa.mjs"
   },
@@ -15,7 +16,8 @@
     "@supabase/supabase-js": "^2.105.4",
     "next": "^15.3.2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "twilio": "^6.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.18",

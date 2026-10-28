@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["twilio"],
   experimental: {
     serverActions: {
       /** Fotos da visita (ate 8 MB cada) — evita Failed to fetch no upload */

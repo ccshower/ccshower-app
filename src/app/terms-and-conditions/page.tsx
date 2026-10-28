@@ -31,7 +31,7 @@ export default function TermsAndConditionsPage() {
           </header>
 
           <div className="space-y-6 p-4 text-sm leading-relaxed text-cc-deep sm:p-6">
-            <p className="text-cc-muted">Last updated October 27, 2026.</p>
+            <p className="text-cc-muted">Last updated October 28, 2026.</p>
 
             <p>
               These terms describe the service-related text messages CC Shower
@@ -73,9 +73,16 @@ export default function TermsAndConditionsPage() {
               </p>
               <p>Message and data rates may apply.</p>
               <p>
-                Reply STOP to opt out of further CC Shower text messages. Reply
-                HELP for assistance, or contact CC Shower using the method in
-                the Contact section below.
+                SMS authorization is recorded on the customer record. Changing
+                the phone number requires that authorization to be recorded
+                again. STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, and QUIT are
+                stored when the application receives them, and they block later
+                texts. Checking the authorization box again does not remove an
+                opt-out that is still in effect.
+              </p>
+              <p>
+                HELP replies are not answered automatically. For help, contact
+                CC Shower using the method in the Contact section below.
               </p>
               <p>
                 How SMS information is handled is described in the{" "}
@@ -91,38 +98,25 @@ export default function TermsAndConditionsPage() {
             </section>
 
             <section className="space-y-2">
-              <h2 className="font-medium text-cc-ink">
-                Controls not yet in operation
-              </h2>
+              <h2 className="font-medium text-cc-ink">What these terms do not claim</h2>
               <p>
-                Publishing these terms does not record consent. The application
-                does not currently store an SMS opt-in. A phone number saved for
-                a visit or installation is only contact information for that
-                service.
+                A phone number saved for a visit or installation is contact
+                information. It is not SMS authorization by itself.
               </p>
-              <p>These operational requirements are still outstanding:</p>
-              <ul className="list-disc space-y-1 pl-5">
-                <li>
-                  Collect and store SMS consent separately from the phone number
-                  on the service record.
-                </li>
-                <li>
-                  Include STOP, HELP, and “Message and data rates may apply” in
-                  the message customers receive. The current template does not
-                  include them.
-                </li>
-                <li>
-                  Process STOP as an opt-out and answer HELP replies. The
-                  application and the n8n workflow do not do this yet.
-                </li>
-              </ul>
+              <p>
+                The arrival message prepared by the current workflow does not
+                include STOP or HELP instructions. A text reply is stored only
+                after it reaches the application. These terms do not certify the
+                program, guarantee delivery, or state that a carrier or
+                regulator has approved it.
+              </p>
             </section>
 
             <section className="space-y-2">
               <h2 className="font-medium text-cc-ink">Contact</h2>
               <p>
                 For help with these messages, contact CC Shower by email or
-                phone. Replying HELP is not answered automatically yet.
+                phone. HELP replies are not answered automatically.
               </p>
               <ul className="space-y-2">
                 <li>
