@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:sms-stop": "node --experimental-strip-types --import ./scripts/sms-stop-register.mjs scripts/sms-stop-checks.mts",
+    "test:open-route-sms": "node --experimental-strip-types --import ./scripts/sms-stop-register.mjs scripts/open-route-sms-checks.mts",
     "seed:clientes": "node scripts/seed-clientes.mjs",
     "db:apply-valores-etapa": "node scripts/apply-os-valores-etapa.mjs"
   },

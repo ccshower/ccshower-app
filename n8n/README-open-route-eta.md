@@ -13,9 +13,15 @@ Especificação do fluxo: `docs/OPEN_ROUTE_ETA_SMS.md`.
 1. No n8n, abra **Workflows** → **Import from File** e selecione
    `ccshower-open-route-eta-sms.json`.
 2. No nó **Twilio - Enviar SMS cliente**, selecione a credencial Twilio já
-   criada: `ccshower_twilio`.
-3. No mesmo nó, substitua `YOUR_TWILIO_FROM_E164` pelo número remetente
-   Twilio em E.164, por exemplo `+19045550123`.
+   criada: `ccshower_twilio`. Não crie outra credencial e não troque o
+   webhook de entrada do Chatwoot.
+3. No mesmo nó, substitua os dois placeholders pelos identificadores da
+   conta, sem colar o Auth Token neste arquivo:
+   - `YOUR_TWILIO_ACCOUNT_SID`: Account SID já usado em `ccshower_twilio`.
+   - `YOUR_TWILIO_MESSAGING_SERVICE_SID`: SID `MG...` do Messaging Service
+     A2P aprovado, com o número de teste já vinculado.
+   O nó nativo da Twilio não envia `MessagingServiceSid`; por isso o
+   workflow chama `Messages.json` com essa credencial e sem campo `From`.
 4. No nó **Webhook Open Route**, selecione/crie a credencial Header Auth
    `ccshower_open_route_webhook_auth`:
    - Header name: `Authorization`
@@ -26,8 +32,9 @@ Especificação do fluxo: `docs/OPEN_ROUTE_ETA_SMS.md`.
 O Header Auth é a validação do segredo. Não deixe o webhook ativo sem essa
 credencial: o app envia `Authorization: Bearer <N8N_WEBHOOK_SECRET>`.
 
-Twilio fica somente no n8n; não adicione SID, Auth Token ou número remetente
-ao Next.js/Vercel.
+Twilio fica somente no n8n. Não adicione Account SID, Auth Token, número
+remetente nem Messaging Service SID ao Next.js/Vercel. O app exige
+`N8N_WEBHOOK_SECRET` junto com a URL; sem o segredo, o webhook não é chamado.
 
 ## 2. Variáveis da Vercel
 

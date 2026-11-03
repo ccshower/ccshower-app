@@ -141,6 +141,8 @@ export const ptBR = {
       openRouteLoading: "Abrindo rota…",
       openRouteGpsDenied: "Localização indisponível. Abrindo rota sem ETA.",
       openRoutePhoneMissing: "Telefone do cliente ausente. Rota aberta sem SMS.",
+      openRoutePhoneInvalid:
+        "Telefone do cliente inválido. Rota aberta sem SMS.",
       openRouteSmsNotAuthorized:
         "Cliente não autorizou SMS. Rota aberta sem mensagem.",
       openRouteUnavailable: "Rota indisponível.",

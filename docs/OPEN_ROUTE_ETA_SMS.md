@@ -121,8 +121,8 @@ Timezone operacional: `America/New_York` (`OPERATIONAL_TZ` em `src/lib/ordens-se
 
 - Workflow: `n8n/ccshower-open-route-eta-sms.json`
 - README: `n8n/README-open-route-eta.md`
-- Trigger: Webhook POST
-- Nó Twilio: SMS com template EN (cliente EUA)
+- Trigger: Webhook POST com Header Auth `Authorization: Bearer {N8N_WEBHOOK_SECRET}`
+- Envio: `Messages.json` com a credencial `ccshower_twilio` e `MessagingServiceSid` do serviço A2P aprovado. O nó nativo da Twilio não aceita esse SID. O valor é preenchido no n8n, não na Vercel.
 
 ### Variáveis de ambiente
 

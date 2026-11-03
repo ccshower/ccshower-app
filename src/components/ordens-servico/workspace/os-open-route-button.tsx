@@ -102,6 +102,8 @@ export function OsOpenRouteButton({
 
       if (result.message === "Customer phone missing") {
         setMessage(t("os.workspace.openRoutePhoneMissing"));
+      } else if (result.message === "Customer phone invalid") {
+        setMessage(t("os.workspace.openRoutePhoneInvalid"));
       } else if (result.message === "Customer has not authorized SMS") {
         setMessage(t("os.workspace.openRouteSmsNotAuthorized"));
       }

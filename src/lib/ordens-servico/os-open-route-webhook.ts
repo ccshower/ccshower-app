@@ -1,6 +1,3 @@
-const N8N_WEBHOOK_OPEN_ROUTE_URL =
-  process.env.N8N_WEBHOOK_OPEN_ROUTE_URL?.trim() ?? "";
-
 export type OpenRouteWebhookPayload = {
   event: "technical_visit_open_route" | "installer_open_route";
   os_id: string;
@@ -30,30 +27,44 @@ export type OpenRouteWebhookPayload = {
   timezone: "America/New_York";
 };
 
+function openRouteWebhookUrl(): string {
+  return process.env.N8N_WEBHOOK_OPEN_ROUTE_URL?.trim() ?? "";
+}
+
+function openRouteWebhookSecret(): string {
+  return process.env.N8N_WEBHOOK_SECRET?.trim() ?? "";
+}
+
 export function isN8nOpenRouteWebhookConfigured(): boolean {
-  return Boolean(N8N_WEBHOOK_OPEN_ROUTE_URL);
+  return Boolean(openRouteWebhookUrl() && openRouteWebhookSecret());
 }
 
 export async function dispatchOpenRouteWebhook(
   payload: OpenRouteWebhookPayload,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!isN8nOpenRouteWebhookConfigured()) {
+  const url = openRouteWebhookUrl();
+  if (!url) {
     return {
       ok: false,
       message: "N8N_WEBHOOK_OPEN_ROUTE_URL nao configurada",
     };
   }
 
-  const secret = process.env.N8N_WEBHOOK_SECRET?.trim() ?? "";
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (secret) {
-    headers.Authorization = `Bearer ${secret}`;
+  const secret = openRouteWebhookSecret();
+  if (!secret) {
+    return {
+      ok: false,
+      message: "N8N_WEBHOOK_SECRET nao configurada",
+    };
   }
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${secret}`,
+  };
+
   try {
-    const res = await fetch(N8N_WEBHOOK_OPEN_ROUTE_URL, {
+    const res = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),

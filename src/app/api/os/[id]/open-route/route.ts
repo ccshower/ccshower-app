@@ -4,9 +4,9 @@ import { clienteDirectionsUrl } from "@/lib/ordens-servico/cliente-directions-ur
 import { OPERATIONAL_TZ } from "@/lib/ordens-servico/datetime";
 import { computeDrivingEta } from "@/lib/ordens-servico/google-routes";
 import {
-  clientEtaStageAllowsSms,
-  openRouteEventForStage,
-  shouldSendClientEtaSms,
+  clientEtaSmsDedupeSince,
+  decideClientEtaSms,
+  recentClientEtaSmsBlocks,
 } from "@/lib/ordens-servico/open-route-policy";
 import {
   dispatchOpenRouteWebhook,
@@ -152,44 +152,26 @@ export async function POST(request: Request, context: RouteContext) {
           })
         : null) ?? clienteMapsUrl(cliente);
     const stage = parseOsStage(os.etapa_atual);
-    const smsEligibility = {
+    const decision = decideClientEtaSms({
       stage,
       statusAtual: os.status_atual,
       osStatus: os.status,
       smsAutorizado: cliente.sms_autorizado,
       smsConsentimentoEm: cliente.sms_consentimento_em,
       smsOptOutEm: cliente.sms_opt_out_em,
-    };
-    const stageAllowsSms = clientEtaStageAllowsSms(smsEligibility);
+      telefone: cliente.telefone,
+    });
 
-    if (!shouldSendClientEtaSms(smsEligibility)) {
+    if (!decision.queue) {
       return NextResponse.json({
         ok: true,
         mapsUrl,
         smsQueued: false,
-        ...(!stageAllowsSms && stage === "commercial"
-          ? { message: "Visit not in progress" }
-          : {}),
-        ...(stageAllowsSms
-          ? { message: "Customer has not authorized SMS" }
-          : {}),
+        ...(decision.message ? { message: decision.message } : {}),
       });
     }
 
-    if (stage !== "commercial" && stage !== "installation") {
-      return NextResponse.json({ ok: true, mapsUrl, smsQueued: false });
-    }
-
-    if (!cliente.telefone?.trim()) {
-      return NextResponse.json({
-        ok: true,
-        mapsUrl,
-        smsQueued: false,
-        message: "Customer phone missing",
-      });
-    }
-
-    const dedupeSince = new Date(Date.now() - 20 * 60_000).toISOString();
+    const dedupeSince = clientEtaSmsDedupeSince(Date.now());
     const { data: recentSms, error: dedupeError } = await supabase
       .from("agenda_eventos")
       .select("id")
@@ -209,7 +191,7 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    if (recentSms?.length) {
+    if (recentClientEtaSmsBlocks(recentSms?.length ?? 0)) {
       return NextResponse.json({
         ok: true,
         mapsUrl,
@@ -230,14 +212,14 @@ export async function POST(request: Request, context: RouteContext) {
         : null;
     const arrival = eta ? etaArrival(eta.minutos) : null;
     const payload: OpenRouteWebhookPayload = {
-      event: openRouteEventForStage(stage),
+      event: decision.event,
       os_id: os.id,
       empresa_id: os.empresa_id ?? null,
-      etapa_atual: stage,
+      etapa_atual: decision.etapa,
       cliente: {
         id: cliente.id,
         nome: cliente.nome,
-        telefone: cliente.telefone,
+        telefone: decision.telefone,
         endereco_formatado: cliente.endereco_formatado ?? null,
       },
       destino: {
@@ -272,7 +254,7 @@ export async function POST(request: Request, context: RouteContext) {
         equipe_id: teamId ?? null,
         responsavel_id: os.responsavel_id ?? user.id,
         tipo_evento: "other",
-        etapa: stage,
+        etapa: decision.etapa,
         status: "completed",
         titulo: "client_eta_sms",
         descricao: "client_eta_sms",
