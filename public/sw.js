@@ -1,13 +1,31 @@
-/** Service worker — instalabilidade PWA (Android) + cache leve do shell. */
-const CACHE = "ccshower-shell-v1";
-const PRECACHE = ["/", "/login", "/manifest.webmanifest"];
+/** Service worker — instalação do PWA no iOS e no Android. */
+const CACHE = "ccshower-shell-v2";
+const PRECACHE = [
+  "/login",
+  "/manifest.webmanifest",
+  "/apple-touch-icon.png",
+  "/icon-192.png",
+  "/icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+    (async () => {
+      const cache = await caches.open(CACHE);
+      await Promise.all(
+        PRECACHE.map(async (path) => {
+          try {
+            const response = await fetch(path, { cache: "reload" });
+            if (response.ok && response.type === "basic" && !response.redirected) {
+              await cache.put(path, response);
+            }
+          } catch {
+            /* Um asset a menos não pode impedir a instalação. */
+          }
+        }),
+      );
+      await self.skipWaiting();
+    })(),
   );
 });
 
@@ -35,12 +53,23 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response.ok && PRECACHE.includes(url.pathname)) {
+        if (response.ok && !response.redirected && PRECACHE.includes(url.pathname)) {
           const clone = response.clone();
-          void caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          void caches.open(CACHE).then((cache) => cache.put(url.pathname, clone));
         }
         return response;
       })
-      .catch(() => caches.match(event.request).then((r) => r ?? caches.match("/"))),
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (event.request.mode === "navigate") {
+          const login = await caches.match("/login");
+          if (login) return login;
+        }
+        return new Response("Offline", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }),
   );
 });
