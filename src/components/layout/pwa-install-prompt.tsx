@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const DISMISS_KEY = "ccshower-pwa-dismissed-v2";
+const DISMISS_KEY = "ccshower-pwa-dismissed-v3";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -113,40 +113,45 @@ export function PwaInstallPrompt() {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-cc-ink">{title}</p>
-          {needsSafari ? (
-            <p className="mt-1 text-xs leading-relaxed text-cc-muted">
-              {pt ? (
-                <>
-                  O iPhone só instala pelo <strong className="font-medium text-cc-ink">Safari</strong>.
-                  Copie o link, abra no Safari e toque em{" "}
-                  <strong className="font-medium text-cc-ink">Compartilhar</strong>, depois em{" "}
-                  <strong className="font-medium text-cc-ink">Adicionar à Tela de Início</strong>.
-                </>
-              ) : (
-                <>
-                  iPhone only installs this app from{" "}
-                  <strong className="font-medium text-cc-ink">Safari</strong>. Copy the link, open it
-                  in Safari, then tap <strong className="font-medium text-cc-ink">Share</strong> and{" "}
-                  <strong className="font-medium text-cc-ink">Add to Home Screen</strong>.
-                </>
-              )}
-            </p>
-          ) : ios && !deferredPrompt ? (
-            <p className="mt-1 text-xs leading-relaxed text-cc-muted">
-              {pt ? (
-                <>
-                  Toque em <strong className="font-medium text-cc-ink">Compartilhar</strong> (quadrado
-                  com a seta) e depois em{" "}
-                  <strong className="font-medium text-cc-ink">Adicionar à Tela de Início</strong>.
-                </>
-              ) : (
-                <>
-                  Tap <strong className="font-medium text-cc-ink">Share</strong> (the square with an
-                  arrow), then{" "}
-                  <strong className="font-medium text-cc-ink">Add to Home Screen</strong>.
-                </>
-              )}
-            </p>
+          {ios && !deferredPrompt ? (
+            <div className="mt-1 text-xs leading-relaxed text-cc-muted">
+              {needsSafari ? (
+                <p>
+                  {pt ? (
+                    <>
+                      Abra esta página no <strong className="font-medium text-cc-ink">Safari</strong>.
+                      O Chrome do iPhone não instala.
+                    </>
+                  ) : (
+                    <>
+                      Open this page in <strong className="font-medium text-cc-ink">Safari</strong>.
+                      iPhone Chrome cannot install it.
+                    </>
+                  )}
+                </p>
+              ) : null}
+              <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                {(pt
+                  ? [
+                      "Toque em Compartilhar, o quadrado com a seta na barra de baixo.",
+                      "Role a lista e toque em Adicionar à Tela de Início.",
+                      "Deixe Abrir como App da Web ligado e toque em Adicionar.",
+                    ]
+                  : [
+                      "Tap Share, the square with an arrow in the bottom bar.",
+                      "Scroll the list and tap Add to Home Screen.",
+                      "Leave Open as Web App on, then tap Add.",
+                    ]
+                ).map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              <p className="mt-1">
+                {pt
+                  ? "Se Adicionar à Tela de Início não aparecer, role até o fim, toque em Editar Ações e ative essa opção."
+                  : "If Add to Home Screen is not there, scroll to the bottom, tap Edit Actions, and turn it on."}
+              </p>
+            </div>
           ) : (
             <p className="mt-1 text-xs text-cc-muted">
               {pt
