@@ -1,5 +1,5 @@
 /** Service worker — instalação do PWA no iOS e no Android. */
-const CACHE = "ccshower-shell-v2";
+const CACHE = "ccshower-shell-v3";
 const PRECACHE = [
   "/login",
   "/manifest.webmanifest",
