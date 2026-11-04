@@ -10,6 +10,7 @@ import {
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
 import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
+import { phoneForStorage } from "@/lib/sms/e164";
 import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import {
   OS_ANEXOS_BUCKET,
@@ -319,7 +320,7 @@ export async function atualizarClientePrimeiraVisita(
     }
 
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = String(formData.get("telefone") ?? "").trim();
+    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
     if (!nome || !telefone || !endereco_formatado) {
       return { ok: false, message: "Name, phone and address are required" };
@@ -357,15 +358,14 @@ export async function atualizarClientePrimeiraVisita(
       if (requested !== "contractor") tipo_cliente = requested;
     }
 
-    const { error: cliErr } = await supabase
-      .from("clientes")
-      .update({
+    const row = {
         nome,
         telefone,
         tipo_cliente,
         email: emptyToNull(formData.get("email")),
         endereco_formatado,
         endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        endereco_complemento: emptyToNull(formData.get("endereco_complemento")),
         cidade: emptyToNull(formData.get("cidade")),
         estado: emptyToNull(formData.get("estado")),
         cep: emptyToNull(formData.get("cep")),
@@ -378,8 +378,18 @@ export async function atualizarClientePrimeiraVisita(
         origem_lead: lead.origem_lead,
         origem_lead_outro: lead.origem_lead_outro,
         ...smsConsent.fields,
-      })
+      };
+    let { error: cliErr } = await supabase
+      .from("clientes")
+      .update(row)
       .eq("id", os.cliente_id);
+    if (cliErr && /endereco_complemento/i.test(cliErr.message)) {
+      const { endereco_complemento: _drop, ...withoutComplement } = row;
+      ({ error: cliErr } = await supabase
+        .from("clientes")
+        .update(withoutComplement)
+        .eq("id", os.cliente_id));
+    }
 
     if (cliErr) {
       return {

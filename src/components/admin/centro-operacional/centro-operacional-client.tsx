@@ -502,11 +502,20 @@ function CentroHeader({
   unidadeSelecionadaId: string | null;
 }) {
   const headerDate = formatCentroHeaderDate();
+  const router = useRouter();
   const unidadeAtual = unidades.find((u) => u.id === unidadeSelecionadaId) ?? null;
   const [cadastroModal, setCadastroModal] = useState<CadastroTipo | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   function openCadastroModal(item: CentroAdminMenuItem) {
+    if (item.href === "/admin/clientes") {
+      router.push("/admin/clientes");
+      return;
+    }
+    if (item.href === "/admin/usuarios") {
+      setCadastroModal("usuarios");
+      return;
+    }
     if (item.href === "/admin/equipes") {
       if (!unidadeSelecionadaId) return;
       setCadastroModal("equipes");
@@ -528,7 +537,6 @@ function CentroHeader({
       setCadastroModal("contractors");
       return;
     }
-    setCadastroModal("usuarios");
   }
 
   return (

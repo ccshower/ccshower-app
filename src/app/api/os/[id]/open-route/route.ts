@@ -15,6 +15,7 @@ import {
 import { parseOsStage } from "@/lib/ordens-servico/operacional-snapshot";
 import { clienteMapsUrl } from "@/lib/ordens-servico/visita-comercial";
 import { spreadAgendaEventoDatetime } from "@/lib/ordens-servico/agenda-evento-query";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -48,6 +49,19 @@ function coordinateFromBody(body: OpenRouteBody): Coordinate | null {
   }
 
   return { latitude, longitude };
+}
+
+function smsClaimClient(
+  fallback: Awaited<ReturnType<typeof createClient>>,
+) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return fallback;
+  }
+  try {
+    return createAdminClient();
+  } catch {
+    return fallback;
+  }
 }
 
 function capturedAtFromBody(capturedAt: unknown): string {
@@ -167,16 +181,18 @@ export async function POST(request: Request, context: RouteContext) {
         ok: true,
         mapsUrl,
         smsQueued: false,
-        ...(decision.message ? { message: decision.message } : {}),
+        message: decision.message ?? "Customer text was not sent",
       });
     }
 
+    const claimClient = smsClaimClient(supabase);
     const dedupeSince = clientEtaSmsDedupeSince(Date.now());
-    const { data: recentSms, error: dedupeError } = await supabase
+    const { data: recentSms, error: dedupeError } = await claimClient
       .from("agenda_eventos")
       .select("id")
       .eq("ordem_servico_id", os.id)
-      .or("titulo.eq.client_eta_sms,descricao.ilike.%client_eta_sms%")
+      .eq("etapa", decision.etapa)
+      .eq("titulo", "client_eta_sms")
       .gte("criado_em", dedupeSince)
       .order("criado_em", { ascending: false })
       .limit(1);
@@ -246,7 +262,7 @@ export async function POST(request: Request, context: RouteContext) {
     };
 
     const now = new Date().toISOString();
-    const { data: smsClaim, error: claimError } = await supabase
+    const { data: smsClaim, error: claimError } = await claimClient
       .from("agenda_eventos")
       .insert({
         ordem_servico_id: os.id,
@@ -274,11 +290,12 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    const { data: earliestSmsClaim, error: claimVerificationError } = await supabase
+    const { data: earliestSmsClaim, error: claimVerificationError } = await claimClient
       .from("agenda_eventos")
       .select("id")
       .eq("ordem_servico_id", os.id)
-      .or("titulo.eq.client_eta_sms,descricao.ilike.%client_eta_sms%")
+      .eq("etapa", decision.etapa)
+      .eq("titulo", "client_eta_sms")
       .gte("criado_em", dedupeSince)
       .order("criado_em", { ascending: true })
       .order("id", { ascending: true })
@@ -290,7 +307,7 @@ export async function POST(request: Request, context: RouteContext) {
         "[open-route] failed to verify SMS dispatch claim:",
         claimVerificationError,
       );
-      await supabase.from("agenda_eventos").delete().eq("id", smsClaim.id);
+      await claimClient.from("agenda_eventos").delete().eq("id", smsClaim.id);
       return NextResponse.json({
         ok: true,
         mapsUrl,
@@ -301,7 +318,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (earliestSmsClaim.id !== smsClaim.id) {
-      await supabase.from("agenda_eventos").delete().eq("id", smsClaim.id);
+      await claimClient.from("agenda_eventos").delete().eq("id", smsClaim.id);
       return NextResponse.json({
         ok: true,
         mapsUrl,
@@ -314,7 +331,7 @@ export async function POST(request: Request, context: RouteContext) {
     const webhook = await dispatchOpenRouteWebhook(payload);
 
     if (!webhook.ok) {
-      const { error: releaseError } = await supabase
+      const { error: releaseError } = await claimClient
         .from("agenda_eventos")
         .delete()
         .eq("id", smsClaim.id);

@@ -70,6 +70,7 @@ export type Cliente = {
   contractor_id: string | null;
   endereco_formatado: string;
   endereco_linha1: string | null;
+  endereco_complemento: string | null;
   cidade: string | null;
   estado: string | null;
   cep: string | null;
@@ -315,6 +316,7 @@ export type OrdemServicoWithRelations = OrdemServico & {
         | "email"
         | "endereco_formatado"
         | "endereco_linha1"
+        | "endereco_complemento"
         | "cidade"
         | "estado"
         | "cep"

@@ -87,7 +87,8 @@ export function resolveSmsConsentWrite(input: {
 }): { ok: true; fields: SmsConsentFields } {
   const previous = input.previous;
   const phoneChanged =
-    previous != null && previous.telefone.trim() !== input.nextTelefone.trim();
+    previous != null &&
+    phoneMatchKey(previous.telefone) !== phoneMatchKey(input.nextTelefone);
   if (
     previous != null &&
     smsOptOutIsLatest(previous.sms_consentimento_em, previous.sms_opt_out_em)

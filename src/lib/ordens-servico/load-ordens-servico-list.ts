@@ -144,6 +144,7 @@ export async function loadOrdensServicoList(
               email: c.email ?? null,
               endereco_formatado: c.endereco_formatado,
               endereco_linha1: c.endereco_linha1 ?? null,
+              endereco_complemento: null,
               cidade: c.cidade ?? null,
               estado: c.estado ?? null,
               cep: c.cep ?? null,

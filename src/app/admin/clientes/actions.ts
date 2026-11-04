@@ -12,6 +12,7 @@ import {
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
 import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
+import { phoneForStorage } from "@/lib/sms/e164";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
 import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
@@ -121,7 +122,7 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
   try {
     const { supabase, usuario, userId } = await requireActiveSupabase();
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = String(formData.get("telefone") ?? "").trim();
+    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
@@ -155,15 +156,14 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
       };
     }
 
-    const { data: created, error } = await supabase
-      .from("clientes")
-      .insert({
+    const row = {
         nome,
         telefone,
         tipo_cliente,
         email: emptyToNull(formData.get("email")),
         endereco_formatado,
         endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        endereco_complemento: emptyToNull(formData.get("endereco_complemento")),
         cidade: emptyToNull(formData.get("cidade")),
         estado: emptyToNull(formData.get("estado")),
         cep: emptyToNull(formData.get("cep")),
@@ -182,9 +182,24 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
         criado_por: userId,
         ativo: true,
         ...smsConsent.fields,
-      })
+      };
+    let createdResult = await supabase
+      .from("clientes")
+      .insert(row)
       .select("id, nome, equipe_id")
       .single();
+    if (
+      createdResult.error &&
+      /endereco_complemento/i.test(createdResult.error.message)
+    ) {
+      const { endereco_complemento: _drop, ...withoutComplement } = row;
+      createdResult = await supabase
+        .from("clientes")
+        .insert(withoutComplement)
+        .select("id, nome, equipe_id")
+        .single();
+    }
+    const { data: created, error } = createdResult;
 
     if (error) {
       return {
@@ -241,7 +256,7 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
     const { supabase, usuario } = await requireActiveSupabase();
     const id = String(formData.get("id") ?? "");
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = String(formData.get("telefone") ?? "").trim();
+    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
@@ -287,15 +302,14 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
       equipeResolved.equipeId,
     );
 
-    const { error } = await supabase
-      .from("clientes")
-      .update({
+    const row = {
         nome,
         telefone,
         tipo_cliente,
         email: emptyToNull(formData.get("email")),
         endereco_formatado,
         endereco_linha1: emptyToNull(formData.get("endereco_linha1")),
+        endereco_complemento: emptyToNull(formData.get("endereco_complemento")),
         cidade: emptyToNull(formData.get("cidade")),
         estado: emptyToNull(formData.get("estado")),
         cep: emptyToNull(formData.get("cep")),
@@ -311,8 +325,15 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
         equipe_id: equipeResolved.equipeId,
         ...(unidade_id ? { unidade_id } : {}),
         ...smsConsent.fields,
-      })
-      .eq("id", id);
+      };
+    let { error } = await supabase.from("clientes").update(row).eq("id", id);
+    if (error && /endereco_complemento/i.test(error.message)) {
+      const { endereco_complemento: _drop, ...withoutComplement } = row;
+      ({ error } = await supabase
+        .from("clientes")
+        .update(withoutComplement)
+        .eq("id", id));
+    }
 
     if (error) {
       return {

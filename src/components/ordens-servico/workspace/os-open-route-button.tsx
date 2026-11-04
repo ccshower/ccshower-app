@@ -15,6 +15,7 @@ type Props = {
 type OpenRouteResponse = {
   ok?: boolean;
   mapsUrl?: string | null;
+  smsQueued?: boolean;
   message?: string;
 };
 
@@ -100,12 +101,18 @@ export function OsOpenRouteButton({
         return;
       }
 
-      if (result.message === "Customer phone missing") {
-        setMessage(t("os.workspace.openRoutePhoneMissing"));
-      } else if (result.message === "Customer phone invalid") {
-        setMessage(t("os.workspace.openRoutePhoneInvalid"));
-      } else if (result.message === "Customer has not authorized SMS") {
-        setMessage(t("os.workspace.openRouteSmsNotAuthorized"));
+      if (result.smsQueued === false) {
+        if (result.message === "Customer phone missing") {
+          setMessage(t("os.workspace.openRoutePhoneMissing"));
+        } else if (result.message === "Customer phone invalid") {
+          setMessage(t("os.workspace.openRoutePhoneInvalid"));
+        } else if (result.message === "Customer has not authorized SMS") {
+          setMessage(t("os.workspace.openRouteSmsNotAuthorized"));
+        } else if (result.message === "Customer notification was recently queued") {
+          setMessage(t("os.workspace.openRouteSmsRecent"));
+        } else {
+          setMessage(t("os.workspace.openRouteSmsFailed"));
+        }
       }
 
       window.open(mapsUrl, "_blank", "noopener,noreferrer");

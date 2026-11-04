@@ -10,10 +10,17 @@ import {
   ClienteLeadSourceFields,
   validateClienteLeadSourceForm,
 } from "@/components/clientes/cliente-lead-source-fields";
+import { composeEnderecoFormatado } from "@/lib/clientes/endereco-complemento";
 import {
   hasValidSmsConsent,
+  phoneMatchKey,
   smsOptOutIsLatest,
 } from "@/lib/clientes/sms-consent";
+import {
+  formatNanpLocal,
+  nationalNanpDigits,
+  phoneFieldValue,
+} from "@/lib/sms/e164";
 import { Field } from "@/components/ui/field";
 import {
   CLIENT_TYPE,
@@ -80,7 +87,7 @@ export function ClienteForm({
   const [contractorId, setContractorId] = useState(
     () => cliente?.contractor_id ?? "",
   );
-  const [phone, setPhone] = useState(() => cliente?.telefone ?? "");
+  const [phone, setPhone] = useState(() => phoneFieldValue(cliente?.telefone));
   const [smsAuthorized, setSmsAuthorized] = useState(() =>
     hasValidSmsConsent({
       smsAutorizado: cliente?.sms_autorizado,
@@ -112,7 +119,7 @@ export function ClienteForm({
     setAddress(googleAddressFromCliente(cliente));
     setTipoCliente(parseClientType(cliente?.tipo_cliente ?? "residential"));
     setContractorId(cliente?.contractor_id ?? "");
-    setPhone(cliente?.telefone ?? "");
+    setPhone(phoneFieldValue(cliente?.telefone));
     setSmsAuthorized(
       hasValidSmsConsent({
         smsAutorizado: cliente?.sms_autorizado,
@@ -123,7 +130,8 @@ export function ClienteForm({
   }, [cliente, formKey]);
 
   const savedPhone = cliente?.telefone ?? "";
-  const phoneChanged = Boolean(cliente) && phone.trim() !== savedPhone.trim();
+  const phoneChanged =
+    Boolean(cliente) && phoneMatchKey(phone) !== phoneMatchKey(savedPhone);
   const optOutBlocks = smsOptOutIsLatest(
     cliente?.sms_consentimento_em,
     cliente?.sms_opt_out_em,
@@ -132,7 +140,7 @@ export function ClienteForm({
   function onPhoneChange(value: string) {
     setPhone(value);
     if (!cliente) return;
-    if (value.trim() !== savedPhone.trim()) {
+    if (phoneMatchKey(value) !== phoneMatchKey(savedPhone)) {
       setSmsAuthorized(false);
       return;
     }
@@ -152,9 +160,15 @@ export function ClienteForm({
         ev.preventDefault();
         const fd = new FormData(ev.currentTarget);
         const busca = String(fd.get("endereco_busca") ?? "").trim();
+        const formatted = address.endereco_formatado.trim() || busca;
         const merged: GoogleAddress = {
           ...address,
-          endereco_formatado: address.endereco_formatado.trim() || busca,
+          endereco_complemento: address.endereco_complemento.trim(),
+          endereco_formatado: composeEnderecoFormatado(
+            formatted,
+            cliente?.endereco_complemento ?? "",
+            address.endereco_complemento,
+          ),
         };
         Object.entries(merged).forEach(([key, value]) => fd.set(key, value));
         if (!merged.endereco_formatado) {
@@ -211,14 +225,24 @@ export function ClienteForm({
           />
         </Field>
         <Field label="Phone">
-          <input
-            name="telefone"
-            required
-            value={phone}
-            onChange={(e) => onPhoneChange(e.target.value)}
-            className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
-            placeholder="+1"
-          />
+          <div className="flex overflow-hidden rounded-sm border-[1.5px] border-cc-border focus-within:border-cc-blue-focus focus-within:shadow-focus">
+            <span className="flex items-center border-r border-cc-border bg-cc-border-light px-3 text-sm font-medium text-cc-muted">
+              +1
+            </span>
+            <input
+              required
+              inputMode="tel"
+              autoComplete="tel-national"
+              value={formatNanpLocal(nationalNanpDigits(phone))}
+              onChange={(e) => {
+                const local = nationalNanpDigits(e.target.value);
+                onPhoneChange(local ? `+1${local}` : "");
+              }}
+              className="w-full border-0 bg-white px-3 py-2.5 text-sm font-light text-cc-ink outline-none"
+              placeholder="(000) 000-0000"
+            />
+          </div>
+          <input type="hidden" name="telefone" value={phone} />
         </Field>
       </div>
 
@@ -319,6 +343,20 @@ export function ClienteForm({
         onAddress={setAddress}
         active
       />
+
+      <Field label="Apt, suite, unit" hint="Optional. Shows on the address and in the arrival text.">
+        <input
+          value={address.endereco_complemento}
+          onChange={(e) =>
+            setAddress({
+              ...address,
+              endereco_complemento: e.target.value.toLocaleUpperCase("en-US"),
+            })
+          }
+          placeholder="APT 4, SUITE B, UNIT 12"
+          className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light uppercase text-cc-ink outline-none placeholder:normal-case focus:border-cc-blue-focus focus:shadow-focus"
+        />
+      </Field>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="City">

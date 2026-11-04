@@ -145,6 +145,9 @@ export const ptBR = {
         "Telefone do cliente inválido. Rota aberta sem SMS.",
       openRouteSmsNotAuthorized:
         "Cliente não autorizou SMS. Rota aberta sem mensagem.",
+      openRouteSmsRecent:
+        "Este cliente já recebeu uma mensagem há poucos minutos. Rota aberta sem outro SMS.",
+      openRouteSmsFailed: "Rota aberta. O SMS do cliente não foi enviado.",
       openRouteUnavailable: "Rota indisponível.",
       openRouteError: "Não foi possível abrir a rota. Tente novamente.",
       viewDetails: "Ver detalhes",

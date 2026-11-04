@@ -9,6 +9,7 @@ import { t } from "@/lib/i18n";
 export type GoogleAddress = {
   endereco_formatado: string;
   endereco_linha1: string;
+  endereco_complemento: string;
   cidade: string;
   estado: string;
   cep: string;
@@ -161,6 +162,7 @@ function placeToAddress(place: PlaceLike): GoogleAddress {
     "administrative_area_level_1",
     true,
   );
+  const complemento = getComponent(place.addressComponents, "subpremise");
   const cep = getComponent(place.addressComponents, "postal_code");
   const pais = getComponent(place.addressComponents, "country", true) || "US";
   const lat = place.location?.lat();
@@ -175,6 +177,7 @@ function placeToAddress(place: PlaceLike): GoogleAddress {
   return {
     endereco_formatado: toAddressUpper(formatted),
     endereco_linha1: toAddressUpper([streetNumber, route].filter(Boolean).join(" ")),
+    endereco_complemento: toAddressUpper(complemento),
     cidade: toAddressUpper(cidade),
     estado: (estado || "FL").toUpperCase(),
     cep,
@@ -205,6 +208,7 @@ export function emptyGoogleAddress(): GoogleAddress {
   return {
     endereco_formatado: "",
     endereco_linha1: "",
+    endereco_complemento: "",
     cidade: "",
     estado: "FL",
     cep: "",
@@ -219,6 +223,7 @@ export function emptyGoogleAddress(): GoogleAddress {
 export function googleAddressFromCliente(c?: {
   endereco_formatado: string;
   endereco_linha1?: string | null;
+  endereco_complemento?: string | null;
   cidade?: string | null;
   estado?: string | null;
   cep?: string | null;
@@ -232,6 +237,7 @@ export function googleAddressFromCliente(c?: {
   return {
     endereco_formatado: toAddressUpper(c.endereco_formatado),
     endereco_linha1: toAddressUpper(c.endereco_linha1 ?? ""),
+    endereco_complemento: toAddressUpper(c.endereco_complemento ?? ""),
     cidade: toAddressUpper(c.cidade ?? ""),
     estado: c.estado ?? "FL",
     cep: c.cep ?? "",

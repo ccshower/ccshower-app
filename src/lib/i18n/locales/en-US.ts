@@ -145,6 +145,9 @@ export const enUS = {
         "Customer phone is not a valid number. Route opened without SMS.",
       openRouteSmsNotAuthorized:
         "Customer has not authorized SMS. Route opened without a text.",
+      openRouteSmsRecent:
+        "This customer was already texted a few minutes ago. Route opened without another text.",
+      openRouteSmsFailed: "Route opened. The customer text was not sent.",
       openRouteUnavailable: "Route unavailable.",
       openRouteError: "Unable to open route. Please try again.",
       viewDetails: "View details",
