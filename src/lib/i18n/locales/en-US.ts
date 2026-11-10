@@ -139,15 +139,24 @@ export const enUS = {
       fullHistoryTitle: "Full history",
       openRoute: "Open route",
       openRouteLoading: "Opening route…",
-      openRouteGpsDenied: "Location unavailable. Opening route without ETA.",
-      openRoutePhoneMissing: "Customer phone missing. Route opened without SMS.",
-      openRoutePhoneInvalid:
-        "Customer phone is not a valid number. Route opened without SMS.",
-      openRouteSmsNotAuthorized:
-        "Customer has not authorized SMS. Route opened without a text.",
-      openRouteSmsRecent:
-        "This customer was already texted a few minutes ago. Route opened without another text.",
-      openRouteSmsFailed: "Route opened. The customer text was not sent.",
+      openRouteGpsDenied:
+        "Location unavailable. Opening route without a starting point.",
+      sendNotice: "Send notice",
+      sendNoticeLoading: "Sending notice…",
+      sendNoticeConfirm:
+        "Send an arrival notice to the customer? They will get a text now.",
+      sendNoticeSent: "Notice sent to the customer.",
+      sendNoticeSentWithoutGps:
+        "Notice sent. Without location, the arrival time may be missing.",
+      sendNoticePhoneMissing: "Customer phone missing. Notice was not sent.",
+      sendNoticePhoneInvalid:
+        "Customer phone is not a valid number. Notice was not sent.",
+      sendNoticeSmsNotAuthorized:
+        "Customer has not authorized SMS. Notice was not sent.",
+      sendNoticeSmsRecent:
+        "This customer was already notified a few minutes ago.",
+      sendNoticeFailed: "The notice could not be sent.",
+      sendNoticeError: "Unable to send the notice. Please try again.",
       openRouteUnavailable: "Route unavailable.",
       openRouteError: "Unable to open route. Please try again.",
       viewDetails: "View details",

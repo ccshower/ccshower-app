@@ -14,7 +14,7 @@ const SMS_STAGES: ReadonlySet<OsWorkflowStage> = new Set([
   "installation",
 ]);
 
-/** Open route dispara ETA + SMS ao cliente nestas etapas. */
+/** O botão "Enviar aviso" dispara ETA + SMS ao cliente nestas etapas. */
 export function stageTriggersClientEtaSms(
   stage: OsWorkflowStage | null,
 ): boolean {

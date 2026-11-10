@@ -139,15 +139,23 @@ export const ptBR = {
       fullHistoryTitle: "Histórico completo",
       openRoute: "Abrir rota",
       openRouteLoading: "Abrindo rota…",
-      openRouteGpsDenied: "Localização indisponível. Abrindo rota sem ETA.",
-      openRoutePhoneMissing: "Telefone do cliente ausente. Rota aberta sem SMS.",
-      openRoutePhoneInvalid:
-        "Telefone do cliente inválido. Rota aberta sem SMS.",
-      openRouteSmsNotAuthorized:
-        "Cliente não autorizou SMS. Rota aberta sem mensagem.",
-      openRouteSmsRecent:
-        "Este cliente já recebeu uma mensagem há poucos minutos. Rota aberta sem outro SMS.",
-      openRouteSmsFailed: "Rota aberta. O SMS do cliente não foi enviado.",
+      openRouteGpsDenied:
+        "Localização indisponível. Abrindo rota sem ponto de partida.",
+      sendNotice: "Enviar aviso",
+      sendNoticeLoading: "Enviando aviso…",
+      sendNoticeConfirm:
+        "Enviar aviso de chegada para o cliente? Ele recebe um SMS agora.",
+      sendNoticeSent: "Aviso enviado ao cliente.",
+      sendNoticeSentWithoutGps:
+        "Aviso enviado. Sem localização, o horário de chegada pode não constar.",
+      sendNoticePhoneMissing: "Telefone do cliente ausente. Aviso não enviado.",
+      sendNoticePhoneInvalid: "Telefone do cliente inválido. Aviso não enviado.",
+      sendNoticeSmsNotAuthorized:
+        "Cliente não autorizou SMS. Aviso não enviado.",
+      sendNoticeSmsRecent:
+        "Este cliente já recebeu um aviso há poucos minutos.",
+      sendNoticeFailed: "Não foi possível enviar o aviso.",
+      sendNoticeError: "Não foi possível enviar o aviso. Tente novamente.",
       openRouteUnavailable: "Rota indisponível.",
       openRouteError: "Não foi possível abrir a rota. Tente novamente.",
       viewDetails: "Ver detalhes",

@@ -27,6 +27,8 @@ type OpenRouteBody = {
   originLat?: unknown;
   originLng?: unknown;
   capturedAt?: unknown;
+  /** SMS só quando o técnico confirma no botão "Enviar aviso". */
+  notify?: unknown;
 };
 
 type Coordinate = { latitude: number; longitude: number };
@@ -165,6 +167,14 @@ export async function POST(request: Request, context: RouteContext) {
             cliente,
           })
         : null) ?? clienteMapsUrl(cliente);
+    if (body.notify !== true) {
+      return NextResponse.json({
+        ok: true,
+        mapsUrl,
+        smsQueued: false,
+      });
+    }
+
     const stage = parseOsStage(os.etapa_atual);
     const decision = decideClientEtaSms({
       stage,

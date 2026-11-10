@@ -25,6 +25,8 @@ type RouteOrigin = {
   capturedAt: string;
 };
 
+type BusyAction = "open" | "notify" | null;
+
 function getCurrentPosition(): Promise<RouteOrigin> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
@@ -41,16 +43,33 @@ function getCurrentPosition(): Promise<RouteOrigin> {
   });
 }
 
+function noticeFailureMessage(message: string | undefined): string {
+  if (message === "Customer phone missing") {
+    return t("os.workspace.sendNoticePhoneMissing");
+  }
+  if (message === "Customer phone invalid") {
+    return t("os.workspace.sendNoticePhoneInvalid");
+  }
+  if (message === "Customer has not authorized SMS") {
+    return t("os.workspace.sendNoticeSmsNotAuthorized");
+  }
+  if (message === "Customer notification was recently queued") {
+    return t("os.workspace.sendNoticeSmsRecent");
+  }
+  return t("os.workspace.sendNoticeFailed");
+}
+
 export function OsOpenRouteButton({
   ordemId,
   etapaAtual,
   fallbackMapsUrl,
 }: Props) {
-  const [isOpening, setIsOpening] = useState(false);
+  const [busy, setBusy] = useState<BusyAction>(null);
   const [message, setMessage] = useState<string | null>(null);
   const etapa = parseOsStage(etapaAtual);
+  const canNotify = stageTriggersClientEtaSms(etapa);
 
-  if (!stageTriggersClientEtaSms(etapa)) {
+  if (!canNotify) {
     return fallbackMapsUrl ? (
       <a
         href={fallbackMapsUrl}
@@ -70,73 +89,110 @@ export function OsOpenRouteButton({
     );
   }
 
-  async function handleOpenRoute() {
-    setIsOpening(true);
-    setMessage(null);
-
+  async function requestRoute(notify: boolean): Promise<{
+    gpsDenied: boolean;
+    result: OpenRouteResponse;
+  }> {
     let origin: Partial<RouteOrigin> = {};
+    let gpsDenied = false;
 
     try {
       origin = await getCurrentPosition();
     } catch {
-      setMessage(t("os.workspace.openRouteGpsDenied"));
+      gpsDenied = true;
     }
 
+    const response = await fetch(`/api/os/${ordemId}/open-route`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...origin, notify }),
+    });
+    const result = (await response.json().catch(() => ({}))) as OpenRouteResponse;
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.message);
+    }
+
+    return { gpsDenied, result };
+  }
+
+  async function handleOpenRoute() {
+    setBusy("open");
+    setMessage(null);
+
     try {
-      const response = await fetch(`/api/os/${ordemId}/open-route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(origin),
-      });
-      const result = (await response.json().catch(() => ({}))) as OpenRouteResponse;
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.message);
-      }
-
-      setMessage(null);
+      const { gpsDenied, result } = await requestRoute(false);
       const mapsUrl = result.mapsUrl ?? fallbackMapsUrl;
       if (!mapsUrl) {
         setMessage(t("os.workspace.openRouteUnavailable"));
         return;
       }
 
-      if (result.smsQueued === false) {
-        if (result.message === "Customer phone missing") {
-          setMessage(t("os.workspace.openRoutePhoneMissing"));
-        } else if (result.message === "Customer phone invalid") {
-          setMessage(t("os.workspace.openRoutePhoneInvalid"));
-        } else if (result.message === "Customer has not authorized SMS") {
-          setMessage(t("os.workspace.openRouteSmsNotAuthorized"));
-        } else if (result.message === "Customer notification was recently queued") {
-          setMessage(t("os.workspace.openRouteSmsRecent"));
-        } else {
-          setMessage(t("os.workspace.openRouteSmsFailed"));
-        }
+      if (gpsDenied) {
+        setMessage(t("os.workspace.openRouteGpsDenied"));
       }
 
       window.open(mapsUrl, "_blank", "noopener,noreferrer");
     } catch {
       setMessage(t("os.workspace.openRouteError"));
     } finally {
-      setIsOpening(false);
+      setBusy(null);
     }
   }
 
+  async function handleSendNotice() {
+    if (!confirm(t("os.workspace.sendNoticeConfirm"))) return;
+
+    setBusy("notify");
+    setMessage(null);
+
+    try {
+      const { gpsDenied, result } = await requestRoute(true);
+      if (result.smsQueued) {
+        setMessage(
+          gpsDenied
+            ? t("os.workspace.sendNoticeSentWithoutGps")
+            : t("os.workspace.sendNoticeSent"),
+        );
+        return;
+      }
+
+      setMessage(noticeFailureMessage(result.message));
+    } catch {
+      setMessage(t("os.workspace.sendNoticeError"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const isBusy = busy != null;
+
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        onClick={handleOpenRoute}
-        disabled={isOpening}
-        className="rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light disabled:cursor-wait disabled:opacity-60"
-      >
-        {isOpening
-          ? t("os.workspace.openRouteLoading")
-          : t("os.workspace.openRoute")}
-      </button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={handleOpenRoute}
+          disabled={isBusy}
+          className="rounded-sm border border-cc-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-deep hover:bg-cc-border-light disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy === "open"
+            ? t("os.workspace.openRouteLoading")
+            : t("os.workspace.openRoute")}
+        </button>
+        <button
+          type="button"
+          onClick={handleSendNotice}
+          disabled={isBusy}
+          className="rounded-sm border border-cc-blue/40 bg-cc-blue-soft px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cc-blue-deep hover:bg-cc-blue/15 disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy === "notify"
+            ? t("os.workspace.sendNoticeLoading")
+            : t("os.workspace.sendNotice")}
+        </button>
+      </div>
       {message ? (
-        <p className="max-w-40 text-right text-[10px] text-cc-muted" role="status">
+        <p className="max-w-56 text-right text-[10px] text-cc-muted" role="status">
           {message}
         </p>
       ) : null}
