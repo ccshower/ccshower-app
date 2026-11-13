@@ -115,17 +115,9 @@ async function resolveAmbienteIdForUpload(
     .maybeSingle();
 
   if (findErr) return { ok: false, message: findErr.message };
-  if (existing?.id) return { ok: true, id: existing.id as string };
 
   const nomeRaw = formData.get("ambiente_nome");
   const nome = typeof nomeRaw === "string" ? nomeRaw.trim() : "";
-  if (!nome) {
-    return {
-      ok: false,
-      message: "Informe o nome do ambiente antes de adicionar fotos",
-    };
-  }
-
   const especificacoesRaw = formData.get("ambiente_especificacoes");
   const especificacoes =
     typeof especificacoesRaw === "string" ? especificacoesRaw.trim() : "";
@@ -137,6 +129,27 @@ async function resolveAmbienteIdForUpload(
     typeof sortRaw === "string" && Number.isFinite(Number(sortRaw))
       ? Number(sortRaw)
       : 0;
+
+  if (existing?.id) {
+    const { error: updErr } = await supabase
+      .from("os_ambientes")
+      .update({
+        ...(nome ? { nome } : {}),
+        especificacoes: especificacoes || null,
+        valor_comercial: valorParsed,
+        sort_order: sortOrder,
+      })
+      .eq("id", existing.id);
+    if (updErr) return { ok: false, message: updErr.message };
+    return { ok: true, id: existing.id as string };
+  }
+
+  if (!nome) {
+    return {
+      ok: false,
+      message: "Informe o nome do ambiente antes de adicionar fotos",
+    };
+  }
 
   const payload = {
     ordem_servico_id: os.id,

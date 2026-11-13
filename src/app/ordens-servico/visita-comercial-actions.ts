@@ -171,12 +171,19 @@ export async function salvarCapturaPagamentoVisita(
     const built = buildVisitPaymentUpdate(payload);
     if (!built.ok) return built;
 
-    const { error: updErr } = await supabase
+    const { data: updated, error: updErr } = await supabase
       .from("ordens_servico")
       .update(built.row)
-      .eq("id", osId);
+      .eq("id", osId)
+      .select("id");
 
     if (updErr) return { ok: false, message: updErr.message };
+    if (!updated?.length) {
+      return {
+        ok: false,
+        message: "Payment was not saved. Check permissions.",
+      };
+    }
     revalidateOs(osId);
     return { ok: true, id: osId };
   } catch (e) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { salvarAmbientesComercial } from "@/app/ordens-servico/ambientes-actions";
 import {
@@ -10,11 +10,15 @@ import {
 } from "@/app/ordens-servico/visita-comercial-actions";
 import { OsCoatingCheckbox } from "@/components/ordens-servico/os-coating-field";
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
-import { OsValorEditableField } from "@/components/ordens-servico/os-valores-etapa-fields";
+import {
+  OsMoneyInput,
+  OsValorEditableField,
+} from "@/components/ordens-servico/os-valores-etapa-fields";
 import {
   ambienteRowFromDb,
   createEmptyAmbienteRow,
   formatSomaAmbientesUsd,
+  somaAmbientesMoneyInput,
   somaValoresAmbientes,
   type OsAmbienteFormRow,
 } from "@/lib/ordens-servico/os-ambientes";
@@ -106,6 +110,9 @@ export function OsAmbientesComercialPanel({
       ? (ordem.ambientes ?? []).map(ambienteRowFromDb)
       : [],
   );
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const saveChain = useRef(Promise.resolve());
   const [anexos, setAnexos] = useState<OsAnexoComUrl[]>(ordem.anexos_visita ?? []);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -156,7 +163,7 @@ export function OsAmbientesComercialPanel({
 
   useEffect(() => {
     if (!useMultiAmbiente) return;
-    const formatted = formatSomaAmbientesUsd(somaAmbientes);
+    const formatted = somaAmbientesMoneyInput(somaAmbientes);
     if (formatted) {
       onValorComercialChange(formatted);
     }
@@ -197,7 +204,26 @@ export function OsAmbientesComercialPanel({
   );
 
   function updateRow(id: string, patch: Partial<OsAmbienteFormRow>) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setRows((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      rowsRef.current = next;
+      return next;
+    });
+  }
+
+  function persistRows(snapshot: OsAmbienteFormRow[]) {
+    const toSave = snapshot.filter((r) => r.nome.trim().length > 0);
+    if (toSave.length === 0) return;
+    saveChain.current = saveChain.current
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          const r = await salvarAmbientesComercial(ordem.id, toSave);
+          if (!r.ok) onMessage?.(r.message);
+        } catch (e) {
+          onMessage?.(e instanceof Error ? e.message : "Error saving environments");
+        }
+      });
   }
 
   function addRow() {
@@ -394,6 +420,9 @@ export function OsAmbientesComercialPanel({
                       disabled={disabled || pending}
                       placeholder={t("os.ambientes.namePlaceholder")}
                       onChange={(e) => updateRow(row.id, { nome: e.target.value })}
+                      onBlur={() => {
+                        void persistRows(rowsRef.current);
+                      }}
                     />
                   </label>
                   <label className="block sm:col-span-2">
@@ -414,17 +443,27 @@ export function OsAmbientesComercialPanel({
                     <span className="text-[11px] font-medium text-cc-muted">
                       {t("os.ambientes.partialValue")}
                     </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={`mt-1 ${inputClass}`}
-                      value={row.valor_comercial}
-                      disabled={disabled || pending}
-                      placeholder="0.00"
-                      onChange={(e) =>
-                        updateRow(row.id, { valor_comercial: e.target.value })
-                      }
-                    />
+                    <div className="mt-1">
+                      <OsMoneyInput
+                        compact
+                        disabled={disabled || pending}
+                        value={row.valor_comercial}
+                        placeholder="$0.00"
+                        onChange={(valor) =>
+                          updateRow(row.id, { valor_comercial: valor })
+                        }
+                        onBlur={(finalized) => {
+                          const next = rowsRef.current.map((r) =>
+                            r.id === row.id
+                              ? { ...r, valor_comercial: finalized }
+                              : r,
+                          );
+                          rowsRef.current = next;
+                          setRows(next);
+                          void persistRows(next);
+                        }}
+                      />
+                    </div>
                   </label>
                 </div>
 

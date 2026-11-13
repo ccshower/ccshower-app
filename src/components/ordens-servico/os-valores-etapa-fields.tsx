@@ -22,7 +22,7 @@ type OsMoneyInputProps = {
   compact?: boolean;
   placeholder?: string;
   onChange: (next: string) => void;
-  onBlur?: () => void;
+  onBlur?: (finalized: string) => void;
 };
 
 /** Input monetário USD — máscara en-US compartilhada em toda a OS. */
@@ -48,7 +48,7 @@ export function OsMoneyInput({
       onBlur={() => {
         const finalized = finalizeMoneyInputDisplay(value);
         if (finalized !== value) onChange(finalized);
-        onBlur?.();
+        onBlur?.(finalized);
       }}
     />
   );

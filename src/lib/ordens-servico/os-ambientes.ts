@@ -1,3 +1,4 @@
+import { moneyInputFromNumber } from "@/lib/ordens-servico/financial-workspace";
 import { parseValorEtapaInput } from "@/lib/ordens-servico/os-valores-etapa";
 import type { OsAmbiente, OsAnexoComUrl } from "@/lib/types/database";
 
@@ -95,15 +96,13 @@ export function createEmptyAmbienteRow(): OsAmbienteFormRow {
 }
 
 export function ambienteRowFromDb(row: OsAmbiente): OsAmbienteFormRow {
-  const valor = row.valor_comercial;
+  const n = row.valor_comercial == null ? null : Number(row.valor_comercial);
   return {
     id: row.id,
     nome: row.nome,
     especificacoes: row.especificacoes ?? "",
     valor_comercial:
-      valor != null && Number.isFinite(Number(valor)) && Number(valor) > 0
-        ? String(valor)
-        : "",
+      n != null && Number.isFinite(n) && n > 0 ? moneyInputFromNumber(n) : "",
   };
 }
 
@@ -122,9 +121,19 @@ export function somaValoresAmbientes(rows: OsAmbienteFormRow[]): number {
   }, 0);
 }
 
+/** Texto da soma para o hint (o `$` já está na tradução). Ex.: "2,500.00". */
 export function formatSomaAmbientesUsd(sum: number): string {
   if (sum <= 0) return "";
-  return sum.toFixed(2);
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(sum);
+}
+
+/** Valor mascarado para o input de total comercial. Ex.: "$2,500.00". */
+export function somaAmbientesMoneyInput(sum: number): string {
+  if (sum <= 0) return "";
+  return moneyInputFromNumber(sum);
 }
 
 export function formatAmbienteValorDisplay(raw: number | null | undefined): string {

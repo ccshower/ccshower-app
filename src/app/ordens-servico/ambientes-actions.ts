@@ -143,11 +143,18 @@ export async function salvarAmbientesComercial(
         .maybeSingle();
 
       if (found?.id) {
-        const { error: updErr } = await supabase
+        const { data: updated, error: updErr } = await supabase
           .from("os_ambientes")
           .update(payload)
-          .eq("id", row.id);
+          .eq("id", row.id)
+          .select("id");
         if (updErr) return { ok: false, message: updErr.message };
+        if (!updated?.length) {
+          return {
+            ok: false,
+            message: "Could not save the environment. Check permissions.",
+          };
+        }
       } else {
         const { error: insErr } = await supabase.from("os_ambientes").insert({
           id: row.id,

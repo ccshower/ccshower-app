@@ -11,6 +11,7 @@ import {
 import {
   listarComprovantePagamentoVisita,
   removerAnexoVisitaComercial,
+  salvarCapturaPagamentoVisita,
 } from "@/app/ordens-servico/visita-comercial-actions";
 import { OsPhotoUploadActions } from "@/components/ordens-servico/os-photo-upload-actions";
 import { OsMoneyInput } from "@/components/ordens-servico/os-valores-etapa-fields";
@@ -51,18 +52,25 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
     const [capture, setCapture] = useState<VisitPaymentCapture>(() =>
       visitPaymentFromOrdem(ordem),
     );
+    const captureRef = useRef(capture);
+    captureRef.current = capture;
+    const saveChain = useRef(Promise.resolve());
     const [savedReceipt, setSavedReceipt] = useState<OsAnexoComUrl | null>(null);
     const [pendingReceipt, setPendingReceipt] = useState<PendingReceipt | null>(null);
     const [removeSavedReceipt, setRemoveSavedReceipt] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const ordemIdRef = useRef(ordem.id);
 
     useEffect(() => {
       if (ordemIdRef.current === ordem.id) return;
       ordemIdRef.current = ordem.id;
-      setCapture(visitPaymentFromOrdem(ordem));
+      const next = visitPaymentFromOrdem(ordem);
+      captureRef.current = next;
+      setCapture(next);
       setSavedReceipt(null);
       setPendingReceipt(null);
       setRemoveSavedReceipt(false);
+      setSaveError(null);
     }, [ordem]);
 
     useEffect(() => {
@@ -90,7 +98,7 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
     useImperativeHandle(
       ref,
       () => ({
-        getPayload: () => capture,
+        getPayload: () => captureRef.current,
         flushReceipts: async () => {
           if (removeSavedReceipt && savedReceipt?.id) {
             const r = await removerAnexoVisitaComercial(savedReceipt.id);
@@ -106,29 +114,48 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
           return { ok: true };
         },
       }),
-      [capture, ordem.id, pendingReceipt, removeSavedReceipt, savedReceipt],
+      [ordem.id, pendingReceipt, removeSavedReceipt, savedReceipt],
     );
 
     function update(partial: Partial<VisitPaymentCapture>) {
-      setCapture((prev) => ({ ...prev, ...partial }));
+      const next = { ...captureRef.current, ...partial };
+      captureRef.current = next;
+      setCapture(next);
+      return next;
+    }
+
+    function persist(next: VisitPaymentCapture) {
+      saveChain.current = saveChain.current
+        .catch(() => undefined)
+        .then(async () => {
+          try {
+            const r = await salvarCapturaPagamentoVisita(ordem.id, next);
+            setSaveError(r.ok ? null : r.message);
+          } catch (e) {
+            setSaveError(e instanceof Error ? e.message : "Error saving payment");
+          }
+        });
     }
 
     function onReceivedToggle(checked: boolean) {
       if (!checked) {
-        setCapture({
+        const cleared: VisitPaymentCapture = {
           received: false,
           amount: "",
           method: "",
           notes: "",
-        });
+        };
+        captureRef.current = cleared;
+        setCapture(cleared);
         setPendingReceipt((prev) => {
           if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
           return null;
         });
         setRemoveSavedReceipt(Boolean(savedReceipt));
+        void persist(cleared);
         return;
       }
-      update({ received: true });
+      void persist(update({ received: true }));
     }
 
     function onReceiptSelected(files: File[]) {
@@ -205,6 +232,9 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
                     disabled={disabled}
                     value={capture.amount}
                     onChange={(amount) => update({ amount })}
+                    onBlur={(amount) => {
+                      void persist(update({ amount }));
+                    }}
                   />
                 </div>
               </div>
@@ -217,11 +247,13 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
                   disabled={disabled}
                   className={`mt-1 ${inputClass}`}
                   value={capture.method}
-                  onChange={(e) =>
-                    update({
-                      method: e.target.value as VisitPaymentCapture["method"],
-                    })
-                  }
+                  onChange={(e) => {
+                    void persist(
+                      update({
+                        method: e.target.value as VisitPaymentCapture["method"],
+                      }),
+                    );
+                  }}
                 >
                   <option value="">{t("os.visitPayment.selectMethod")}</option>
                   {VISIT_PAYMENT_METHODS.map((m) => (
@@ -244,8 +276,15 @@ export const OsVisitPaymentCapture = forwardRef<OsVisitPaymentCaptureHandle, Pro
                 className={`mt-1 min-h-[56px] resize-y ${inputClass}`}
                 value={capture.notes}
                 onChange={(e) => update({ notes: e.target.value })}
+                onBlur={() => {
+                  void persist(captureRef.current);
+                }}
               />
             </div>
+
+            {saveError ? (
+              <p className="text-sm text-cc-red">{saveError}</p>
+            ) : null}
 
             <div>
               <p className={labelClass}>{t("os.visitPayment.receipt")}</p>
