@@ -9,7 +9,7 @@ import type { Equipe, OrdemServicoWithRelations, Usuario } from "@/lib/types/dat
 type ClienteOption = {
   id: string;
   nome: string;
-  telefone: string;
+  telefone: string | null;
   endereco_formatado: string;
   equipe_id: string | null;
 };
@@ -62,7 +62,7 @@ export function OsForm({
           <option value="">Select a client</option>
           {clientes.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.nome} — {c.telefone}
+              {c.nome} — {c.telefone?.trim() || "—"}
             </option>
           ))}
         </select>

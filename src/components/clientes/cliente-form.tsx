@@ -10,6 +10,7 @@ import {
   ClienteLeadSourceFields,
   validateClienteLeadSourceForm,
 } from "@/components/clientes/cliente-lead-source-fields";
+import { telefoneClienteObrigatorio } from "@/lib/clientes/cliente-telefone";
 import { composeEnderecoFormatado } from "@/lib/clientes/endereco-complemento";
 import {
   hasValidSmsConsent,
@@ -20,6 +21,7 @@ import {
   formatNanpLocal,
   nationalNanpDigits,
   phoneFieldValue,
+  toE164Phone,
 } from "@/lib/sms/e164";
 import { Field } from "@/components/ui/field";
 import {
@@ -89,11 +91,12 @@ export function ClienteForm({
   );
   const [phone, setPhone] = useState(() => phoneFieldValue(cliente?.telefone));
   const [smsAuthorized, setSmsAuthorized] = useState(() =>
-    hasValidSmsConsent({
-      smsAutorizado: cliente?.sms_autorizado,
-      smsConsentimentoEm: cliente?.sms_consentimento_em,
-      smsOptOutEm: cliente?.sms_opt_out_em,
-    }),
+    Boolean(toE164Phone(cliente?.telefone)) &&
+      hasValidSmsConsent({
+        smsAutorizado: cliente?.sms_autorizado,
+        smsConsentimentoEm: cliente?.sms_consentimento_em,
+        smsOptOutEm: cliente?.sms_opt_out_em,
+      }),
   );
   const commercialEquipes = useMemo(
     () => filterEquipesForStage(equipes, "commercial"),
@@ -121,11 +124,12 @@ export function ClienteForm({
     setContractorId(cliente?.contractor_id ?? "");
     setPhone(phoneFieldValue(cliente?.telefone));
     setSmsAuthorized(
-      hasValidSmsConsent({
-        smsAutorizado: cliente?.sms_autorizado,
-        smsConsentimentoEm: cliente?.sms_consentimento_em,
-        smsOptOutEm: cliente?.sms_opt_out_em,
-      }),
+      Boolean(toE164Phone(cliente?.telefone)) &&
+        hasValidSmsConsent({
+          smsAutorizado: cliente?.sms_autorizado,
+          smsConsentimentoEm: cliente?.sms_consentimento_em,
+          smsOptOutEm: cliente?.sms_opt_out_em,
+        }),
     );
   }, [cliente, formKey]);
 
@@ -136,9 +140,16 @@ export function ClienteForm({
     cliente?.sms_consentimento_em,
     cliente?.sms_opt_out_em,
   );
+  const phoneRequired = telefoneClienteObrigatorio(tipoCliente);
+  const phoneValidForSms = Boolean(toE164Phone(phone));
+  const smsBlocked = optOutBlocks || !phoneValidForSms;
 
   function onPhoneChange(value: string) {
     setPhone(value);
+    if (!toE164Phone(value)) {
+      setSmsAuthorized(false);
+      return;
+    }
     if (!cliente) return;
     if (phoneMatchKey(value) !== phoneMatchKey(savedPhone)) {
       setSmsAuthorized(false);
@@ -224,13 +235,16 @@ export function ClienteForm({
             className="w-full rounded-sm border-[1.5px] border-cc-border px-3 py-2.5 text-sm font-light text-cc-ink outline-none focus:border-cc-blue-focus focus:shadow-focus"
           />
         </Field>
-        <Field label="Phone">
+        <Field
+          label="Phone"
+          hint={phoneRequired ? undefined : "Optional"}
+        >
           <div className="flex overflow-hidden rounded-sm border-[1.5px] border-cc-border focus-within:border-cc-blue-focus focus-within:shadow-focus">
             <span className="flex items-center border-r border-cc-border bg-cc-border-light px-3 text-sm font-medium text-cc-muted">
               +1
             </span>
             <input
-              required
+              required={phoneRequired}
               inputMode="tel"
               autoComplete="tel-national"
               value={formatNanpLocal(nationalNanpDigits(phone))}
@@ -251,9 +265,15 @@ export function ClienteForm({
           type="checkbox"
           name="sms_autorizado"
           value="yes"
-          checked={optOutBlocks ? false : smsAuthorized}
-          disabled={optOutBlocks}
-          onChange={(e) => setSmsAuthorized(e.target.checked)}
+          checked={smsBlocked ? false : smsAuthorized}
+          disabled={smsBlocked}
+          onChange={(e) => {
+            if (!toE164Phone(phone)) {
+              setSmsAuthorized(false);
+              return;
+            }
+            setSmsAuthorized(e.target.checked);
+          }}
           className="mt-1"
         />
         <span>
@@ -261,9 +281,11 @@ export function ClienteForm({
           <span className="mt-1 block text-cc-ink/80">
             {optOutBlocks
               ? "A STOP reply is on file. SMS stays off, and this box cannot turn it back on."
-              : phoneChanged
-                ? "The phone number changed. Check this box again to allow SMS for the new number."
-                : "When this is off, no text is sent."}
+              : !phoneValidForSms
+                ? "A valid customer phone is required before SMS can be authorized."
+                : phoneChanged
+                  ? "The phone number changed. Check this box again to allow SMS for the new number."
+                  : "When this is off, no text is sent."}
           </span>
         </span>
       </label>

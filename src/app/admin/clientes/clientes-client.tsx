@@ -234,7 +234,9 @@ export function ClientesClient({
                         {tClientType(parseClientType(c.tipo_cliente))}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-cc-muted">{c.telefone}</p>
+                    <p className="mt-0.5 text-xs text-cc-muted">
+                      {c.telefone?.trim() ? c.telefone : "—"}
+                    </p>
                     {c.email ? (
                       <p className="mt-0.5 truncate text-xs text-cc-subtle">{c.email}</p>
                     ) : null}

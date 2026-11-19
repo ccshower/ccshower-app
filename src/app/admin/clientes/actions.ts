@@ -11,8 +11,10 @@ import {
   mapDbErrorLeadSource,
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
-import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
-import { phoneForStorage } from "@/lib/sms/e164";
+import {
+  resolveClienteSmsConsent,
+  validarTelefoneCliente,
+} from "@/lib/clientes/cliente-telefone";
 import { validateEquipeOperacional } from "@/lib/equipes/validate-equipe-operacional";
 import { validateEquipeIdForStage, resolveDefaultTeamForStage } from "@/lib/ordens-servico/workflow-equipe";
 import { buildOperationalSnapshot } from "@/lib/ordens-servico/operacional-snapshot";
@@ -122,17 +124,21 @@ export async function criarCliente(formData: FormData): Promise<ActionResult> {
   try {
     const { supabase, usuario, userId } = await requireActiveSupabase();
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
     );
+    const telefoneInformado = validarTelefoneCliente(
+      tipo_cliente,
+      String(formData.get("telefone") ?? ""),
+    );
 
-    if (!nome || !telefone || !endereco_formatado) {
+    if (!nome || !endereco_formatado || !telefoneInformado.ok) {
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
+    const telefone = telefoneInformado.telefone;
 
-    const smsConsent = resolveSmsConsentFromForm(formData, telefone, null);
+    const smsConsent = resolveClienteSmsConsent(formData, telefone, null);
     if (!smsConsent.ok) return smsConsent;
 
     const lead = parseLeadSourceFromForm(formData, { required: false });
@@ -256,16 +262,20 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
     const { supabase, usuario } = await requireActiveSupabase();
     const id = String(formData.get("id") ?? "");
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
     const tipo_cliente = parseClientType(
       String(formData.get("tipo_cliente") ?? ""),
     );
+    const telefoneInformado = validarTelefoneCliente(
+      tipo_cliente,
+      String(formData.get("telefone") ?? ""),
+    );
 
     if (!id) return { ok: false, message: "ID ausente" };
-    if (!nome || !telefone || !endereco_formatado) {
+    if (!nome || !endereco_formatado || !telefoneInformado.ok) {
       return { ok: false, message: "Nome, telefone e endereco sao obrigatorios" };
     }
+    const telefone = telefoneInformado.telefone;
 
     const { data: atualSms, error: smsLoadError } = await supabase
       .from("clientes")
@@ -278,8 +288,8 @@ export async function atualizarCliente(formData: FormData): Promise<ActionResult
       return { ok: false, message: smsLoadError?.message ?? "Cliente nao encontrado" };
     }
 
-    const smsConsent = resolveSmsConsentFromForm(formData, telefone, {
-      telefone: atualSms.telefone,
+    const smsConsent = resolveClienteSmsConsent(formData, telefone, {
+      telefone: atualSms.telefone ?? "",
       sms_autorizado: atualSms.sms_autorizado === true,
       sms_consentimento_em: atualSms.sms_consentimento_em,
       sms_consentimento_metodo: atualSms.sms_consentimento_metodo,

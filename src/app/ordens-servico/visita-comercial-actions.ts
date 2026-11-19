@@ -9,8 +9,11 @@ import {
   mapDbErrorLeadSource,
   parseLeadSourceFromForm,
 } from "@/lib/clientes/lead-source";
-import { resolveSmsConsentFromForm } from "@/lib/clientes/sms-consent";
-import { phoneForStorage } from "@/lib/sms/e164";
+import {
+  resolveClienteSmsConsent,
+  tipoClienteNaPrimeiraVisita,
+  validarTelefoneCliente,
+} from "@/lib/clientes/cliente-telefone";
 import { parseClientType } from "@/lib/clientes/tipo-cliente";
 import {
   OS_ANEXOS_BUCKET,
@@ -327,11 +330,7 @@ export async function atualizarClientePrimeiraVisita(
     }
 
     const nome = String(formData.get("nome") ?? "").trim();
-    const telefone = phoneForStorage(String(formData.get("telefone") ?? ""));
     const endereco_formatado = String(formData.get("endereco_formatado") ?? "").trim();
-    if (!nome || !telefone || !endereco_formatado) {
-      return { ok: false, message: "Name, phone and address are required" };
-    }
 
     const lead = parseLeadSourceFromForm(formData, { required: false });
     if (!lead.ok) return lead;
@@ -348,8 +347,21 @@ export async function atualizarClientePrimeiraVisita(
       return { ok: false, message: cliLoadErr?.message ?? "Customer not found" };
     }
 
-    const smsConsent = resolveSmsConsentFromForm(formData, telefone, {
-      telefone: atual.telefone,
+    const tipoAtual = parseClientType(String(atual?.tipo_cliente ?? "residential"));
+    const tipoSolicitado = parseClientType(String(formData.get("tipo_cliente") ?? ""));
+    const tipo_cliente = tipoClienteNaPrimeiraVisita(tipoAtual, tipoSolicitado);
+
+    const telefoneInformado = validarTelefoneCliente(
+      tipo_cliente,
+      String(formData.get("telefone") ?? ""),
+    );
+    if (!nome || !endereco_formatado || !telefoneInformado.ok) {
+      return { ok: false, message: "Name, phone and address are required" };
+    }
+    const telefone = telefoneInformado.telefone;
+
+    const smsConsent = resolveClienteSmsConsent(formData, telefone, {
+      telefone: atual.telefone ?? "",
       sms_autorizado: atual.sms_autorizado === true,
       sms_consentimento_em: atual.sms_consentimento_em,
       sms_consentimento_metodo: atual.sms_consentimento_metodo,
@@ -357,13 +369,6 @@ export async function atualizarClientePrimeiraVisita(
       sms_opt_out_origem: atual.sms_opt_out_origem,
     });
     if (!smsConsent.ok) return smsConsent;
-
-    const tipoAtual = parseClientType(String(atual?.tipo_cliente ?? "residential"));
-    let tipo_cliente = tipoAtual;
-    if (tipoAtual !== "contractor") {
-      const requested = parseClientType(String(formData.get("tipo_cliente") ?? ""));
-      if (requested !== "contractor") tipo_cliente = requested;
-    }
 
     const row = {
         nome,

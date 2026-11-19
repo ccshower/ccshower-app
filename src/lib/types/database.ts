@@ -64,7 +64,7 @@ export type Cliente = {
   empresa_id?: string | null;
   unidade_id?: string | null;
   nome: string;
-  telefone: string;
+  telefone: string | null;
   email: string | null;
   tipo_cliente: TipoCliente;
   contractor_id: string | null;
