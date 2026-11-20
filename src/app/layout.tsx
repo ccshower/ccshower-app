@@ -1,22 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Jost } from "next/font/google";
+import localFont from "next/font/local";
 
 import { PwaProvider } from "@/components/layout/pwa-provider";
 
 import "./globals.css";
 
-const jost = Jost({
-  subsets: ["latin"],
+const jost = localFont({
+  src: "../fonts/jost-latin.woff2",
+  weight: "300 600",
+  style: "normal",
   variable: "--font-body",
-  weight: ["300", "400", "500", "600"],
   display: "swap",
 });
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
+const cormorant = localFont({
+  src: [
+    {
+      path: "../fonts/cormorant-normal-latin.woff2",
+      weight: "300 600",
+      style: "normal",
+    },
+    {
+      path: "../fonts/cormorant-italic-latin.woff2",
+      weight: "300 600",
+      style: "italic",
+    },
+  ],
   variable: "--font-display",
-  weight: ["300", "400", "600"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
