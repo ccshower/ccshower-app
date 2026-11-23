@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ClienteContractorSelect,
@@ -10,7 +10,10 @@ import {
   ClienteLeadSourceFields,
   validateClienteLeadSourceForm,
 } from "@/components/clientes/cliente-lead-source-fields";
-import { telefoneClienteObrigatorio } from "@/lib/clientes/cliente-telefone";
+import {
+  telefoneClienteObrigatorio,
+  validarTelefoneCliente,
+} from "@/lib/clientes/cliente-telefone";
 import { composeEnderecoFormatado } from "@/lib/clientes/endereco-complemento";
 import {
   hasValidSmsConsent,
@@ -83,6 +86,8 @@ export function ClienteForm({
   const [equipeError, setEquipeError] = useState<string | null>(null);
   const [leadError, setLeadError] = useState<string | null>(null);
   const [contractorError, setContractorError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const [tipoCliente, setTipoCliente] = useState<ClientType>(() =>
     parseClientType(cliente?.tipo_cliente ?? "residential"),
   );
@@ -123,6 +128,7 @@ export function ClienteForm({
     setTipoCliente(parseClientType(cliente?.tipo_cliente ?? "residential"));
     setContractorId(cliente?.contractor_id ?? "");
     setPhone(phoneFieldValue(cliente?.telefone));
+    setPhoneError(null);
     setSmsAuthorized(
       Boolean(toE164Phone(cliente?.telefone)) &&
         hasValidSmsConsent({
@@ -145,6 +151,7 @@ export function ClienteForm({
   const smsBlocked = optOutBlocks || !phoneValidForSms;
 
   function onPhoneChange(value: string) {
+    setPhoneError(null);
     setPhone(value);
     if (!toE164Phone(value)) {
       setSmsAuthorized(false);
@@ -166,10 +173,28 @@ export function ClienteForm({
 
   return (
     <form
+      noValidate
       className="space-y-3"
       onSubmit={(ev) => {
         ev.preventDefault();
-        const fd = new FormData(ev.currentTarget);
+        const form = ev.currentTarget;
+        const phoneBad = !validarTelefoneCliente(tipoCliente, phone).ok;
+        setPhoneError(phoneBad ? "Phone is required." : null);
+        const nome = form.elements.namedItem("nome");
+        const nomeMissing = nome instanceof HTMLInputElement && !nome.value.trim();
+        if (nomeMissing) {
+          form.reportValidity();
+          return;
+        }
+        if (phoneBad) {
+          phoneInputRef.current?.focus();
+          return;
+        }
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        const fd = new FormData(form);
         const busca = String(fd.get("endereco_busca") ?? "").trim();
         const formatted = address.endereco_formatado.trim() || busca;
         const merged: GoogleAddress = {
@@ -239,14 +264,17 @@ export function ClienteForm({
           label="Phone"
           hint={phoneRequired ? undefined : "Optional"}
         >
-          <div className="flex overflow-hidden rounded-sm border-[1.5px] border-cc-border focus-within:border-cc-blue-focus focus-within:shadow-focus">
+          <div
+            className={`flex overflow-hidden rounded-sm border-[1.5px] focus-within:border-cc-blue-focus focus-within:shadow-focus ${phoneError ? "border-cc-red" : "border-cc-border"}`}
+          >
             <span className="flex items-center border-r border-cc-border bg-cc-border-light px-3 text-sm font-medium text-cc-muted">
               +1
             </span>
             <input
-              required={phoneRequired}
+              ref={phoneInputRef}
               inputMode="tel"
               autoComplete="tel-national"
+              aria-invalid={phoneError ? true : undefined}
               value={formatNanpLocal(nationalNanpDigits(phone))}
               onChange={(e) => {
                 const local = nationalNanpDigits(e.target.value);
@@ -256,6 +284,9 @@ export function ClienteForm({
               placeholder="(000) 000-0000"
             />
           </div>
+          {phoneError ? (
+            <span className="block text-xs text-cc-red">{phoneError}</span>
+          ) : null}
           <input type="hidden" name="telefone" value={phone} />
         </Field>
       </div>
@@ -314,6 +345,7 @@ export function ClienteForm({
             onChange={(e) => {
               const next = parseClientType(e.target.value);
               setTipoCliente(next);
+              if (!telefoneClienteObrigatorio(next)) setPhoneError(null);
               if (next !== "contractor") setContractorId("");
               setContractorError(null);
             }}
